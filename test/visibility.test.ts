@@ -10,7 +10,7 @@ import { removePurchase, setPurchase } from '../server/domain/purchases'
 import { copyWish, linkWish, unlinkOwner } from '../server/domain/sharing'
 import { undoLink } from '../server/domain/undo'
 import { createUser } from '../server/domain/users'
-import { deleteWish, setWishImage, updateWish } from '../server/domain/wishes'
+import { deleteWish, deleteWishes, reorderWishes, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput } from '../shared/schemas/input'
 import { anonWishSchema, buyerWishSchema, ownerWishSchema, type BuyerWish } from '../shared/schemas/list'
 import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, titles, wishIn } from './helpers'
@@ -108,6 +108,18 @@ describe('the owner and visitors who are not logged in', () => {
     ])
     expect({ ...after, wishes: after.wishes.map(wish => ({ ...wish, mine: 0 })) }).toEqual(before)
     expect(getListView(busy.db, busy.token, null)).toEqual(getListView(quiet.db, quiet.token, null))
+  })
+
+  it('reorders and deletes several the same way whether or not anyone bought', () => {
+    const quiet = world(false)
+    const busy = world(true)
+    for (const { db, token, art, plugs, puzzles, book } of [quiet, busy]) {
+      expect(codeOf(() => reorderWishes(db, art.id, token, [book.id, puzzles.id, plugs.id]))).toBeUndefined()
+      expect(codeOf(() => deleteWishes(db, art.id, token, [plugs.id, puzzles.id]))).toBeUndefined()
+    }
+    expect(getListView(busy.db, busy.token, busy.art.id)).toEqual(getListView(quiet.db, quiet.token, quiet.art.id))
+    expect(getListView(busy.db, busy.token, null)).toEqual(getListView(quiet.db, quiet.token, null))
+    expect(titles(getListView(busy.db, busy.token, busy.art.id))).toEqual(['Boek'])
   })
 
   it('gives the same list to the owner after their own tick was refused', () => {

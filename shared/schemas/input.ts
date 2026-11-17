@@ -56,6 +56,17 @@ export const inviteInput = z.discriminatedUnion('kind', [
 ])
 
 /**
+ * Some wishes on a list, for reordering or deleting them together: each once, and at most 200,
+ * the number of wishes a list can show at a time (MAX_LIVE_WISHES).
+ */
+export const wishIdsInput = z.strictObject({
+  wishIds: z.array(z.number('invalid').int('invalid').positive('invalid'), 'required')
+    .min(1, 'required')
+    .max(200, 'too_long')
+    .refine(ids => new Set(ids).size === ids.length, 'invalid'),
+})
+
+/**
  * Accepting a link: wishes need a list to land on; a link to a list needs nothing, which parses to
  * null. The empty shape names both keys as never, so `{ newList: ' ' }` still reports the field
  * rather than a union that matched nothing.

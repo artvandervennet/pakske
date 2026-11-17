@@ -4,8 +4,9 @@ import { ownedListId } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
 import { setPurchase } from '../server/domain/purchases'
 import { linkWish } from '../server/domain/sharing'
-import { deleteWish } from '../server/domain/wishes'
-import { addList, addUser, addWishTo, makeDb, titles } from './helpers'
+import { deleteWish, reorderWishes } from '../server/domain/wishes'
+import { wishIdsInput } from '../shared/schemas/input'
+import { addList, addUser, addWishTo, codeOf, makeDb, titles } from './helpers'
 
 function setup() {
   const db = makeDb()
@@ -47,5 +48,54 @@ describe('the order of a list', () => {
     addWishTo(db, art.id, token, 'B')
     linkWish(db, art.id, M, x.id, { list: token })
     expect(titles(getListView(db, token, art.id))).toEqual(['A', 'B', 'X'])
+  })
+})
+
+describe('reordering a list', () => {
+  function abcd() {
+    const { db, art, mom, token, listId } = setup()
+    const [a, b, c, d] = ['A', 'B', 'C', 'D'].map(title => addWishTo(db, art.id, token, title).id) as [number, number, number, number]
+    return { db, art, mom, token, listId, a, b, c, d }
+  }
+
+  it('reorders the wishes, for everyone', () => {
+    const { db, art, token, a, b, c, d } = abcd()
+    reorderWishes(db, art.id, token, [c, a, d, b])
+    expect(titles(getListView(db, token, art.id))).toEqual(['C', 'A', 'D', 'B'])
+    expect(titles(getListView(db, token, null))).toEqual(['C', 'A', 'D', 'B'])
+  })
+
+  it('keeps the wishes left out after the ones given, in their order', () => {
+    const { db, art, token, b, d } = abcd()
+    reorderWishes(db, art.id, token, [d, b])
+    expect(titles(getListView(db, token, art.id))).toEqual(['D', 'B', 'A', 'C'])
+  })
+
+  it('ignores ids that are not on the list now', () => {
+    const { db, art, mom, token, a, b, c, d } = abcd()
+    const M = addList(db, mom.id, 'Van mama')
+    const m = addWishTo(db, mom.id, M, 'M')
+    deleteWish(db, art.id, token, a)
+    reorderWishes(db, art.id, token, [m.id, a, d, c, b])
+    expect(titles(getListView(db, token, art.id))).toEqual(['D', 'C', 'B'])
+    expect(titles(getListView(db, M, mom.id))).toEqual(['M'])
+  })
+
+  it('puts a wish added after a reorder at the bottom', () => {
+    const { db, art, token, a, b, c, d } = abcd()
+    reorderWishes(db, art.id, token, [d, c, b, a])
+    addWishTo(db, art.id, token, 'E')
+    expect(titles(getListView(db, token, art.id))).toEqual(['D', 'C', 'B', 'A', 'E'])
+  })
+
+  it('refuses someone who doesn\'t own the list', () => {
+    const { db, mom, token, a, b } = abcd()
+    expect(codeOf(() => reorderWishes(db, mom.id, token, [b, a]))).toBe('not_found')
+  })
+
+  it('refuses the same id twice', () => {
+    expect(wishIdsInput.safeParse({ wishIds: [1, 1] }).success).toBe(false)
+    expect(wishIdsInput.safeParse({ wishIds: [1, 2] }).success).toBe(true)
+    expect(wishIdsInput.safeParse({ wishIds: [] }).success).toBe(false)
   })
 })

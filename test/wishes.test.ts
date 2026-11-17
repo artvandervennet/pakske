@@ -6,7 +6,7 @@ import { ownedListId } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
 import { copyWish } from '../server/domain/sharing'
 import { livePublicWishes } from '../server/domain/public-wishes'
-import { addWish, deleteWish, ownedWishOnList, setWishImage, updateWish } from '../server/domain/wishes'
+import { addWish, deleteWish, deleteWishes, ownedWishOnList, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput, wishPatchInput } from '../shared/schemas/input'
 import { publicWishSchema } from '../shared/schemas/list'
 import { addList, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds } from './helpers'
@@ -144,6 +144,32 @@ describe('wishes', () => {
     expect(codeOf(() => addWishTo(db, art.id, token, 'Nog een'))).toBe('wish_limit_ever')
   })
 
+  describe('deleting several at once', () => {
+    it('deletes them', () => {
+      const { db, art, token, listId } = setup()
+      const [a, , c] = ['A', 'B', 'C'].map(title => addWish(db, art.id, token, input(title)).id)
+      deleteWishes(db, art.id, token, [a!, c!])
+      expect(livePublicWishes(db, listId).map(wish => wish.title)).toEqual(['B'])
+      for (const id of [a!, c!]) expect(db.select().from(wishes).where(eq(wishes.id, id)).get()?.deletedAt).not.toBeNull()
+      expectOwnersSettled(db)
+    })
+
+    it('skips wishes that are already gone', () => {
+      const { db, art, token, listId } = setup()
+      const [a, b] = ['A', 'B'].map(title => addWish(db, art.id, token, input(title)).id)
+      deleteWish(db, art.id, token, a!)
+      expect(codeOf(() => deleteWishes(db, art.id, token, [a!, b!]))).toBeUndefined()
+      expect(livePublicWishes(db, listId)).toEqual([])
+    })
+
+    it('refuses someone who doesn\'t own the list', () => {
+      const { db, art, mom, token, listId } = setup()
+      const { id } = addWish(db, art.id, token, input('A'))
+      expect(codeOf(() => deleteWishes(db, mom.id, token, [id]))).toBe('not_found')
+      expect(livePublicWishes(db, listId)).toHaveLength(1)
+    })
+  })
+
   describe('a joint wish, on Art\'s list and on Lotte\'s', () => {
     function joint() {
       const { db, art, mom, token } = setup()
@@ -167,6 +193,17 @@ describe('wishes', () => {
       const { db, art, lot, token, wish } = joint()
       expect(codeOf(() => deleteWish(db, lot.id, token, wish.id))).toBe('not_found')
       expect(ownerIds(db, wish.id)).toEqual([art.id, lot.id].sort((a, b) => a - b))
+    })
+
+    it('takes it off Art\'s list only when several are deleted at once', () => {
+      const { db, art, lot, token, theirs, wish } = joint()
+      const other = addWishTo(db, art.id, token, 'Sokken')
+      deleteWishes(db, art.id, token, [wish.id, other.id])
+      expect(db.select().from(wishes).where(eq(wishes.id, wish.id)).get()?.deletedAt).toBeNull()
+      expect(ownerIds(db, wish.id)).toEqual([lot.id])
+      expect(livePublicWishes(db, ownedListId(db, lot.id, theirs)).map(w => w.title)).toEqual(['Bordspel'])
+      expect(livePublicWishes(db, ownedListId(db, art.id, token))).toEqual([])
+      expectOwnersSettled(db)
     })
 
     it('takes it off Art\'s list only, so it stays Lotte\'s and is not deleted', () => {

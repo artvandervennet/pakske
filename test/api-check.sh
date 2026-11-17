@@ -93,6 +93,8 @@ req anon POST "/api/lists/$TOKEN/wishes" '{"title":"x"}'; check "adding a wish n
 req mom POST "/api/lists/$TOKEN/wishes" '{"title":"Ondergeschoven"}'; check "mom cannot add to art's list" 404
 req mom PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{"title":"Gekaapt"}'; check "mom cannot change art's wish" 404
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS"; check "mom cannot delete art's wish" 404
+req mom POST "/api/lists/$TOKEN/wishes/delete" "{\"wishIds\":[$PLUGS]}"; check "mom cannot delete several of art's wishes" 404
+req mom PUT "/api/lists/$TOKEN/order" "{\"wishIds\":[$PLUGS]}"; check "mom cannot reorder art's list" 404
 req mom PATCH "/api/lists/$MOMLIST/wishes/$PLUGS" '{"title":"Gekaapt"}'; check "mom cannot change art's wish through her own list" 404
 req mom DELETE "/api/lists/$MOMLIST/wishes/$PLUGS"; check "mom cannot delete art's wish through her own list" 404
 

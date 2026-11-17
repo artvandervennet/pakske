@@ -1,12 +1,12 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type { WishInput, WishPatchInput } from '../../shared/schemas/input'
 import type { PublicWish } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { wishes } from '../db/schema'
+import { listWishes, wishes } from '../db/schema'
 import { DomainError } from './errors'
 import { ownedListId } from './lists'
 import { assertRoom, ownedWishOnList, putOnList, takeOffList, wishOnList } from './placement'
-import { toPublicWish } from './public-wishes'
+import { livePublicWishes, toPublicWish } from './public-wishes'
 import { recordChanges, unusedImages } from './undo'
 
 // What an owner does with the wishes on their list. Nothing here reads what buyers did, so no
@@ -42,10 +42,52 @@ export function updateWish(db: Db, userId: number, token: string, wishId: number
  */
 export function deleteWish(db: Db, userId: number, token: string, wishId: number): void {
   db.transaction((tx) => {
-    const listId = ownedListId(tx, userId, token)
+    ownedListId(tx, userId, token)
     if (!wishOnList(tx, token, wishId).live) throw new DomainError('not_found')
-    takeOffList(tx, listId, wishId)
+    takeOff(tx, userId, token, [wishId])
   }, { behavior: 'immediate' })
+}
+
+/**
+ * Takes several wishes off this list of the person's own, each the way `deleteWish` does. A wish
+ * that is no longer on the list, because a co-owner took it off meanwhile, is skipped rather than
+ * failing the others.
+ */
+export function deleteWishes(db: Db, userId: number, token: string, wishIds: number[]): void {
+  db.transaction(tx => takeOff(tx, userId, token, wishIds), { behavior: 'immediate' })
+}
+
+function takeOff(db: Db, userId: number, token: string, wishIds: number[]): void {
+  const listId = ownedListId(db, userId, token)
+  const live = new Set(liveIdsInOrder(db, listId))
+  for (const wishId of wishIds) {
+    if (live.has(wishId)) takeOffList(db, listId, wishId)
+  }
+}
+
+/**
+ * Puts the given wishes first, in the given order. The wishes on the list that aren't given keep
+ * their order and come after them, so a wish a co-owner added meanwhile isn't lost; ids that are
+ * not on the list now are ignored.
+ */
+export function reorderWishes(db: Db, userId: number, token: string, wishIds: number[]): void {
+  db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    const current = liveIdsInOrder(tx, listId)
+    const live = new Set(current)
+    const given = wishIds.filter(id => live.has(id))
+    const chosen = new Set(given)
+    const order = [...given, ...current.filter(id => !chosen.has(id))]
+    order.forEach((wishId, position) => {
+      tx.update(listWishes).set({ position })
+        .where(and(eq(listWishes.listId, listId), eq(listWishes.wishId, wishId))).run()
+    })
+  }, { behavior: 'immediate' })
+}
+
+/** The ids of the wishes on the list now, in the list's order. */
+function liveIdsInOrder(db: Db, listId: number): number[] {
+  return livePublicWishes(db, listId).map(wish => wish.id)
 }
 
 /**
