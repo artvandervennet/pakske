@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fieldErrors, listInput, registerInput, wishInput, wishPatchInput } from '../shared/schemas/input'
+import { fieldErrors, listInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
 const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', url: '', quantity: 1, ...over })
 
@@ -56,6 +56,25 @@ describe('a change to a wish someone submits', () => {
 describe('a list someone submits', () => {
   it('names a list', () => {
     expect(fieldErrors(listInput.safeParse({ title: '   ' }).error!)).toEqual({ title: 'required' })
+  })
+})
+
+describe('the list a wish should land on', () => {
+  it('is one of the person\'s lists, or a new one with a name', () => {
+    expect(targetInput.parse({ list: 'abc' })).toEqual({ list: 'abc' })
+    expect(targetInput.parse({ newList: '  Samen ' })).toEqual({ newList: 'Samen' })
+  })
+
+  it('is not both, and not nothing', () => {
+    expect(targetInput.safeParse({ list: 'abc', newList: 'Samen' }).success).toBe(false)
+    expect(targetInput.safeParse({}).success).toBe(false)
+  })
+
+  it('needs a name for a new list and a list for an existing one', () => {
+    expect(fieldErrors(targetInput.safeParse({ newList: '   ' }).error!)).toEqual({ newList: 'required' })
+    expect(fieldErrors(targetInput.safeParse({ list: '' }).error!)).toEqual({ list: 'required' })
+    expect(fieldErrors(targetInput.safeParse({ list: 'x'.repeat(65) }).error!)).toEqual({ list: 'too_long' })
+    expect(fieldErrors(targetInput.safeParse({ newList: 'x'.repeat(81) }).error!)).toEqual({ newList: 'too_long' })
   })
 })
 

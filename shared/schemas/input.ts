@@ -40,6 +40,12 @@ export const passwordInput = z.object({
 
 export const listInput = z.object({ title: requiredText(80) })
 
+/** Where a wish from someone else's list should land: one of the person's lists, or a new one. */
+export const targetInput = z.union([
+  z.strictObject({ list: z.string('required').min(1, 'required').max(64, 'too_long') }),
+  z.strictObject({ newList: listInput.shape.title }),
+])
+
 const wishFields = {
   title: requiredText(120),
   description: optionalText(2000),
@@ -74,6 +80,7 @@ export const noteInput = z.object({ body: requiredText(1000) })
 
 export type WishInput = z.infer<typeof wishInput>
 export type WishPatchInput = z.infer<typeof wishPatchInput>
+export type ListTarget = z.infer<typeof targetInput>
 
 /** The first error code per field, e.g. `{ title: 'required' }`. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

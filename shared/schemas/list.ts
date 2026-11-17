@@ -89,6 +89,36 @@ export interface OpenedList {
   deleted: boolean
 }
 
+/** The person's own lists, for choosing where a wish lands. */
+export interface MyLists {
+  /** Oldest first. */
+  lists: { token: string, title: string }[]
+  /** The list a wish was most recently put on, or null. */
+  last: string | null
+}
+
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined'
+
+/** A notice as its recipient gets it. Notices are about owners and lists, never about buyers. */
+export interface NoticeView {
+  id: string
+  kind: NoticeKind
+  /** The display name of the person who did it, as it is now. */
+  actor: string
+  actorId: number
+  /** The wish's or list's title as it was when it happened. */
+  title: string
+  /** How many more wishes besides the one named. */
+  more: number
+  /** A live list of the recipient's that shows what the notice is about, or null. */
+  token: string | null
+  wishId: number | null
+  canUndo: boolean
+  /** Not seen yet. */
+  fresh: boolean
+  createdAt: string
+}
+
 /** What the home page shows: the lists a person owns and the ones they opened. */
 export interface HomeView {
   owned: HomeList[]
