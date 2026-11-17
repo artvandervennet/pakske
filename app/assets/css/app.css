@@ -35,22 +35,6 @@ art-button[variant="quiet"]:not(:defined) > :is(a, button) {
   padding-inline: var(--space-3);
   text-decoration: underline;
 }
-art-canvas:not(:defined) {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6) var(--space-6);
-  background: var(--surface-raised);
-  border-radius: var(--radius-canvas);
-  box-shadow: var(--shadow-card);
-}
-art-canvas:not(:defined) > [slot="media"] {
-  inline-size: calc(100% + 2 * var(--space-6));
-  max-inline-size: none;
-  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6)) var(--space-2);
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-}
 art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-ratio: 1; }
 art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-block-size: 2.25rem; }
 
@@ -80,14 +64,14 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .page-head h1 { font-size: var(--step-4); line-height: var(--leading-tight); text-wrap: balance; }
 .page-head .lead { margin-block-start: var(--space-4); }
 .page-head .actions { margin-block-start: var(--space-6); }
-.page-head .crumb { display: inline-block; margin-block-end: var(--space-4); font-size: var(--step--1); }
 
 /* Candidate for Gesso: a page's title that becomes a field to rename it, in the title's own
    type, with Save and Cancel under it. */
 .title-edit { display: grid; gap: var(--space-4); max-inline-size: 40rem; }
 .title-edit input {
   inline-size: 100%;
-  font: var(--weight-regular) var(--step-3)/var(--leading-tight) var(--font-display);
+  font: var(--weight-regular) var(--step-4)/var(--leading-tight) var(--font-display);
+  letter-spacing: -0.025em;
 }
 
 /* Sections on app pages sit closer together than on a portfolio page. */
@@ -302,6 +286,11 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* A button that is busy is aria-disabled for the same reason, and looks the same. Gesso dims
+   an upgraded button by itself, a little less; this also covers the plain HTML before the
+   upgrade, where the button sets its own cursor. */
+art-button:has(> [aria-disabled="true"]) { opacity: 0.4; }
+art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
 /* Under the row, in line with the title. Above the row's toggle, so tapping it doesn't unfold. */
 .wish-tick-message {
   position: relative;
@@ -362,40 +351,7 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
     padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
   }
 }
-.tapes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin-block-start: auto; padding-block-start: var(--space-2); }
-.clamp { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-
-.wish { display: grid; gap: var(--space-8); }
-@media (width >= 48rem) {
-  .wish.has-image { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
-}
-.wish-image {
-  inline-size: 100%;
-  block-size: auto;
-  max-block-size: 28rem;
-  object-fit: contain;
-  background: var(--surface-sunken);
-  border-radius: var(--radius-canvas);
-  box-shadow: var(--shadow-card);
-}
 .wish-text { white-space: pre-line; overflow-wrap: anywhere; }
-.wish-body { display: grid; gap: var(--space-6); justify-items: start; }
-
-/* Candidate for Gesso: "2 of 3", as words with a bar under them. */
-.amount { display: grid; gap: var(--space-2); font-weight: var(--weight-medium); }
-.amount progress {
-  appearance: none;
-  border: 0 solid;
-  overflow: clip;
-  inline-size: min(100%, 16rem);
-  block-size: 0.5rem;
-  border-radius: var(--radius-round);
-  background: var(--surface-sunken);
-  box-shadow: inset 0 0 0 1px var(--rule);
-}
-.amount progress::-webkit-progress-bar { background: transparent; }
-.amount progress::-webkit-progress-value { background: var(--accent); }
-.amount progress::-moz-progress-bar { background: var(--accent); }
 
 .people { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
 .people > li { display: flex; align-items: center; gap: var(--space-3); max-inline-size: none; }
@@ -411,13 +367,8 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .image-picker { display: grid; gap: var(--space-3); justify-items: start; }
 .image-picker img { max-inline-size: 16rem; max-block-size: 12rem; object-fit: contain; border-radius: var(--radius-canvas); box-shadow: var(--shadow-card); }
 
-/* A band that is one column at every width: a form, a single wish. */
+/* A band that is one column at every width: a form, or the error page. */
 .band.wide > .inner { padding-block: var(--space-12) var(--space-16); }
-
-/* The first card of an odd number spans the row (Gesso's rule). With a picture that would be
-   very tall, so its picture is cropped wider. */
-.card-grid > :first-child:nth-last-child(odd) art-canvas::part(media) { aspect-ratio: 16 / 6; }
-.card-grid > li > art-canvas { block-size: 100%; }
 
 fieldset.field { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 fieldset.field > legend { padding: 0; font-weight: var(--weight-medium); margin-block-end: var(--space-2); }

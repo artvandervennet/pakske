@@ -103,11 +103,18 @@ async function stopRenaming() {
 // Deleting the list asks first. Afterwards the owner goes home, where it is gone.
 const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
 const deleteError = ref('')
+const deleting = ref(false)
+
+function askToDelete() {
+  if (!deleting.value) deleteDialog.value?.showModal()
+}
+
 async function onDeleteDialogClose() {
   // Escape sets no value, and browsers differ on whether it clears the last one: reset it.
   const choice = deleteDialog.value?.returnValue
   if (deleteDialog.value) deleteDialog.value.returnValue = ''
-  if (choice !== 'delete') return
+  if (choice !== 'delete' || deleting.value) return
+  deleting.value = true
   deleteError.value = ''
   try {
     await $fetch(`/api/lists/${token.value}`, { method: 'DELETE' })
@@ -115,6 +122,9 @@ async function onDeleteDialogClose() {
   }
   catch (error) {
     deleteError.value = parse(error).message
+  }
+  finally {
+    deleting.value = false
   }
 }
 
@@ -143,6 +153,8 @@ async function addWish(title: string) {
   <div>
     <PageHead :title="list.title" :lead="list.viewerOwnsList ? null : t('list.owners', { names: owners })">
       <template v-if="renaming" #title>
+        <!-- The page keeps its heading while the visible title is a field. -->
+        <h1 class="visually-hidden">{{ list.title }}</h1>
         <form ref="renameForm" class="title-edit" novalidate @submit.prevent="rename">
           <p v-if="renameMessage" class="form-message" role="alert">{{ renameMessage }}</p>
           <FormField id="list-title" v-slot="field" :label="t('list.renameLabel')" :error="renameErrors.title">
@@ -178,7 +190,7 @@ async function addWish(title: string) {
             <button ref="renameButton" type="button" @click="startRenaming">{{ t('list.rename') }}</button>
           </art-button>
           <art-button variant="quiet">
-            <button type="button" @click="deleteDialog?.showModal()">{{ t('list.delete') }}</button>
+            <button type="button" :aria-disabled="deleting || undefined" @click="askToDelete">{{ t('list.delete') }}</button>
           </art-button>
         </template>
       </template>

@@ -8,7 +8,6 @@ defineProps<{ title: string, lead?: string | null }>()
 <template>
   <div class="band page-head" data-paint="deep">
     <div class="inner">
-      <slot name="crumb" />
       <slot name="title">
         <h1>{{ title }}</h1>
       </slot>

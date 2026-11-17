@@ -57,17 +57,9 @@
   "item": {
     "unlimited": "No limit",
     "wanted": "{n} wanted",
-    "notBought": "Not bought yet",
-    "bought": "Bought",
-    "someBought": "{bought} of {wanted} bought",
-    "allBought": "All {wanted} bought",
-    "overBought": "{bought} bought, {wanted} wanted",
-    "countBought": "{bought} bought",
     "removed": "Taken off the list",
     "viewOn": "View on {host}",
-    "edit": "Edit",
     "delete": "Delete",
-    "back": "Back to the list",
     "deleteTitle": "Delete \"{title}\"?",
     "deleteBody": "The wish disappears from your list. You can't undo this.",
     "deleteConfirm": "Delete",
@@ -75,16 +67,7 @@
   },
   "purchase": {
     "title": "Who is buying this?",
-    "none": "Nobody yet.",
-    "you": "You",
-    "label": "How many are you buying?",
-    "buy": "I'm buying this",
-    "save": "Save amount",
-    "remove": "I'm not buying this anymore",
-    "saved": "Saved.",
-    "removedDone": "You're no longer buying this.",
-    "left": "None left | {n} left | {n} left",
-    "removedItem": "{name} took this off the list. You can only lower your amount or remove it."
+    "you": "You"
   },
   "tick": {
     "box": "I'm getting {title}",
@@ -105,13 +88,11 @@
   "notes": {
     "title": "Notes for the other buyers",
     "hint": "Not visible to {names}.",
-    "empty": "No notes yet.",
     "label": "Note",
     "add": "Post note",
     "delete": "Delete"
   },
   "form": {
-    "newTitle": "New wish",
     "editTitle": "Edit \"{title}\"",
     "title": "Title",
     "description": "Description",
@@ -190,7 +171,6 @@
   },
   "fields": {
     "required": "Fill this in.",
-    "too_short": "That is too short.",
     "too_long": "That is too long.",
     "invalid_email": "That isn't a valid email address.",
     "password_short": "Choose a password of at least 10 characters.",

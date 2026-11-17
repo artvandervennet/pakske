@@ -56,6 +56,11 @@ const { form, pending, message, errors, run } = useForm(async () => {
 
 const shownMessage = computed(() => message.value || imageMessage.value)
 
+// Closing mid-save would take the form away before a failed picture could say so.
+function cancel() {
+  if (!pending.value) emit('closed')
+}
+
 // Deleting asks first, in a native dialog with the safe button focused.
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 const deleting = ref(false)
@@ -168,7 +173,7 @@ async function onDialogClose() {
           <button type="submit" :aria-disabled="pending || undefined">{{ pending ? t('form.saving') : t('form.save') }}</button>
         </art-button>
         <art-button variant="secondary">
-          <button type="button" @click="emit('closed')">{{ t('form.cancel') }}</button>
+          <button type="button" :aria-disabled="pending || undefined" @click="cancel">{{ t('form.cancel') }}</button>
         </art-button>
         <art-button variant="quiet">
           <button type="button" :aria-disabled="deleting || undefined" @click="askToDelete">{{ t('item.delete') }}</button>

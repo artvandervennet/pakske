@@ -57,17 +57,9 @@
   "item": {
     "unlimited": "Onbeperkt",
     "wanted": "{n} gevraagd",
-    "notBought": "Nog niet gekocht",
-    "bought": "Gekocht",
-    "someBought": "{bought} van {wanted} gekocht",
-    "allBought": "Alle {wanted} gekocht",
-    "overBought": "{bought} gekocht, {wanted} gevraagd",
-    "countBought": "{bought} gekocht",
     "removed": "Van de lijst gehaald",
     "viewOn": "Bekijk op {host}",
-    "edit": "Bewerken",
     "delete": "Verwijderen",
-    "back": "Terug naar de lijst",
     "deleteTitle": "\"{title}\" verwijderen?",
     "deleteBody": "De wens verdwijnt van je lijst. Dat kun je niet ongedaan maken.",
     "deleteConfirm": "Verwijderen",
@@ -75,16 +67,7 @@
   },
   "purchase": {
     "title": "Wie koopt dit?",
-    "none": "Nog niemand.",
-    "you": "Jij",
-    "label": "Hoeveel koop jij?",
-    "buy": "Ik koop dit",
-    "save": "Aantal opslaan",
-    "remove": "Ik koop dit niet meer",
-    "saved": "Opgeslagen.",
-    "removedDone": "Je koopt dit niet meer.",
-    "left": "Niets meer over | Nog {n} over | Nog {n} over",
-    "removedItem": "{name} haalde dit van de lijst. Je kunt je aantal alleen nog verlagen of weghalen."
+    "you": "Jij"
   },
   "tick": {
     "box": "Ik koop {title}",
@@ -105,13 +88,11 @@
   "notes": {
     "title": "Notities voor de andere kopers",
     "hint": "Niet zichtbaar voor {names}.",
-    "empty": "Nog geen notities.",
     "label": "Notitie",
     "add": "Notitie plaatsen",
     "delete": "Verwijderen"
   },
   "form": {
-    "newTitle": "Nieuwe wens",
     "editTitle": "\"{title}\" bewerken",
     "title": "Titel",
     "description": "Beschrijving",
@@ -190,7 +171,6 @@
   },
   "fields": {
     "required": "Vul dit in.",
-    "too_short": "Dat is te kort.",
     "too_long": "Dat is te lang.",
     "invalid_email": "Dat is geen geldig e-mailadres.",
     "password_short": "Kies een wachtwoord van minstens 10 tekens.",
