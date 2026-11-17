@@ -79,3 +79,18 @@ export interface ListView {
   deleted: boolean
   wishes: WishView[]
 }
+
+/** A list someone else owns that this person opened before. */
+export interface OpenedList {
+  token: string
+  title: string
+  /** Display names of the list's owners. */
+  owners: string[]
+  deleted: boolean
+}
+
+/** What the home page shows: the lists a person owns and the ones they opened. */
+export interface HomeView {
+  owned: HomeList[]
+  opened: OpenedList[]
+}
