@@ -3,8 +3,7 @@ import type { WishView } from '#shared/schemas/list'
 
 // What an unfolded row shows to someone who doesn't own the wish: the text and the shop link,
 // and for a buyer who is buying it and the notes. A visitor who isn't logged in gets a way to
-// log in that brings them back to this row. An owner sees the text and the link here until
-// their row gets its editor.
+// log in that brings them back to this row. An owner gets WishEditor instead.
 const props = defineProps<{ wish: WishView, token: string, owners: string, ownerCount: number }>()
 const emit = defineEmits<{ changed: [] }>()
 
@@ -44,7 +43,5 @@ const loginLink = computed(() => ({
       {{ t('wish.anonHint') }}
       <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
     </p>
-
-    <p v-else-if="!wish.description && !host" class="muted">{{ t('wish.nothingMore') }}</p>
   </div>
 </template>

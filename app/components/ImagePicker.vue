@@ -9,6 +9,8 @@
 const props = defineProps<{ current: string | null }>()
 const model = defineModel<Blob | null | undefined>()
 const { t } = useI18n()
+// Several wishes can be open for editing at once, each with its own picker.
+const id = useId()
 
 const error = ref('')
 const input = ref<HTMLInputElement>()
@@ -51,11 +53,11 @@ onBeforeUnmount(() => setPreview(null))
 </script>
 
 <template>
-  <FormField id="image" v-slot="field" :label="t('form.image')" :hint="t('form.imageHint')" :error="error">
+  <FormField :id="id" v-slot="field" :label="t('form.image')" :hint="t('form.imageHint')" :error="error">
     <div class="image-picker">
       <img v-if="shown" :src="shown" :alt="t('form.imageAlt')">
       <input
-        id="image"
+        :id="id"
         ref="input"
         type="file"
         name="image"

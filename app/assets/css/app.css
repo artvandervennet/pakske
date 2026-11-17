@@ -82,6 +82,14 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .page-head .actions { margin-block-start: var(--space-6); }
 .page-head .crumb { display: inline-block; margin-block-end: var(--space-4); font-size: var(--step--1); }
 
+/* Candidate for Gesso: a page's title that becomes a field to rename it, in the title's own
+   type, with Save and Cancel under it. */
+.title-edit { display: grid; gap: var(--space-4); max-inline-size: 40rem; }
+.title-edit input {
+  inline-size: 100%;
+  font: var(--weight-regular) var(--step-3)/var(--leading-tight) var(--font-display);
+}
+
 /* Sections on app pages sit closer together than on a portfolio page. */
 .section > .inner { padding-block: var(--space-12) var(--space-16); }
 .section-head > .actions { margin-block-start: var(--space-6); }

@@ -36,14 +36,22 @@
     "wishes": "Wensen",
     "add": "Voeg iets toe…",
     "empty": "Er staat nog niets op deze lijst.",
-    "deleted": "{names} heeft deze lijst verwijderd. Wat al gekocht was, blijft hier staan. | {names} hebben deze lijst verwijderd. Wat al gekocht was, blijft hier staan."
+    "deleted": "{names} heeft deze lijst verwijderd. Wat al gekocht was, blijft hier staan. | {names} hebben deze lijst verwijderd. Wat al gekocht was, blijft hier staan.",
+    "rename": "Naam wijzigen",
+    "renameLabel": "Naam van de lijst",
+    "renameSave": "Naam opslaan",
+    "renameCancel": "Annuleren",
+    "delete": "Lijst verwijderen",
+    "deleteTitle": "\"{title}\" verwijderen?",
+    "deleteBody": "De lijst verdwijnt, met alle wensen erop. Dat kun je niet ongedaan maken.",
+    "deleteConfirm": "Lijst verwijderen",
+    "deleteCancel": "Annuleren"
   },
   "wish": {
     "yours": "Je hebt dit zelf | Je hebt er zelf {n}",
     "left": "niets meer over | nog {n} over | nog {n} over",
     "nobody": "Nog niemand koopt dit.",
     "anonHint": "Log in om te zien wie dit al koopt en om notities te lezen.",
-    "nothingMore": "Nog geen tekst of link.",
     "removedIntro": "{names} haalde dit van de lijst nadat iemand het kocht. Het blijft hier staan zodat jullie het kunnen afspreken. | {names} haalden dit van de lijst nadat iemand het kocht. Het blijft hier staan zodat jullie het kunnen afspreken."
   },
   "item": {
@@ -91,7 +99,7 @@
     "taken": "Iemand heeft dit al.",
     "notEnough": "Zoveel zijn er niet meer over.",
     "gone": "Dat bestaat niet meer.",
-    "removed": "Dit is van de lijst gehaald.",
+    "removed": "Dit staat niet meer op de lijst. Je kunt alleen je eigen aantal nog verlagen of weghalen.",
     "goneFromList": "\"{title}\" bestaat niet meer en is van de lijst verdwenen."
   },
   "notes": {
@@ -104,7 +112,7 @@
   },
   "form": {
     "newTitle": "Nieuwe wens",
-    "editTitle": "Wens bewerken",
+    "editTitle": "\"{title}\" bewerken",
     "title": "Titel",
     "description": "Beschrijving",
     "descriptionHint": "Kleur, maat, waarom je het wilt. Mag leeg blijven.",
@@ -114,6 +122,7 @@
     "imageHint": "JPEG, PNG of WebP. Grote foto's worden verkleind.",
     "imageRemove": "Afbeelding weghalen",
     "imageAlt": "Gekozen afbeelding",
+    "imageNotSaved": "De wens is opgeslagen, de afbeelding niet.",
     "amount": "Aantal",
     "unlimited": "Geen limiet",
     "unlimitedHint": "Voor dingen waar je er nooit genoeg van hebt, zoals puzzels.",

@@ -36,14 +36,22 @@
     "wishes": "Wishes",
     "add": "Add something…",
     "empty": "There is nothing on this list yet.",
-    "deleted": "{names} deleted this list. What was already bought stays here. | {names} deleted this list. What was already bought stays here."
+    "deleted": "{names} deleted this list. What was already bought stays here. | {names} deleted this list. What was already bought stays here.",
+    "rename": "Change name",
+    "renameLabel": "Name of the list",
+    "renameSave": "Save name",
+    "renameCancel": "Cancel",
+    "delete": "Delete list",
+    "deleteTitle": "Delete \"{title}\"?",
+    "deleteBody": "The list disappears, with every wish on it. You can't undo this.",
+    "deleteConfirm": "Delete list",
+    "deleteCancel": "Cancel"
   },
   "wish": {
     "yours": "You got this yourself | You got {n} yourself",
     "left": "none left | {n} left | {n} left",
     "nobody": "Nobody is buying this yet.",
     "anonHint": "Log in to see who is buying this and to read the notes.",
-    "nothingMore": "No text or link yet.",
     "removedIntro": "{names} took this off the list after someone bought it. It stays here so you can sort it out. | {names} took this off the list after someone bought it. It stays here so you can sort it out."
   },
   "item": {
@@ -91,7 +99,7 @@
     "taken": "Someone already has this.",
     "notEnough": "There aren't that many left.",
     "gone": "That no longer exists.",
-    "removed": "This was taken off the list.",
+    "removed": "This is no longer on the list. You can only lower or remove your own amount.",
     "goneFromList": "\"{title}\" no longer exists and has gone from the list."
   },
   "notes": {
@@ -104,7 +112,7 @@
   },
   "form": {
     "newTitle": "New wish",
-    "editTitle": "Edit wish",
+    "editTitle": "Edit \"{title}\"",
     "title": "Title",
     "description": "Description",
     "descriptionHint": "Colour, size, why you want it. You can leave this empty.",
@@ -114,6 +122,7 @@
     "imageHint": "JPEG, PNG or WebP. Large photos are made smaller.",
     "imageRemove": "Remove image",
     "imageAlt": "Chosen image",
+    "imageNotSaved": "The wish is saved, but its image isn't.",
     "amount": "Amount",
     "unlimited": "No limit",
     "unlimitedHint": "For things you can never have enough of, like puzzles.",
