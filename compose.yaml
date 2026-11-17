@@ -1,0 +1,22 @@
+# The wishlist on a Raspberry Pi (or any Docker host).
+#
+#   cp .env.example .env      # then fill in NUXT_APP_SECRET
+#   docker compose up -d --build
+#
+# The database and the uploaded images live in the `wishlist-data` volume.
+services:
+  wishlist:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NUXT_APP_SECRET: ${NUXT_APP_SECRET:?Set NUXT_APP_SECRET in .env (see .env.example)}
+      NUXT_SESSION_COOKIE_SECURE: ${NUXT_SESSION_COOKIE_SECURE:-true}
+      NUXT_TRUST_PROXY: ${NUXT_TRUST_PROXY:-false}
+      NUXT_MAX_USERS: ${NUXT_MAX_USERS:-200}
+    volumes:
+      - wishlist-data:/data
+
+volumes:
+  wishlist-data:

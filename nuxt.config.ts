@@ -1,0 +1,58 @@
+const isProd = process.env.NODE_ENV === 'production'
+
+// Sets the saved colour scheme before the stylesheets apply, so the page never flashes the wrong one.
+// <art-scheme remember> writes the same key.
+const schemeScript = `try{document.documentElement.dataset.scheme=localStorage.getItem('gesso-scheme')||'auto'}catch{}`
+
+export default defineNuxtConfig({
+  compatibilityDate: '2026-11-01',
+  devtools: { enabled: false },
+  // Not 3000: on this machine another project's Docker container already publishes that port,
+  // and a browser that picks IPv4 for "localhost" would reach that container.
+  devServer: { port: 3400 },
+  modules: ['nuxt-auth-utils', '@nuxtjs/i18n'],
+  css: ['~/assets/css/main.css'],
+
+  vue: {
+    compilerOptions: {
+      // Gesso's components are native custom elements, registered in app/plugins/gesso.client.ts.
+      isCustomElement: tag => tag.startsWith('art-'),
+    },
+  },
+
+  app: {
+    head: {
+      meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'robots', content: 'noindex, nofollow' },
+      ],
+      script: [{ innerHTML: schemeScript, tagPosition: 'head' }],
+    },
+  },
+
+  runtimeConfig: {
+    // NUXT_DATA_DIR: where the SQLite file and the uploaded images live.
+    dataDir: '.data',
+    // NUXT_MAX_USERS: registration closes when this many accounts exist.
+    maxUsers: 200,
+    // NUXT_TRUST_PROXY=true when a reverse proxy of yours sets X-Forwarded-For and X-Forwarded-Host.
+    trustProxy: false,
+    session: {
+      maxAge: 60 * 60 * 24 * 60,
+      // NUXT_SESSION_COOKIE_SECURE=false when the site is served over plain http.
+      cookie: { secure: isProd },
+    },
+  },
+
+  i18n: {
+    defaultLocale: 'nl',
+    strategy: 'prefix_except_default',
+    detectBrowserLanguage: false,
+    locales: [
+      { code: 'nl', language: 'nl-BE', name: 'Nederlands', file: 'nl.json' },
+      { code: 'en', language: 'en-GB', name: 'English', file: 'en.json' },
+    ],
+  },
+
+  typescript: { strict: true },
+})

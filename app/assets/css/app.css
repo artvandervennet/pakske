@@ -1,0 +1,162 @@
+/* App styles on top of Gesso. Everything here is written against Gesso's role tokens, so it
+   follows the theme and the colour scheme. The blocks marked "candidate for Gesso" fill gaps
+   in the design system and could move there. */
+
+/* ── Before the components load ───────────────────────────────────────────
+   The server sends plain buttons, links and headings. These rules give them roughly their
+   final shape, so the page doesn't jump when the custom elements upgrade. */
+art-button:not(:defined) { display: inline-block; vertical-align: middle; }
+art-button:not(:defined) > :is(a, button) {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-6);
+  font: var(--weight-bold) var(--step-0)/1.2 var(--font-body);
+  border-radius: var(--radius-dab);
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+art-button[size="s"]:not(:defined) > :is(a, button) {
+  min-block-size: 2.25rem;
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--step--1);
+}
+art-button[variant="secondary"]:not(:defined) > :is(a, button) {
+  background: transparent;
+  color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+art-button[variant="quiet"]:not(:defined) > :is(a, button) {
+  background: transparent;
+  color: var(--accent);
+  padding-inline: var(--space-3);
+  text-decoration: underline;
+}
+art-canvas:not(:defined) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  background: var(--surface-raised);
+  border-radius: var(--radius-canvas);
+  box-shadow: var(--shadow-card);
+}
+art-canvas:not(:defined) > [slot="media"] {
+  inline-size: calc(100% + 2 * var(--space-6));
+  max-inline-size: none;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-6)) var(--space-2);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-ratio: 1; }
+art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-block-size: 2.25rem; }
+
+/* ── Page head ────────────────────────────────────────────────────────────
+   Every page opens with a band in the deep paint. On the home page that is Gesso's hero;
+   on the other pages it is this quieter title band. */
+.page-head .inner { padding-block: var(--space-12) var(--space-8); }
+.page-head h1 { font-size: var(--step-4); line-height: var(--leading-tight); text-wrap: balance; }
+.page-head .lead { margin-block-start: var(--space-4); }
+.page-head .actions { margin-block-start: var(--space-6); }
+.page-head .crumb { display: inline-block; margin-block-end: var(--space-4); font-size: var(--step--1); }
+
+/* Sections on app pages sit closer together than on a portfolio page. */
+.section > .inner { padding-block: var(--space-12) var(--space-16); }
+.section-head > .actions { margin-block-start: var(--space-6); }
+
+/* The footer follows a section in another paint here, so it needs room of its own above. */
+.page-footer .inner { padding-block-start: var(--space-12); }
+.page-footer nav { display: flex; gap: var(--space-4); align-items: baseline; }
+
+/* ── Forms ────────────────────────────────────────────────────────────────*/
+.form { display: grid; gap: var(--space-6); max-inline-size: 34rem; }
+.field { display: grid; gap: var(--space-2); }
+.field > .hint { font-size: var(--step--1); color: var(--ink-muted); }
+.field.inline { grid-template-columns: auto 1fr; align-items: center; column-gap: var(--space-3); }
+.field input[type="number"] { max-inline-size: 8rem; }
+.form > .actions { margin-block-start: var(--space-2); }
+
+/* Candidate for Gesso: a field that failed validation. The message under it says how to fix
+   it; the border is the second signal, never the only one. */
+:is(input, textarea, select)[aria-invalid="true"] { border-color: var(--danger); border-width: 2px; }
+.field > .error { font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--danger); }
+
+/* Candidate for Gesso: what a form says back when it worked. */
+.form-message[role="status"] {
+  border-inline-start: 4px solid var(--success);
+  padding-inline-start: var(--space-3);
+}
+.form-message:empty { display: none; }
+
+/* ── Wishes ───────────────────────────────────────────────────────────────*/
+.tapes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin-block-start: auto; padding-block-start: var(--space-2); }
+.clamp { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.wish { display: grid; gap: var(--space-8); }
+@media (width >= 48rem) {
+  .wish.has-image { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+}
+.wish-image {
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 28rem;
+  object-fit: contain;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-canvas);
+  box-shadow: var(--shadow-card);
+}
+.wish-text { white-space: pre-line; overflow-wrap: anywhere; }
+.wish-body { display: grid; gap: var(--space-6); justify-items: start; }
+
+/* Candidate for Gesso: "2 of 3", as words with a bar under them. */
+.amount { display: grid; gap: var(--space-2); font-weight: var(--weight-medium); }
+.amount progress {
+  appearance: none;
+  border: 0 solid;
+  overflow: clip;
+  inline-size: min(100%, 16rem);
+  block-size: 0.5rem;
+  border-radius: var(--radius-round);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.amount progress::-webkit-progress-bar { background: transparent; }
+.amount progress::-webkit-progress-value { background: var(--accent); }
+.amount progress::-moz-progress-bar { background: var(--accent); }
+
+.people { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
+.people > li { display: flex; align-items: center; gap: var(--space-3); max-inline-size: none; }
+.people .count { margin-inline-start: auto; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+
+.note { display: grid; gap: var(--space-2); }
+.note > header { display: flex; align-items: center; gap: var(--space-3); font-size: var(--step--1); color: var(--ink-muted); }
+.note > header strong { color: var(--ink); }
+.note > header art-button { margin-inline-start: auto; }
+.note > p { white-space: pre-line; overflow-wrap: anywhere; }
+
+.person-card { display: flex; align-items: center; gap: var(--space-4); }
+.person-card h3 { font-size: var(--step-1); }
+
+/* The image picker: the chosen picture, then the buttons. */
+.image-picker { display: grid; gap: var(--space-3); justify-items: start; }
+.image-picker img { max-inline-size: 16rem; max-block-size: 12rem; object-fit: contain; border-radius: var(--radius-canvas); box-shadow: var(--shadow-card); }
+
+/* A band that is one column at every width: a form, a single wish. */
+.band.wide > .inner { padding-block: var(--space-12) var(--space-16); }
+
+/* The first card of an odd number spans the row (Gesso's rule). With a picture that would be
+   very tall, so its picture is cropped wider. */
+.card-grid > :first-child:nth-last-child(odd) art-canvas::part(media) { aspect-ratio: 16 / 6; }
+.card-grid > li > art-canvas { block-size: 100%; }
+
+fieldset.field { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+fieldset.field > legend { padding: 0; font-weight: var(--weight-medium); margin-block-end: var(--space-2); }
+
+/* A modal dialog keeps scroll gestures to itself, so the page behind it stays where it is. */
+dialog:modal { overscroll-behavior: contain; }
+dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
+
+.dialog h2 { font-size: var(--step-2); overflow-wrap: anywhere; }

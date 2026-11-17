@@ -1,0 +1,7 @@
+{
+  "id": "ribbon",
+  "label": "Ribbon",
+  "brand":      { "name": "Perylene maroon", "code": "PR179", "oklch": [38, 0.11, 20] },
+  "partner":    { "name": "Nickel yellow",   "code": "PY53",  "oklch": [89, 0.10, 100] },
+  "complement": { "name": "Cobalt teal",     "code": "PG50",  "oklch": [58, 0.10, 190] }
+}
