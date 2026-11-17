@@ -101,6 +101,11 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .section > .inner { padding-block: var(--space-12) var(--space-16); }
 .section-head > .actions { margin-block-start: var(--space-6); }
 
+/* On a short page the footer sits at the bottom of the screen; a long page scrolls as usual.
+   Nuxt mounts the layout's header, main and footer as children of #__nuxt. */
+#__nuxt { display: flex; flex-direction: column; min-block-size: 100svh; }
+#main { flex: 1 0 auto; }
+
 /* The footer follows a section in another paint here, so it needs room of its own above. */
 .page-footer .inner { padding-block-start: var(--space-12); }
 .page-footer nav { display: flex; gap: var(--space-4); align-items: baseline; }
