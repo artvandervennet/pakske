@@ -59,6 +59,7 @@ req anon GET /api/me; check "the account endpoint needs a login" 401
 req art GET /api/me; check "art reads the account" 200; has "… with the email" '"email":"art@example.test"'; has "… and the display name" '"displayName":"Art"'
 req art PATCH /api/me '{"displayName":"Arthur"}'; check "art changes the display name" 200; has "… and gets it back" '"displayName":"Arthur"'
 req art PATCH /api/me '{"displayName":"Art"}'; check "… and changes it back" 200
+req art GET /api/_auth/session; check "the page asks who is logged in" 200; has "… and it is art" '"displayName":"Art"'
 
 echo "── lists"
 req art POST /api/lists '{"title":"Verjaardag"}'; check "art makes a list" 201; TOKEN=$(json .token)
@@ -154,6 +155,16 @@ if cmp -s "$BODY" "$TMP/anon-before"; then ok "the visitor's list is byte for by
 curl -s -D "$TMP/headers" -o /dev/null -b "$TMP/art.jar" "$BASE/api/lists/$TOKEN"
 if grep -qi 'cache-control: private, no-store' "$TMP/headers"; then ok "the list is never cached"; else bad "cache-control missing"; fi
 
+echo "── the page Nuxt renders for each viewer"
+# The page carries the API's answer in its HTML. Fetched as a page, it may hold no more than the API gave.
+page() { STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/$1.jar" -c "$TMP/$1.jar" "$BASE/l/$TOKEN"); }
+page art; check "art opens the page of his list" 200
+for secret in Moeke Zus geheimpje; do lacks "… and the HTML has no '$secret'" "$secret"; done
+page page-visitor; check "a visitor opens the page" 200
+for secret in Moeke Zus geheimpje; do lacks "… and the HTML has no '$secret'" "$secret"; done
+page sis; check "sis opens the page" 200
+has "… and the HTML names mom, who bought" Moeke; has "… and holds mom's note" geheimpje
+
 echo "── the owner ticks his own wishes"
 req art PUT "/api/lists/$TOKEN/wishes/$BOOK/purchase" '{"quantity":1}'; check "art ticks his own free wish" 204
 req art GET "/api/lists/$TOKEN"; has "… and his list shows it as his" '"mine":1'
@@ -164,7 +175,9 @@ if printf %s "$REFUSAL" | grep -q 'Moeke'; then bad "the refusal names mom: $REF
 if printf %s "$REFUSAL" | grep -q '[0-9]'; then bad "the refusal holds a number: $REFUSAL"; else ok "… and holds no number"; fi
 
 echo "── the owner changes things buyers already acted on"
-req art PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{"title":"Slimme stekkers","description":"Zigbee","url":"https://example.test/plug","quantity":2}'; check "art lowers the amount below what is bought" 200; has "… and gets the wish back" '"quantity":2'
+req art PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{"quantity":2}'; check "art lowers the amount below what is bought, sending only the amount" 200; has "… and gets the wish back" '"quantity":2'
+has "… with its text kept" '"description":"Zigbee"'; has "… and its link" '"url":"https://example.test/plug"'
+req art PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{}'; check "a change that names no field is refused" 422
 req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "art deletes the bought wish" 204
 req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "a second delete finds nothing" 404
 req art DELETE "/api/lists/$TOKEN/wishes/$PUZZLES"; check "art deletes another bought wish, same answer" 204

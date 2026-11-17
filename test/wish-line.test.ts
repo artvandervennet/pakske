@@ -59,7 +59,7 @@ describe("a row's second line", () => {
     expect(wishLine(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toBe('Moeke · [wish.left 0]')
   })
 
-  it('says nothing is left to a buyer when the wish is unlimited', () => {
+  it('says nothing about what is left to a buyer when the wish is unlimited', () => {
     expect(wishLine(buyer(null, [{ name: 'Moeke', quantity: 5, mine: false }]), t)).toBe('Moeke 5')
   })
 

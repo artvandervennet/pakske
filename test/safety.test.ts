@@ -6,7 +6,7 @@ const ORIGIN = 'https://wishlist.example'
 
 describe('where the login page sends someone afterwards', () => {
   it('keeps a path on this site, with its query', () => {
-    expect(safeNextPath('/u/art/3?x=1', ORIGIN)).toBe('/u/art/3?x=1')
+    expect(safeNextPath('/l/AbCdEfGhIjKlMnOpQrStUv?x=1', ORIGIN)).toBe('/l/AbCdEfGhIjKlMnOpQrStUv?x=1')
   })
 
   it.each([
@@ -15,7 +15,7 @@ describe('where the login page sends someone afterwards', () => {
     ['a backslash the browser reads as a slash', '/\\evil.example'],
     ['a tab the browser drops', '/\t/evil.example'],
     ['a script', 'javascript:alert(1)'],
-    ['something that is not text', ['/u/art']],
+    ['something that is not text', ['/l/AbCdEfGhIjKlMnOpQrStUv']],
     ['nothing', undefined],
   ])('refuses %s', (_name, value) => {
     expect(safeNextPath(value, ORIGIN)).toBeNull()

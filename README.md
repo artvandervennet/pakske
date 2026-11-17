@@ -41,7 +41,7 @@ The server decides this per wish, not per list. Each wish has its own owners in 
 
 The page shows whatever the API returned, so the HTML that Nuxt renders on the server can't contain more than the person may see.
 
-Every request about a wish goes through a list link: the URL names the list's token, and the wish must be on that list (`wishOnList` in `server/domain/purchases.ts`). A wish's number alone gives no access.
+Every request about a wish goes through a list link: the URL names the list's token, and the wish must be on that list (`wishOnList` in `server/domain/purchases.ts`). A wish's number alone gives no access. The one request that names no list is deleting your own note: it goes by the note's random id, and only its author gets anything but "not found".
 
 An owner can tick their own wish. Before every tick or higher number the site asks "You might find out that someone already got this. Continue?"; unticking and lowering don't ask. When not enough are left, the owner reads "Someone already has this" or "There aren't that many left" and nothing is recorded. The server answers with a code only, so the refusal names nobody and gives no number. The owner's row never says how many are left, and its + is always enabled.
 
@@ -96,6 +96,14 @@ docker compose up -d --build
 
 New migrations run when the server starts.
 
+A database made by the first version, from before private lists, can't be upgraded: the server stops at start with a "table already exists" error. Remove the old `wishlist.db` and its `wishlist.db-wal` and `wishlist.db-shm` files from the data folder (in Docker, the volume `wishlist-data`) and start again. Accounts and wishes from the first version are not carried over.
+
+```sh
+docker compose down
+docker compose run --rm -u root wishlist sh -c 'rm -f /data/wishlist.db /data/wishlist.db-wal /data/wishlist.db-shm'
+docker compose up -d --build
+```
+
 ### Back up
 
 Everything is in the volume: `wishlist.db` and the `uploads/` folder. This copies both into `backup/` while the site keeps running:
@@ -148,11 +156,11 @@ server/
   utils/        database handle, HTTP helpers, rate limiter, uploads, the cookie of opened lists
 shared/
   schemas/      zod schemas for what comes in and what goes out
-  utils/        the words on a row and what a tick may do, shared by the page and the tests
+  utils/        the words on a row, the order of the rows and what a tick may do, shared by the page and the tests
 test/           unit tests and the API check
 ```
 
-- **Accounts**: `nuxt-auth-utils`, a sealed cookie session and scrypt password hashes. Registering asks for a name, an email address and a password.
+- **Accounts**: `nuxt-auth-utils`, a sealed cookie session and scrypt password hashes. Registering asks for a name, an email address and a password. The cookie holds the account's id and the moment the account was made; a cookie whose account is gone, or whose id now belongs to another account (after a restore, say), logs nobody in, for the API and the page alike (`sessionBelongsTo` in `server/domain/users.ts`).
 - **Lists**: a list has a title, one or more owners (`list_owners`) and a token of 16 random bytes in base64url, made by `newListToken` in `server/domain/tokens.ts`. The token is the list's address, `/l/<token>`, and the only way in: no page lists other people's lists. Owners rename a list (the address stays) and delete it. A wish is shown on a list through `list_wishes`.
 - **Remembered lists**: opening someone else's list puts it on your home page under "Lists you opened". Logged in, that is a row in `list_visits`. Logged out, its token goes into the `opened-lists` cookie (at most 50). A cookie and not local storage, because the server builds the home page. Logging in or registering moves the cookie's lists into the account and clears the cookie. "Remove" only takes a list off the home page; the link keeps working.
 - **Amounts**: a wish has a whole number or no limit (`quantity` is `NULL`). Adding one takes only a title; the amount starts at one. Each person has one purchase per wish with their own number. `setPurchase` in `server/domain/purchases.ts` checks the total in one synchronous transaction, so two buyers can't both take the last one.
