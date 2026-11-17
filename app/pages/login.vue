@@ -10,18 +10,18 @@ useHead({ title: () => t('auth.loginTitle') })
 const origin = useRequestURL().origin
 const next = computed(() => safeNextPath(route.query.next, origin))
 
-if (user.value) await navigateTo(next.value ?? localePath(`/u/${user.value.username}`))
+if (user.value) await navigateTo(next.value ?? localePath('/'))
 
 const email = useFieldValue('email')
 const password = useFieldValue('password')
 
 const { form, pending, message, errors, run } = useForm(async () => {
-  const account = await $fetch<{ username: string }>('/api/auth/login', {
+  await $fetch('/api/auth/login', {
     method: 'POST',
     body: { email: email.value, password: password.value },
   })
   // A full page load: everything on screen is then rendered for the person who just logged in.
-  window.location.assign(next.value ?? localePath(`/u/${account.username}`))
+  window.location.assign(next.value ?? localePath('/'))
 })
 </script>
 
@@ -54,7 +54,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
           </div>
           <p>
             {{ t('auth.noAccount') }}
-            <NuxtLink :to="localePath('/register')">{{ t('auth.register') }}</NuxtLink>
+            <NuxtLink :to="{ path: localePath('/register'), query: next ? { next } : {} }">{{ t('auth.register') }}</NuxtLink>
           </p>
         </form>
       </div>

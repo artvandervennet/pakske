@@ -18,7 +18,6 @@ async function logout() {
   <art-header :key="headerKey" :label="t('nav.label')" data-paint="deep">
     <NuxtLink slot="wordmark" :to="localePath('/')">{{ t('site.name') }}</NuxtLink>
     <NuxtLink :to="localePath('/')">{{ t('nav.lists') }}</NuxtLink>
-    <NuxtLink v-if="user" :to="localePath(`/u/${user.username}`)">{{ t('nav.myList') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
     <art-scheme slot="actions" remember />
     <art-button v-if="loggedIn" slot="actions" size="s" variant="secondary">

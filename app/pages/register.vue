@@ -1,42 +1,28 @@
 <script setup lang="ts">
 const { t } = useI18n()
 const localePath = useLocalePath()
+const route = useRoute()
 const { user } = useUserSession()
 
 useHead({ title: () => t('auth.registerTitle') })
 
-if (user.value) await navigateTo(localePath(`/u/${user.value.username}`))
+// Where to go once the account exists: only a path on this site, never another site.
+const origin = useRequestURL().origin
+const next = computed(() => safeNextPath(route.query.next, origin))
+
+if (user.value) await navigateTo(next.value ?? localePath('/'))
 
 const displayName = useFieldValue('name')
 const email = useFieldValue('email')
-const username = useFieldValue('list-address')
 const password = useFieldValue('new-password')
 
-// Suggest an address from the name until the person types their own.
-const usernameTouched = ref(username.value !== '')
-watch(displayName, (name) => {
-  if (usernameTouched.value) return
-  username.value = name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 30)
-}, { immediate: true })
-
-// The hint shows the address being typed. The server renders it without one, so the first
-// client render must too; after that it follows the field.
-const mounted = ref(false)
-onMounted(() => (mounted.value = true))
-const addressPreview = computed(() => `/u/${(mounted.value && username.value) || '…'}`)
-
 const { form, pending, message, errors, run } = useForm(async () => {
-  const account = await $fetch<{ username: string }>('/api/auth/register', {
+  await $fetch('/api/auth/register', {
     method: 'POST',
-    body: { displayName: displayName.value, email: email.value, username: username.value, password: password.value },
+    body: { displayName: displayName.value, email: email.value, password: password.value },
   })
-  window.location.assign(localePath(`/u/${account.username}`))
+  // A full page load: everything on screen is then rendered for the person who just registered.
+  window.location.assign(next.value ?? localePath('/'))
 })
 </script>
 
@@ -76,24 +62,6 @@ const { form, pending, message, errors, run } = useForm(async () => {
             >
           </FormField>
           <PasswordField id="new-password" v-model="password" :label="t('auth.password')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="10" :error="errors.password" />
-          <FormField id="list-address" v-slot="field" :label="t('auth.username')" :hint="t('auth.usernameHint', { address: addressPreview })" :error="errors.username">
-            <input
-              id="list-address"
-              v-model="username"
-              name="list-address"
-              type="text"
-              autocomplete="off"
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-              maxlength="30"
-              required
-              enterkeyhint="done"
-              :aria-describedby="field.describedBy"
-              :aria-invalid="field.invalid"
-              @input="usernameTouched = true"
-            >
-          </FormField>
           <div class="actions">
             <art-button>
               <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.register') }}</button>
@@ -101,7 +69,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
           </div>
           <p>
             {{ t('auth.haveAccount') }}
-            <NuxtLink :to="localePath('/login')">{{ t('auth.login') }}</NuxtLink>
+            <NuxtLink :to="{ path: localePath('/login'), query: next ? { next } : {} }">{{ t('auth.login') }}</NuxtLink>
           </p>
         </form>
       </div>

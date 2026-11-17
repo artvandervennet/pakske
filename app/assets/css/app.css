@@ -91,6 +91,64 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 }
 .form-message:empty { display: none; }
 
+/* ── Rows ─────────────────────────────────────────────────────────────────
+   Candidate for Gesso: a list of things as rows between thin rules, each a name with a
+   short line of detail and, at the end, what you can do with it. Gesso's .stack is for
+   cards; this is for lists you scan. */
+.rows { list-style: none; padding: 0; border-block-start: 1px solid var(--rule); }
+.rows > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  min-block-size: 3.5rem;
+  padding-block: var(--space-3);
+}
+.row-text { display: grid; flex: 1 1 12rem; min-inline-size: 0; }
+.row-title { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.row-meta { font-size: var(--step--1); color: var(--ink-muted); }
+.row > .row-title { flex: 1 1 12rem; }
+.empty + .rows { margin-block-start: var(--space-2); }
+.section-body > .form-message { margin-block: var(--space-4); }
+
+/* Candidate for Gesso: a row to add something by typing its name, with a + where the next
+   row's content starts. The field only shows its edge on hover and focus, so at rest it
+   reads as the last row of the list. */
+.quick-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 3.5rem;
+  padding-block: var(--space-2);
+}
+.quick-add-plus {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: var(--radius-dab);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font: var(--weight-bold) var(--step-1)/1 var(--font-body);
+  cursor: pointer;
+}
+.quick-add input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  background: transparent;
+  border-color: transparent;
+}
+.quick-add input:is(:hover, :focus) { border-color: var(--rule-strong); background: var(--surface-raised); }
+.quick-add input::placeholder { color: var(--ink-muted); opacity: 1; }
+.quick-add input[readonly] { color: var(--ink-muted); }
+
+/* Candidate for Gesso: a button that copies a link and says so beside it. */
+.share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.share-status { font-size: var(--step--1); font-weight: var(--weight-medium); }
+.share > .field { flex: 1 1 100%; }
+
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
 .tapes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin-block-start: auto; padding-block-start: var(--space-2); }
 .clamp { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -136,9 +194,6 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .note > header strong { color: var(--ink); }
 .note > header art-button { margin-inline-start: auto; }
 .note > p { white-space: pre-line; overflow-wrap: anywhere; }
-
-.person-card { display: flex; align-items: center; gap: var(--space-4); }
-.person-card h3 { font-size: var(--step-1); }
 
 /* The image picker: the chosen picture, then the buttons. */
 .image-picker { display: grid; gap: var(--space-3); justify-items: start; }

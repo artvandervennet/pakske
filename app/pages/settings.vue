@@ -9,12 +9,11 @@ useHead({ title: () => t('settings.title') })
 const { data: me } = await useFetch('/api/me')
 
 const displayName = ref(me.value?.displayName ?? '')
-const listIntro = ref(me.value?.listIntro ?? '')
 const profileSaved = ref('')
 
 const profile = useForm(async () => {
   profileSaved.value = ''
-  await $fetch('/api/me', { method: 'PATCH', body: { displayName: displayName.value, listIntro: listIntro.value } })
+  await $fetch('/api/me', { method: 'PATCH', body: { displayName: displayName.value } })
   await refreshSession()
   profileSaved.value = t('settings.saved')
 })
@@ -57,17 +56,6 @@ const password = useForm(async () => {
                 :aria-describedby="field.describedBy"
                 :aria-invalid="field.invalid"
               >
-            </FormField>
-            <FormField id="intro" v-slot="field" :label="t('settings.listIntro')" :hint="t('settings.listIntroHint')" :error="profile.errors.value.listIntro">
-              <textarea
-                id="intro"
-                v-model="listIntro"
-                name="intro"
-                rows="3"
-                maxlength="500"
-                :aria-describedby="field.describedBy"
-                :aria-invalid="field.invalid"
-              />
             </FormField>
             <div class="actions">
               <art-button>
