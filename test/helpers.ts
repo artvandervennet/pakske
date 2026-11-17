@@ -1,4 +1,5 @@
 import { openDb, type Db } from '../server/db/client'
+import { createList } from '../server/domain/lists'
 import { createUser } from '../server/domain/users'
 
 export function makeDb(): Db {
@@ -22,4 +23,8 @@ export function codeOf(fn: () => unknown): string | undefined {
     return (error as { code?: string }).code ?? String(error)
   }
   return undefined
+}
+
+export function addList(db: Db, userId: number, title = 'Kerst'): string {
+  return createList(db, userId, title).token
 }
