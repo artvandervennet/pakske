@@ -1,5 +1,6 @@
 import { registerInput } from '../../../shared/schemas/input'
 import { createUser } from '../../domain/users'
+import { mergeVisits } from '../../domain/visits'
 
 const HOUR = 60 * 60 * 1000
 
@@ -12,15 +13,18 @@ export default defineEventHandler(async (event) => {
   const input = await readInput(event, registerInput)
 
   const passwordHash = await hashPassword(input.password)
-  const user = domain(() => createUser(useDb(), {
+  const db = useDb()
+  const user = domain(() => createUser(db, {
     email: input.email,
-    username: input.username,
     displayName: input.displayName,
     passwordHash,
   }, { maxUsers: Number(useRuntimeConfig().maxUsers) }))
 
   countHit(key, HOUR)
-  await setUserSession(event, { user: { id: user.id, username: user.username, displayName: user.displayName } })
+  await setUserSession(event, { user: { id: user.id, displayName: user.displayName } })
+  // The lists opened before making the account move into it, so the cookie isn't needed any more.
+  mergeVisits(db, user.id, readOpened(event))
+  clearOpened(event)
   setResponseStatus(event, 201)
-  return { username: user.username }
+  return { displayName: user.displayName }
 })

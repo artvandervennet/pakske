@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import type { ZodType } from 'zod'
 import { fieldErrors } from '../../shared/schemas/input'
 import { DomainError, type DomainErrorCode } from '../domain/errors'
+import { LIST_TOKEN } from '../domain/tokens'
 import { findUserById } from '../domain/users'
 
 const STATUS: Record<DomainErrorCode, number> = {
@@ -47,20 +48,35 @@ export function idParam(event: H3Event, name = 'id'): number {
   return id
 }
 
-/** The id of the logged-in person, or null. */
-export async function sessionUserId(event: H3Event): Promise<number | null> {
-  const session = await getUserSession(event)
-  return session.user?.id ?? null
+/** The list token from the route. A malformed one is "not found", the same as one that matches no list. */
+export function tokenParam(event: H3Event): string {
+  const token = String(getRouterParam(event, 'token'))
+  if (!LIST_TOKEN.test(token)) fail(404, 'not_found')
+  return token
 }
 
-/** The logged-in person's account, or 401. Also 401 when the account behind the cookie is gone. */
+/**
+ * The logged-in person's account, or undefined. A cookie for an account that is gone (say, after
+ * the database was replaced) is cleared, so whoever holds it is simply logged out.
+ */
+async function sessionUser(event: H3Event) {
+  const session = await getUserSession(event)
+  const id = session.user?.id
+  if (id === undefined) return undefined
+  const user = findUserById(useDb(), id)
+  if (!user) await clearUserSession(event)
+  return user
+}
+
+/** The id of the logged-in person, or null. */
+export async function sessionUserId(event: H3Event): Promise<number | null> {
+  return (await sessionUser(event))?.id ?? null
+}
+
+/** The logged-in person's account, or 401. */
 export async function requireUser(event: H3Event) {
-  const id = await sessionUserId(event)
-  const user = id === null ? undefined : findUserById(useDb(), id)
-  if (!user) {
-    if (id !== null) await clearUserSession(event)
-    fail(401, 'unauthorized')
-  }
+  const user = await sessionUser(event)
+  if (!user) fail(401, 'unauthorized')
   return user
 }
 

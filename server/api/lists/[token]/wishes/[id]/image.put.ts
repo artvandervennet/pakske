@@ -1,7 +1,8 @@
-import { setItemImage } from '../../../../domain/items'
+import { setWishImage } from '../../../../../domain/wishes'
 
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
+  const token = tokenParam(event)
   const id = idParam(event)
 
   // The middleware already refused a body over the limit before it was read.
@@ -15,10 +16,10 @@ export default defineEventHandler(async (event) => {
   const name = await saveUpload(file.data, ext)
   let previous: string | null
   try {
-    previous = domain(() => setItemImage(useDb(), user.id, id, name)).previous
+    previous = domain(() => setWishImage(useDb(), user.id, token, id, name)).previous
   }
   catch (error) {
-    // The wish isn't theirs or is gone: don't keep the file.
+    // The wish isn't theirs, isn't on this list, or is gone: don't keep the file.
     await removeUpload(name)
     throw error
   }

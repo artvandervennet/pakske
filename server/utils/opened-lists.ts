@@ -33,7 +33,7 @@ export function writeOpened(event: H3Event, tokens: string[]): void {
     sameSite: 'lax',
     path: '/',
     maxAge: ONE_YEAR,
-    secure: useRuntimeConfig(event).session.cookie.secure,
+    secure: useRuntimeConfig(event).session.cookie?.secure,
   })
 }
 

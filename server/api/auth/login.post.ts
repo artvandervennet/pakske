@@ -1,5 +1,6 @@
 import { loginInput } from '../../../shared/schemas/input'
 import { findUserByEmail } from '../../domain/users'
+import { mergeVisits } from '../../domain/visits'
 
 const WINDOW = 15 * 60 * 1000
 
@@ -9,7 +10,8 @@ export default defineEventHandler(async (event) => {
   const ipKey = `login:ip:${clientIp(event)}`
   if (isLimited(accountKey, 5) || isLimited(ipKey, 20)) fail(429, 'rate_limited')
 
-  const user = findUserByEmail(useDb(), input.email)
+  const db = useDb()
+  const user = findUserByEmail(db, input.email)
   // One answer for "no such account" and "wrong password".
   if (!user || !(await verifyPassword(user.passwordHash, input.password))) {
     countHit(accountKey, WINDOW)
@@ -18,6 +20,9 @@ export default defineEventHandler(async (event) => {
   }
 
   clearHits(accountKey)
-  await replaceUserSession(event, { user: { id: user.id, username: user.username, displayName: user.displayName } })
-  return { username: user.username }
+  await replaceUserSession(event, { user: { id: user.id, displayName: user.displayName } })
+  // The lists opened while logged out move into the account, so the cookie isn't needed any more.
+  mergeVisits(db, user.id, readOpened(event))
+  clearOpened(event)
+  return { displayName: user.displayName }
 })
