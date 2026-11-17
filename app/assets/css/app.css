@@ -667,6 +667,51 @@ textarea.inline-edit { overflow: hidden; }
 }
 .wish-list.manageable .wish-head :is(input, textarea) { -webkit-user-select: text; user-select: text; }
 .wish-list.manageable .wish-head img { -webkit-user-drag: none; }
+
+/* Candidate for Gesso: moving rows. The handle at the end of a row in edit mode, the row lifted
+   while it follows the pointer, and a line where it will land. */
+.wish-handle {
+  all: unset;
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-chip);
+  font-size: var(--step-1);
+  line-height: 1;
+  color: var(--ink-muted);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.wish-handle:is(:hover, :focus-visible) { background: var(--surface-sunken); color: var(--ink); }
+.wish-handle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+:root.dragging-row, :root.dragging-row * { cursor: grabbing !important; }
+.wish-row.dragging {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lifted);
+  scale: 1.02;
+}
+.wish-list[data-drop]::after {
+  content: "";
+  position: fixed;
+  z-index: 4;
+  inset-block-start: calc(var(--drop-y) - 2px);
+  inset-inline-start: var(--drop-x);
+  inline-size: var(--drop-w);
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+@media (forced-colors: active) { .wish-list[data-drop]::after { background: Highlight; } }
 .wish-row.edit-mode:has(.joint-pick input:checked) { background: color-mix(in oklab, var(--accent) 10%, transparent); }
 .section-head > .actions:has(art-button[size="s"]) { margin-block-start: var(--space-4); }
 

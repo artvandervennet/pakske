@@ -260,14 +260,65 @@ watch(editing, (on) => {
   if (!on && !wishes.value.length) nextTick(() => wishesTitle.value?.focus())
 })
 
-// Holding a wish starts edit mode with it chosen; handy on a phone.
+// Moving wishes in edit mode: drag the handle, or hold the row and drag (on a phone), or the
+// arrow keys on the handle. The list shows the move at once; the order is saved whole.
 const wishList = useTemplateRef<HTMLElement>('wishList')
+const { order } = edit
+const shownWishes = computed(() => {
+  if (!editing.value) return wishes.value
+  const byId = new Map(wishes.value.map(wish => [wish.id, wish]))
+  return order.value.flatMap(id => byId.get(id) ?? [])
+})
+const drag = useDragReorder({ list: wishList, order, move: edit.move, onDrop: () => edit.saveOrder() })
+
+function onHandleDown(wishId: number, event: PointerEvent) {
+  drag.start(wishId, event)
+}
+
+// Holding a wish starts edit mode with it chosen, and keeps going as a drag if the finger moves.
 useLongPress(wishList, {
   enabled: () => canManage.value,
-  onPress: (wishId) => {
-    if (!editing.value) startEditing(wishId)
+  onPress: async (wishId, event) => {
+    if (editing.value) return drag.start(wishId, event)
+    // The bar that edit mode puts above the list pushes the rows down; the page scrolls along, so
+    // the row stays under the finger that holds it.
+    const top = () => document.getElementById(`wish-${wishId}`)?.getBoundingClientRect().top ?? 0
+    const before = top()
+    if (!(await startEditing(wishId))) return
+    window.scrollBy({ top: top() - before, behavior: 'instant' })
+    drag.start(wishId, event)
   },
 })
+
+const orderStatus = ref('')
+let statusTimer: ReturnType<typeof setTimeout> | undefined
+/** Says where the wish is now, a moment after the move, so the refocused handle doesn't drown it. */
+function announcePlace(wish: WishView) {
+  orderStatus.value = ''
+  clearTimeout(statusTimer)
+  statusTimer = setTimeout(() => {
+    orderStatus.value = t('listEdit.position', { title: wish.title, n: order.value.indexOf(wish.id) + 1, total: order.value.length })
+  }, 300)
+}
+onBeforeUnmount(() => clearTimeout(statusTimer))
+
+async function onHandleKey(wish: WishView, event: KeyboardEvent) {
+  const step = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+  if (!step) return
+  event.preventDefault()
+  const from = order.value.indexOf(wish.id)
+  const to = from + step
+  // At the top or the bottom there is nowhere to go: nothing moves and nothing is sent.
+  if (from === -1 || to < 0 || to >= order.value.length) return
+  edit.move(wish.id, to)
+  edit.saveOrder({ delay: 400 })
+  announcePlace(wish)
+  await nextTick()
+  // Moving the row can take the focus off its handle.
+  const handle = document.querySelector<HTMLElement>(`#wish-${wish.id} .wish-handle`)
+  handle?.closest('li')?.scrollIntoView({ block: 'nearest' })
+  if (handle && document.activeElement !== handle) handle.focus({ preventScroll: true })
+}
 
 const editDeleteDialog = useTemplateRef<HTMLDialogElement>('editDeleteDialog')
 const chosenElsewhere = computed(() => edit.chosen().some(wish => wish.role === 'owner' && wish.alsoElsewhere))
@@ -383,9 +434,11 @@ async function addWish(title: string) {
             <p v-if="edit.error.value" class="form-message" role="alert">{{ edit.error.value }}</p>
           </div>
           <OneTimeLink v-else-if="wishLink" ref="wishLinkBox" class="joint-link" :path="wishLink" :text="t('joint.linkText')" />
+          <p v-if="editing" class="visually-hidden" role="status">{{ orderStatus }}</p>
+          <p v-if="editing" id="order-help" class="visually-hidden">{{ t('listEdit.moveHelp') }}</p>
           <ul v-if="wishes.length || canManage" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
             <WishRow
-              v-for="wish in wishes"
+              v-for="wish in shownWishes"
               :key="wish.id"
               :ref="row => rowRef(wish.id, row)"
               :wish="wish"
@@ -414,6 +467,18 @@ async function addWish(title: string) {
                     <template v-else>{{ t('add.removed') }}</template>
                   </template>
                 </p>
+              </template>
+              <template v-if="editing" #end>
+                <button
+                  type="button"
+                  class="wish-handle"
+                  :aria-label="t('listEdit.move', { title: wish.title })"
+                  aria-describedby="order-help"
+                  @pointerdown="event => onHandleDown(wish.id, event)"
+                  @keydown="event => onHandleKey(wish, event)"
+                >
+                  <span aria-hidden="true">⠿</span>
+                </button>
               </template>
               <template v-if="wish.role !== 'anon'" #tick>
                 <!-- Named by the row itself, a <label> for it in edit mode (WishRow). -->

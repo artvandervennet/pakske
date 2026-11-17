@@ -7,9 +7,11 @@ export interface RowControl {
 }
 
 /**
- * An owner's edit mode on their list: choose wishes to delete or make joint. Starting it folds the
- * open rows, the way folding them by hand does: it waits for their saves, and a row holding a
- * failed save stays open and keeps edit mode from starting.
+ * An owner's edit mode on their list: choose wishes to delete or make joint, and move them. Starting
+ * it folds the open rows, the way folding them by hand does: it waits for their saves, and a row
+ * holding a failed save stays open and keeps edit mode from starting.
+ * `order` is the order the page shows while editing. A move shows at once and is saved whole; a
+ * save that fails says so and puts the list back in the server's order.
  */
 export function useListEdit(options: {
   token: () => string
@@ -26,6 +28,58 @@ export function useListEdit(options: {
   const selected = reactive(new Set<number>())
   const error = ref('')
   const busy = ref(false)
+
+  // The order on screen follows the server's, except while a move is waiting to be saved.
+  const order = ref<number[]>([])
+  const ids = () => options.wishes().map(wish => wish.id)
+  let saveTimer: ReturnType<typeof setTimeout> | undefined
+  let saving: Promise<void> = Promise.resolve()
+  let unsaved = 0
+  watch(() => ids().join(), () => {
+    if (!unsaved) order.value = ids()
+  }, { immediate: true })
+
+  /** Moves a wish to place `to` (0 is the top) in the order on screen. */
+  function move(id: number, to: number) {
+    const next = order.value.filter(other => other !== id)
+    next.splice(Math.max(0, Math.min(to, next.length)), 0, id)
+    order.value = next
+  }
+
+  /** Saves the order on screen, now or after `delay` ms without another call. */
+  function saveOrder(saveOptions: { delay?: number } = {}) {
+    if (saveTimer === undefined) unsaved++
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(sendOrder, saveOptions.delay ?? 0)
+  }
+
+  /** Sends a save that is still waiting for its delay, such as when edit mode ends. */
+  function flushOrder() {
+    if (saveTimer === undefined) return
+    clearTimeout(saveTimer)
+    sendOrder()
+  }
+
+  function sendOrder() {
+    saveTimer = undefined
+    const wishIds = [...order.value]
+    // One save at a time, in the order they were made: each sends the whole order.
+    saving = saving.then(async () => {
+      try {
+        if (wishIds.length) await $fetch<unknown>(`/api/lists/${options.token()}/order`, { method: 'PUT', body: { wishIds } })
+      }
+      catch {
+        error.value = t('listEdit.orderFailed')
+      }
+      finally {
+        unsaved--
+        if (!unsaved) {
+          await options.refresh()
+          order.value = ids()
+        }
+      }
+    })
+  }
 
   /** The chosen wishes that are still on the list: one may have gone since it was chosen. */
   const chosen = () => options.wishes().filter(wish => selected.has(wish.id))
@@ -46,6 +100,7 @@ export function useListEdit(options: {
   }
 
   function leave() {
+    flushOrder()
     editing.value = false
     selected.clear()
     error.value = ''
@@ -103,7 +158,7 @@ export function useListEdit(options: {
     if (!count && editing.value) leave()
   })
 
-  return { editing, selected, error, busy, chosen, enter, leave, toggle, deleteSelected, makeLink }
+  return { editing, selected, error, busy, chosen, enter, leave, toggle, deleteSelected, makeLink, order, move, saveOrder }
 }
 
 export type ListEdit = ReturnType<typeof useListEdit>
