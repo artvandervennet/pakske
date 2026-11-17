@@ -54,12 +54,39 @@
     "unlimited": "Onbeperkt",
     "wanted": "{n} gevraagd",
     "removed": "Van de lijst gehaald",
+    "with": "met {names}",
+    "alsoYours": "ook van jou",
+    "removeFromList": "Van mijn lijst halen",
+    "removeTitle": "\"{title}\" van je lijst halen?",
+    "removeBody": "De wens verdwijnt van deze lijst. Op de andere lijsten waar hij staat, blijft hij staan.",
+    "removeConfirm": "Van mijn lijst halen",
     "viewOn": "Bekijk op {host}",
     "delete": "Verwijderen",
     "deleteTitle": "\"{title}\" verwijderen?",
     "deleteBody": "De wens verdwijnt van je lijst. Dat kun je niet ongedaan maken.",
     "deleteConfirm": "Verwijderen",
     "cancel": "Annuleren"
+  },
+  "joint": {
+    "sharedWith": "Samen met"
+  },
+  "unlink": {
+    "action": "Ontkoppelen",
+    "title": "{name} ontkoppelen van \"{title}\"?",
+    "body": "{name} krijgt een eigen kopie zonder aankopen. Aan jouw wens verandert niets.",
+    "confirm": "Ontkoppelen"
+  },
+  "add": {
+    "open": "Op mijn lijst zetten",
+    "which": "Op welke lijst?",
+    "newList": "Een nieuwe lijst",
+    "newListName": "Naam van de nieuwe lijst",
+    "linked": "Gekoppeld",
+    "linkedHint": "Jullie delen dan één wens, die één keer gekocht wordt. Je ziet daarna niet meer wie hem koopt.",
+    "copy": "Kopie",
+    "copyHint": "Een eigen wens die losstaat van deze. Niemand krijgt er bericht van.",
+    "done": "\"{title}\" staat nu op {list}.",
+    "removed": "Deze wens staat niet meer op de lijst."
   },
   "purchase": {
     "title": "Wie koopt dit?",
@@ -152,7 +179,7 @@
     "registration_closed": "Er kunnen geen accounts meer bij. Vraag het aan wie de site beheert.",
     "rate_limited": "Te veel pogingen. Wacht een kwartier en probeer het opnieuw.",
     "unauthorized": "Log in om verder te gaan.",
-    "forbidden": "Dat kan niet op je eigen lijst.",
+    "forbidden": "Dat kan hier niet.",
     "not_found": "Dat bestaat niet meer. Laad de pagina opnieuw.",
     "list_limit": "Je hebt het maximum aantal lijsten. Verwijder eerst een lijst die je niet meer nodig hebt.",
     "list_limit_ever": "Je hebt al zoveel lijsten gemaakt als één account mag. Vraag het aan wie de site beheert.",

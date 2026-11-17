@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { HomeView, OpenedList } from '#shared/schemas/list'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const localePath = useLocalePath()
 const { loggedIn } = useUserSession()
 const { parse } = useApiError()
@@ -63,8 +63,7 @@ async function forget(token: string) {
 // For a visitor who isn't, the link would only lead to "not found".
 const canOpen = (list: OpenedList) => !list.deleted || loggedIn.value
 
-const ownerNames = (owners: string[]) =>
-  new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(owners)
+const ownerNames = useNames()
 
 // Logged out, the page is the hero and the lists opened before; with none, one quiet sentence.
 const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !!loadError.value)

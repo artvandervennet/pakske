@@ -2,16 +2,20 @@
 import type { WishView } from '#shared/schemas/list'
 
 // What an unfolded row shows to someone who doesn't own the wish: the text and the shop link,
-// and for a buyer who is buying it and the notes. A visitor who isn't logged in gets a way to
-// log in that brings them back to this row. An owner gets WishEditor instead.
-const props = defineProps<{ wish: WishView, token: string, owners: string, ownerCount: number }>()
-const emit = defineEmits<{ changed: [] }>()
+// and for a buyer who is buying it, the notes, and a way to put it on a list of their own. A
+// visitor who isn't logged in gets a way to log in that brings them back to this row. An owner
+// gets WishEditor instead.
+// `owners` is the list's owners. The notes are hidden from them and from the wish's other owners.
+const props = defineProps<{ wish: WishView, token: string, owners: string[] }>()
+const emit = defineEmits<{ changed: [], added: [list: { token: string, title: string }], removed: [] }>()
 
 const { t } = useI18n()
+const names = useNames()
 const route = useRoute()
 const localePath = useLocalePath()
 
 const host = computed(() => hostOf(props.wish.url))
+const hiddenFrom = computed(() => names([...props.owners, ...props.wish.sharedWith]))
 const loginLink = computed(() => ({
   path: localePath('/login'),
   query: { next: `${route.path}#wish-${props.wish.id}` },
@@ -26,7 +30,7 @@ const loginLink = computed(() => ({
     </art-button>
 
     <template v-if="wish.role === 'buyer'">
-      <p v-if="wish.removed" class="form-message">{{ t('wish.removedIntro', { names: owners }, ownerCount) }}</p>
+      <p v-if="wish.removed" class="form-message">{{ t('wish.removedIntro', { names: names(owners) }, owners.length) }}</p>
       <h3 class="wish-subtitle">{{ t('purchase.title') }}</h3>
       <ul v-if="wish.purchases.length" class="people">
         <li v-for="(purchase, index) in wish.purchases" :key="index">
@@ -36,7 +40,8 @@ const loginLink = computed(() => ({
       </ul>
       <p v-else class="muted">{{ t('wish.nobody') }}</p>
       <h3 class="wish-subtitle">{{ t('notes.title') }}</h3>
-      <WishNotes :wish="wish" :token="token" :owners="owners" @changed="emit('changed')" />
+      <WishNotes :wish="wish" :token="token" :hidden-from="hiddenFrom" @changed="emit('changed')" />
+      <AddToMyList v-if="!wish.removed" :wish="wish" :token="token" @added="list => emit('added', list)" @removed="emit('removed')" />
     </template>
 
     <p v-else-if="wish.role === 'anon'" class="muted">

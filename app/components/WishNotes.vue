@@ -2,8 +2,9 @@
 import type { BuyerWish } from '#shared/schemas/list'
 
 // The notes buyers leave each other on a wish. The server only sends them to buyers, and only
-// a buyer of this wish gets this component.
-const props = defineProps<{ wish: BuyerWish, token: string, owners: string }>()
+// a buyer of this wish gets this component. `hiddenFrom` names everyone who never sees them:
+// the list's owners and the wish's other owners, as one phrase.
+const props = defineProps<{ wish: BuyerWish, token: string, hiddenFrom: string }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const { t, locale } = useI18n()
@@ -53,7 +54,7 @@ async function remove(id: string) {
 
     <form ref="form" class="form" method="post" novalidate @submit.prevent="run">
       <p v-if="message" class="form-message" role="alert">{{ message }}</p>
-      <FormField :id="fieldId" v-slot="field" :label="t('notes.label')" :hint="t('notes.hint', { names: owners })" :error="errors.body">
+      <FormField :id="fieldId" v-slot="field" :label="t('notes.label')" :hint="t('notes.hint', { names: hiddenFrom })" :error="errors.body">
         <textarea
           :id="fieldId"
           v-model="body"

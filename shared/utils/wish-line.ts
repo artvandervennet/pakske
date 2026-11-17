@@ -46,6 +46,21 @@ function buyers(wish: BuyerWish, t: Translate): string {
   return parts.join(' · ')
 }
 
+/**
+ * The tag that says whose wish it is besides the list's owners: "met Lotte" when someone who
+ * doesn't own this list owns it too, "ook van jou" for an owner of the wish looking at someone
+ * else's list, or null. The names are owners only, so the tag is the same for every viewer of
+ * a row whatever buyers did. A row taken off this list has its own tag and no other: the names
+ * would be of people it went on living with elsewhere.
+ */
+export function wishOwnerTag(wish: WishView, viewerOwnsList: boolean):
+  { key: 'wish.with', names: string[] } | { key: 'wish.alsoYours' } | null {
+  if (wish.role === 'buyer' && wish.removed) return null
+  if (wish.sharedWith.length > 0) return { key: 'wish.with', names: wish.sharedWith }
+  if (wish.role === 'owner' && !viewerOwnsList) return { key: 'wish.alsoYours' }
+  return null
+}
+
 /** "3 gevraagd", "Onbeperkt", or null for a single one. */
 export function wishAmountTag(wish: WishView, t: Translate): string | null {
   if (wish.quantity === null) return t('wish.unlimited', {})

@@ -13,14 +13,14 @@ const base = {
 }
 
 function owner(quantity: number | null, mine: number): OwnerWish {
-  return { ...base, role: 'owner', quantity, mine }
+  return { ...base, role: 'owner', quantity, mine, sharedWith: [], coOwners: [], alsoElsewhere: false }
 }
 
 function buyer(quantity: number | null, bought: number, mine: number, extra: Partial<BuyerWish> = {}): BuyerWish {
-  return { ...base, role: 'buyer', quantity, removed: false, bought, mine, purchases: [], notes: [], ...extra }
+  return { ...base, role: 'buyer', quantity, sharedWith: [], removed: false, bought, mine, purchases: [], notes: [], ...extra }
 }
 
-const anon: AnonWish = { ...base, role: 'anon', quantity: 1 }
+const anon: AnonWish = { ...base, role: 'anon', quantity: 1, sharedWith: [] }
 
 describe('who may raise their number', () => {
   it('lets an owner raise, whatever the numbers on the wish', () => {

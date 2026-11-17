@@ -54,12 +54,39 @@
     "unlimited": "No limit",
     "wanted": "{n} wanted",
     "removed": "Taken off the list",
+    "with": "with {names}",
+    "alsoYours": "also yours",
+    "removeFromList": "Remove from my list",
+    "removeTitle": "Remove \"{title}\" from your list?",
+    "removeBody": "The wish leaves this list. It stays on the other lists that show it.",
+    "removeConfirm": "Remove from my list",
     "viewOn": "View on {host}",
     "delete": "Delete",
     "deleteTitle": "Delete \"{title}\"?",
     "deleteBody": "The wish disappears from your list. You can't undo this.",
     "deleteConfirm": "Delete",
     "cancel": "Cancel"
+  },
+  "joint": {
+    "sharedWith": "Shared with"
+  },
+  "unlink": {
+    "action": "Unlink",
+    "title": "Unlink {name} from \"{title}\"?",
+    "body": "{name} gets a copy of their own, without purchases. Nothing about your wish changes.",
+    "confirm": "Unlink"
+  },
+  "add": {
+    "open": "Add to my list",
+    "which": "Which list?",
+    "newList": "A new list",
+    "newListName": "Name of the new list",
+    "linked": "Linked",
+    "linkedHint": "You then share one wish, bought once. From then on you no longer see who buys it.",
+    "copy": "Copy",
+    "copyHint": "A wish of your own, separate from this one. Nobody is told.",
+    "done": "\"{title}\" is now on {list}.",
+    "removed": "This wish is no longer on the list."
   },
   "purchase": {
     "title": "Who is buying this?",
@@ -152,7 +179,7 @@
     "registration_closed": "No more accounts can be added. Ask whoever runs the site.",
     "rate_limited": "Too many attempts. Wait fifteen minutes and try again.",
     "unauthorized": "Log in to continue.",
-    "forbidden": "You can't do that on your own list.",
+    "forbidden": "That isn't possible here.",
     "not_found": "That no longer exists. Reload the page.",
     "list_limit": "You have the most lists you can have. Delete one you no longer need first.",
     "list_limit_ever": "You have made as many lists as one account may. Ask whoever runs the site.",

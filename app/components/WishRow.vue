@@ -5,26 +5,34 @@ import type { WishView } from '#shared/schemas/list'
 // several can be open at once and they stay open when the list refreshes. Unfolded, it shows
 // an owner the wish itself, editable where it stands (the title here, the rest in WishEditor),
 // and everyone else the details.
-// `owners` is the owners' names as one phrase; `ownerCount` picks the singular or plural around it.
+// `owners` is the list's owners; `viewerOwnsList` says whether the viewer is one of them.
 // `refresh` refreshes the list after an owner's edit saved; `changed` is for what can take the
-// focused control away with it, such as deleting.
+// focused control away with it, such as deleting. `added` and `removed` come from "Op mijn lijst
+// zetten": where the wish went, or that it left this list meanwhile.
+// The `message` slot is for what the page says about this row, at the top of its details.
 const props = defineProps<{
   wish: WishView
   token: string
   open: boolean
-  owners: string
-  ownerCount: number
+  owners: string[]
+  viewerOwnsList: boolean
   refresh: () => Promise<unknown>
 }>()
-const emit = defineEmits<{ toggle: [], changed: [] }>()
+const emit = defineEmits<{ toggle: [], changed: [], added: [list: { token: string, title: string }], removed: [] }>()
 
 const { t } = useI18n()
 const { secondLine, amountTag } = useWishStatus()
+const names = useNames()
 
 const detailsId = computed(() => `wish-${props.wish.id}-details`)
 const line = computed(() => secondLine(props.wish))
 const amount = computed(() => amountTag(props.wish))
 const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed)
+const ownerTag = computed(() => {
+  const tag = wishOwnerTag(props.wish, props.viewerOwnsList)
+  if (!tag) return null
+  return tag.key === 'wish.with' ? t(tag.key, { names: names(tag.names) }) : t(tag.key)
+})
 
 // Only the owner's view of the wish reaches the editing, so nothing in it can depend on buyers.
 const ownWish = computed(() => (props.wish.role === 'owner' ? props.wish : null))
@@ -84,15 +92,25 @@ watch(() => props.open, (open) => {
         </EditableText>
         <span v-if="line" class="wish-line">{{ line }}</span>
       </div>
-      <div v-if="amount || removed" class="wish-tags">
+      <div v-if="amount || removed || ownerTag" class="wish-tags">
         <art-tape v-if="removed" pigment="complement" :seed="`removed-${wish.id}`">{{ t('wish.removed') }}</art-tape>
+        <art-tape v-if="ownerTag" class="wish-owner-tag" :seed="`owners-${wish.id}`">{{ ownerTag }}</art-tape>
         <art-tape v-if="amount" :seed="`wish-${wish.id}`">{{ amount }}</art-tape>
       </div>
     </div>
     <div :id="detailsId" class="wish-details" :hidden="!open">
       <template v-if="open">
-        <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" @changed="emit('changed')" />
-        <WishBuyerDetails v-else :wish="wish" :token="token" :owners="owners" :owner-count="ownerCount" @changed="emit('changed')" />
+        <slot name="message" />
+        <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :can-remove="viewerOwnsList" @changed="emit('changed')" />
+        <WishBuyerDetails
+          v-else
+          :wish="wish"
+          :token="token"
+          :owners="owners"
+          @changed="emit('changed')"
+          @added="list => emit('added', list)"
+          @removed="emit('removed')"
+        />
       </template>
     </div>
   </li>

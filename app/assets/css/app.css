@@ -514,6 +514,86 @@ textarea.inline-edit { overflow: hidden; }
 .picture-edit-choose:hover .picture-edit-label { text-decoration: underline; }
 .picture-edit-remove { position: absolute; inset-block-start: var(--space-2); inset-inline-end: var(--space-2); }
 
+/* Candidate for Gesso: a tape that holds names. Tape keeps to one line; names can be long,
+   so this one wraps, and the tags beside a title never take more than part of the row. */
+.wish-tags { max-inline-size: min(16rem, 45%); }
+.wish-owner-tag { white-space: normal; overflow-wrap: anywhere; text-align: end; }
+@media (width < 40rem) {
+  .wish-list:has(.wish-tick) .wish-tags { max-inline-size: none; }
+  .wish-list:has(.wish-tick) .wish-owner-tag { text-align: start; }
+}
+
+/* What the page says about one row, at the top of its details, in line with the title. */
+.wish-message {
+  max-inline-size: none;
+  margin-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+  margin-block-start: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 4px solid var(--success);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+/* Empty, it takes no room but stays rendered: a live region that was hidden may not be
+   announced when its words arrive. */
+.wish-message:empty { margin: 0; padding: 0; border: 0; }
+@media (width < 40rem) { .wish-message { margin-inline-start: 0; } }
+
+/* The other owners of a wish, each with what the viewer can do about them. */
+.co-owners > li { flex-wrap: wrap; }
+.co-owner-name { overflow-wrap: anywhere; min-inline-size: 0; }
+
+/* Candidate for Gesso: a choice made in a sentence. A word in it is the button that opens a
+   short menu of the other options (Gesso's .menu); a new option is typed where the word was. */
+.list-chooser { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); max-inline-size: 100%; }
+.list-chooser-legend { font: var(--weight-bold) var(--step--1)/1.3 var(--font-body); color: var(--ink-muted); }
+.list-chooser-pick {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding-inline: 0.25em;
+  margin-inline: -0.25em;
+  border-radius: var(--radius-chip);
+  box-shadow: inset 0 -1px 0 var(--rule);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+/* While its menu is open, the word keeps the wash, so it is clear what the menu is for. */
+.list-chooser-pick:hover, .list-chooser:has(.menu:popover-open) .list-chooser-pick { background: var(--accent-wash); }
+.list-chooser-pick:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.list-chooser-chevron {
+  flex: none;
+  inline-size: 0.45em;
+  block-size: 0.45em;
+  margin-inline-start: 0.6em;
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  rotate: 45deg;
+  translate: 0 -0.15em;
+  color: var(--ink-muted);
+}
+.list-chooser-name { flex: 1 1 12rem; max-inline-size: 24rem; min-block-size: 2.75rem; }
+.list-chooser > .inline-field-error { flex: 1 0 100%; }
+/* The chosen option carries a check; every option keeps the room for one, so they line up. */
+.list-chooser .menu { max-inline-size: calc(100vw - 2rem); }
+.list-chooser .menu > button { overflow-wrap: anywhere; }
+.list-chooser .menu > button::before { content: ""; flex: none; inline-size: 1em; }
+.list-chooser .menu > button[aria-pressed="true"]::before { content: "\2713"; color: var(--accent); }
+
+/* "Op mijn lijst zetten" unfolded: the list, then each way with what it means beside it. */
+/* Apart from the notes above it, whose own button sits right there. */
+.add-to-list { display: grid; gap: var(--space-4); justify-items: start; inline-size: 100%; margin-block-start: var(--space-4); }
+.add-to-list-body { display: grid; gap: var(--space-4); inline-size: 100%; }
+.add-to-list-body[hidden] { display: none; }
+.add-to-list-ways { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
+.add-to-list-ways > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); max-inline-size: none; }
+.add-to-list-ways art-button { flex: none; min-inline-size: 7rem; }
+.add-to-list-ways art-button > button { inline-size: 100%; justify-content: center; }
+.add-to-list-hint { flex: 1 1 16rem; font-size: var(--step--1); color: var(--ink-muted); }
+
 /* A band that is one column at every width: a form, or the error page. */
 .band.wide > .inner { padding-block: var(--space-12) var(--space-16); }
 

@@ -3,7 +3,7 @@ import type { WishView } from '#shared/schemas/list'
 import type { AskTickWarning } from '~/composables/useTickWarning'
 
 const route = useRoute()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const localePath = useLocalePath()
 const { parse } = useApiError()
 
@@ -12,9 +12,8 @@ const { list, gone, refresh } = await useListView(token)
 
 useHead({ title: () => list.value.title })
 
-const owners = computed(() =>
-  new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(list.value.owners),
-)
+const names = useNames()
+const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
 
@@ -22,6 +21,7 @@ const open = reactive(new Set<number>())
 function toggle(id: number) {
   if (open.has(id)) open.delete(id)
   else open.add(id)
+  if (rowMessage.value?.wishId === id) rowMessage.value = null
 }
 
 // A link to one wish (`/l/<token>#wish-12`, also where logging in returns to) opens that row.
@@ -60,12 +60,44 @@ async function refreshList() {
 }
 
 // A change can take the focused control away with it: deleting a wish removes its row, delete
-// button and all. Then the focus goes to the list's heading rather than the start of the page.
+// button and all; unlinking removes the person's line. Then the focus goes to the row's own
+// button while the row is still there, else to the list's heading rather than the start of the page.
 const wishesTitle = useTemplateRef<HTMLElement>('wishesTitle')
-async function onWishChanged() {
+function keepFocus(wishId: number) {
+  if (document.activeElement && document.activeElement !== document.body) return
+  const rowButton = document.querySelector<HTMLElement>(`#wish-${wishId} .wish-toggle`)
+  ;(rowButton ?? wishesTitle.value)?.focus()
+}
+
+async function onWishChanged(wish: WishView) {
   await refresh()
   await nextTick()
-  if (!document.activeElement || document.activeElement === document.body) wishesTitle.value?.focus()
+  keepFocus(wish.id)
+}
+
+// "Op mijn lijst zetten" worked or found the wish gone. The row says so at the top of its
+// details; a linked wish is an owner's row after the refresh, with the line still above it.
+// When the row went with the refresh, the list says it instead.
+const rowMessage = ref<{ wishId: number, title: string, list?: { token: string, title: string } } | null>(null)
+
+async function onAdded(wish: WishView, landed: { token: string, title: string }) {
+  goneNotice.value = ''
+  rowMessage.value = { wishId: wish.id, title: wish.title, list: landed }
+  await refresh()
+  await nextTick()
+  keepFocus(wish.id)
+}
+
+async function onAddRemoved(wish: WishView) {
+  goneNotice.value = ''
+  rowMessage.value = { wishId: wish.id, title: wish.title }
+  await refresh()
+  await nextTick()
+  if (!list.value.wishes.some(other => other.id === wish.id)) {
+    rowMessage.value = null
+    goneNotice.value = t('add.removed')
+  }
+  keepFocus(wish.id)
 }
 
 // Renaming: the title in the head band is the control. Activated, it turns into a field in
@@ -203,13 +235,29 @@ async function addWish(title: string) {
               :key="wish.id"
               :wish="wish"
               :token="list.token"
-              :owners="owners"
-              :owner-count="list.owners.length"
+              :owners="list.owners"
+              :viewer-owns-list="list.viewerOwnsList"
               :open="open.has(wish.id)"
               :refresh="refreshList"
               @toggle="toggle(wish.id)"
-              @changed="onWishChanged"
+              @changed="onWishChanged(wish)"
+              @added="landed => onAdded(wish, landed)"
+              @removed="onAddRemoved(wish)"
             >
+              <template #message>
+                <!-- Always there in an open row, so the words are announced when they appear. -->
+                <p class="wish-message" role="status">
+                  <template v-if="rowMessage?.wishId === wish.id">
+                    <i18n-t v-if="rowMessage.list" keypath="add.done" scope="global">
+                      <template #title>{{ rowMessage.title }}</template>
+                      <template #list>
+                        <NuxtLink :to="localePath(`/l/${rowMessage.list.token}`)">{{ rowMessage.list.title }}</NuxtLink>
+                      </template>
+                    </i18n-t>
+                    <template v-else>{{ t('add.removed') }}</template>
+                  </template>
+                </p>
+              </template>
               <template v-if="wish.role !== 'anon'" #tick>
                 <WishTick :wish="wish" :token="list.token" @changed="reason => onTickChanged(wish, reason)" />
               </template>

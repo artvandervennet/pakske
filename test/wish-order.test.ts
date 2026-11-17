@@ -13,9 +13,9 @@ const base = {
 }
 
 const buyer = (id: number, removed: boolean): WishView =>
-  ({ ...base, id, role: 'buyer', removed, bought: 1, mine: 0, purchases: [], notes: [] })
-const owner = (id: number): WishView => ({ ...base, id, role: 'owner', mine: 0 })
-const anon = (id: number): WishView => ({ ...base, id, role: 'anon' })
+  ({ ...base, id, role: 'buyer', sharedWith: [], removed, bought: 1, mine: 0, purchases: [], notes: [] })
+const owner = (id: number): WishView => ({ ...base, id, role: 'owner', mine: 0, sharedWith: [], coOwners: [], alsoElsewhere: false })
+const anon = (id: number): WishView => ({ ...base, id, role: 'anon', sharedWith: [] })
 
 describe('the order of the rows on a list', () => {
   it('puts removed wishes after everything still wanted, each group in the order it came', () => {
