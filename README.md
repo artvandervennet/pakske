@@ -2,6 +2,8 @@
 
 A wishlist site for family and friends. Everyone with an account can make several lists. Each list has an address the site makes up, and only people who have the link can find it; anyone who has it can pass it on. Buyers tick what they are getting and leave each other notes. The owners of a wish see none of that: to them it looks as if nobody bought anything, unless they tick it themselves.
 
+A wish can belong to several people and show on a list of each of them, and a list can have several owners. Buyers from every list that shows a wish see the same purchases; each owner sees only their own tick.
+
 Built with Nuxt 4 and [Gesso](https://github.com/artvandervennet/gesso), in Dutch and English, for a Raspberry Pi.
 
 ## Run it locally
@@ -17,7 +19,7 @@ The site is at <http://localhost:3400> (set in `nuxt.config.ts` under `devServer
 | --- | --- |
 | `pnpm dev` | Development server |
 | `pnpm test` | Unit tests for the rules (Vitest, in-memory SQLite) |
-| `test/api-check.sh` | Checks the HTTP API as three people and a visitor; see the top of the file |
+| `test/api-check.sh` | Checks the HTTP API and the rendered pages as four people and as visitors; see the top of the file |
 | `pnpm typecheck` | Type check |
 | `pnpm theme` | Rebuilds `app/assets/css/theme.css` from `theme.json` |
 | `pnpm db:generate` | Writes a migration after a change to `server/db/schema.ts` |
@@ -25,7 +27,7 @@ The site is at <http://localhost:3400> (set in `nuxt.config.ts` under `devServer
 
 ## Who sees what
 
-The server decides this per wish, not per list. Each wish has its own owners in `wish_owners`; for now they are always the owners of the list it was added to.
+The server decides this per wish, not per list. A wish's owners are in `wish_owners`: the owners of every list that shows it now. Someone else's list can hold a wish they share with you, so that page shows you that row as an owner and the others as a buyer.
 
 | | The wish | Who bought how many | Notes |
 | --- | --- | --- | --- |
@@ -37,25 +39,38 @@ The server decides this per wish, not per list. Each wish has its own owners in 
 
 - A visitor gets the wishes from `server/domain/public-wishes.ts`. That file only reads wishes and the list they are on.
 - An owner gets the same wishes and their own purchase. The purchases table is read for the viewer's own rows only.
-- Anyone else gets every purchase with name and number, the notes, and the wishes that were removed after someone bought them.
+- Anyone who owns neither the wish nor the list gets every purchase with name and number, the notes, and the wishes that left the list after someone bought them.
+
+Every viewer sees who else a wish belongs to: a row on Art's list that he shares with Lotte says "with Lotte". An owner also sees the other owners in the unfolded row, under "Shared with".
+
+A wish with several owners:
+
+- Each owner sees only their own purchase. When Lotte ticks the board game she shares with Art, Art's page doesn't change. When there aren't enough left, the refusal is the same as on a wish of your own.
+- Buyers see one shared state. Mom buying through Art's list and Sis buying through Lotte's list see the same total, the same names and the same notes.
+- A wish taken off a list stays on that list for logged-in people who own neither the wish nor the list, marked "Taken off the list", for as long as anyone has a purchase on it. They can lower or withdraw their own purchase there and write notes, but not buy more. The list's owners and the wish's owners never get that row.
+- Someone who stops owning a wish (by taking it off their list, leaving a list or being unlinked) is a buyer of it again wherever they can still open a list that shows it, and sees its purchases and notes there.
 
 The page shows whatever the API returned, so the HTML that Nuxt renders on the server can't contain more than the person may see.
 
-Every request about a wish goes through a list link: the URL names the list's token, and the wish must be on that list (`wishOnList` in `server/domain/purchases.ts`). A wish's number alone gives no access. The one request that names no list is deleting your own note: it goes by the note's random id, and only its author gets anything but "not found".
+Every request about a wish goes through a list link: the URL names the list's token, and the wish must be on that list now (`wishOnList` in `server/domain/placement.ts`). A wish's number alone gives no access. Lowering or withdrawing a purchase and writing a note also work on a wish that left the list; buying more there answers `wish_removed`. A few requests name no list. Deleting your own note and dismissing your own notice go by a random id, and only their owner gets anything but "not found". A single-use link goes by its own token.
 
 An owner can tick their own wish. Before every tick or higher number the site asks "You might find out that someone already got this. Continue?"; unticking and lowering don't ask. When not enough are left, the owner reads "Someone already has this" or "There aren't that many left" and nothing is recorded. The server answers with a code only, so the refusal names nobody and gives no number. The owner's row never says how many are left, and its + is always enabled.
 
 Rules that keep an owner from finding out by a detour:
 
-- Deleting a wish always answers 204 and keeps the row and its image. Buyers who bought it still see it, marked as removed.
+- Taking a wish off your list ("Delete" or "Remove from my list") always answers 204, whatever buyers did. A wish nobody owns any more is marked deleted; its row and image stay. Buyers who bought it still see it, marked as taken off.
 - Lowering an amount below what is bought is always accepted. Buyers then see that none are left.
-- Deleting a list deletes every wish on it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it.
+- Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it. A list with more than one owner can't be deleted, whatever is on it.
+- Linking, copying, unlinking, undo and leaving a list never read purchases or notes, so they answer the same whatever was bought. An already bought wish can be linked like any other.
+- Notices are about who owns what: a wish linked or unlinked, a single-use link used, a new co-owner. Buying, ticking and writing notes never make one.
 - Buying and writing notes never change a wish's `updatedAt` or its place in the list.
-- An owner of a wish gets a fixed 403 when they try to write a note on it. Deleting a note that isn't yours answers "not found", the same as a note that doesn't exist.
+- An owner of a wish or of the list gets a fixed 403 when they try to write a note on it, also on a wish they took off. Deleting a note that isn't yours answers "not found", the same as a note that doesn't exist.
 - Pages and API answers are sent with `Cache-Control: private, no-store`. Logging in and out reloads the page.
 - Note ids are random, so a gap in a sequence can't hint at notes written elsewhere.
 
-`test/visibility.test.ts` builds two databases that differ only in what buyers did and checks that the owner and a visitor get identical results from both. The owner's own purchase is the one difference, and only the owner sees it.
+Only `purchases.ts`, `notes.ts` and `list-view.ts` in `server/domain/` read purchases or notes. Tests read the sources of the files behind wishes, lists, placements, sharing, undo, links and notices to keep it that way.
+
+`test/visibility.test.ts` builds two databases that differ only in what buyers, and the other owners of a joint wish, did. It checks that each owner and a visitor get identical results from both. An owner's own purchase is the one difference, and only that owner sees it.
 
 One limit: an owner can register a second account and open their own list as a buyer. Nothing in the code can stop that.
 
@@ -144,11 +159,11 @@ It prints a random password. The person logs in with it and picks their own unde
 ```text
 app/            pages, components and composables (the Vue side)
   assets/css/   main.css imports Gesso; theme.css is generated; app.css holds the app's own styles
-  pages/        index.vue is the home page, l/[token].vue a list
+  pages/        index.vue is the home page, l/[token].vue a list, j/[token].vue a single-use link
   plugins/      gesso.client.ts registers Gesso's custom elements in the browser
 i18n/locales/   nl.json and en.json
 server/
-  api/          the HTTP API; requests about a wish are under lists/[token]/wishes/
+  api/          the HTTP API; requests about a wish are under lists/[token]/wishes/, single-use links under invites/
   db/           schema and migrations (Drizzle, SQLite)
   domain/       the rules, as plain functions that take a database; no Nuxt in here
   middleware/   01.security.ts: cache headers, origin check, body size limits
@@ -156,15 +171,23 @@ server/
   utils/        database handle, HTTP helpers, rate limiter, uploads, the cookie of opened lists
 shared/
   schemas/      zod schemas for what comes in and what goes out
-  utils/        the words on a row, the order of the rows, what a tick may do and what an edit sends, shared by the page and the tests
+  utils/        the words on a row and on a notice, the order of the rows, what a tick may do and what an edit sends, shared by the page and the tests
 test/           unit tests and the API check
 ```
 
 - **Accounts**: `nuxt-auth-utils`, a sealed cookie session and scrypt password hashes. Registering asks for a name, an email address and a password. The cookie holds the account's id and the moment the account was made; a cookie whose account is gone, or whose id now belongs to another account (after a restore, say), logs nobody in, for the API and the page alike (`sessionBelongsTo` in `server/domain/users.ts`).
-- **Lists**: a list has a title, one or more owners (`list_owners`) and a token of 16 random bytes in base64url, made by `newListToken` in `server/domain/tokens.ts`. The token is the list's address, `/l/<token>`, and the only way in: no page lists other people's lists. Owners rename a list (the address stays) and delete it. A wish is shown on a list through `list_wishes`.
+- **Lists**: a list has a title, one or more owners (`list_owners`) and a token of 16 random bytes in base64url, made by `newListToken` in `server/domain/tokens.ts`. The token is the list's address, `/l/<token>`, and the only way in: no page lists other people's lists. Owners rename a list (the address stays). A list with one owner can be deleted; with more, each owner can leave it and the last one deletes it.
+- **Placements**: `list_wishes` says which lists show a wish. Taking a wish off a list sets `removed_at` on its placement and keeps the row. One rule in `server/domain/placement.ts` covers every way a wish leaves a list (deleting a wish or a list, unlinking, undo): `takeOffList`, which ends with `settleOwners`. `settleOwners` is the only code that writes `wish_owners`: it makes a wish's owners the owners of the live lists that show it, and marks a wish deleted when nobody owns it any more. Leaving a list calls `settleOwners` directly. Each placement has a join order that only goes up, so the site knows who had a wish first.
+- **Linked and Copy**: on a wish on someone else's list, "Add to my list" asks which of your lists it goes on (the one used last is chosen) and offers two buttons (`server/domain/sharing.ts`). Linked puts the same wish on your list: you own it at once, stop seeing who buys it, and its earlier owners get a notice with Undo. Copy makes a new wish of your own with the same title, text, link, picture and amount; nobody is told. Either can make a new list on the way.
+- **Unlink**: an owner can unlink anyone who became an owner after them; someone who joined later can only take the wish off their own list. Owners of one list can't unlink each other. The wish doesn't change. The unlinked person gets, on each of their lists that showed it, a plain copy in the same place, without purchases, and a notice. Purchases stay on the original, theirs included.
+- **What a link remembers**: when a linker changes a field (title, text, link, amount, picture), their link remembers what it held before their first change, in `link_changes` (`recordChanges` in `server/domain/undo.ts`). When anyone else changes that field later, every other link forgets it, so undo never takes back a newer change. Undo puts the remembered fields back, unlinks the linker, and removes the link and every notice about it. When the last notice about a link is dismissed, the link and what it remembered are deleted; from then on the changes are simply the wish.
+- **Single-use links**: an owner selects wishes with "Make joint", or presses "Invite a co-owner", and gets a link `/j/<token>` (`server/domain/invites.ts`). Its token is made like a list token and is never the list's. The link needs a login and works once: whoever opens it puts the wishes on a list of theirs (or a new one), or becomes a co-owner of the whole list. For wishes, the maker gets a notice; for a list, every earlier owner does. It closes when it is used, when its list is deleted, when its maker no longer owns the list, or when none of its wishes is on the list any more. A link holds at most 50 wishes; a list has at most 20 unused links, and making one more drops the oldest.
+- **Joint lists**: a co-owner owns the list and every wish on it, those already there and those added later, and finds it under "Your lists", which names the other owners. Leaving takes away the list and every wish on it that isn't also on another list of yours (`leaveList` in `server/domain/lists.ts`). The last owner can't leave (`last_owner`); a list with more than one owner can't be deleted (`list_shared`).
+- **Notices** (`server/domain/notices.ts`): someone linked a wish of yours (with Undo), you were unlinked from a wish, your single-use link was used, someone became a co-owner of your list. They are on the home page under "Notices", with Dismiss, and View when one of your lists shows what it is about. While some are new, the header has a mark ("Lists", or the site's name on a phone); opening the home page counts as having seen them.
 - **Remembered lists**: opening someone else's list puts it on your home page under "Lists you opened". Logged in, that is a row in `list_visits`. Logged out, its token goes into the `opened-lists` cookie (at most 50). A cookie and not local storage, because the server builds the home page. Logging in or registering moves the cookie's lists into the account and clears the cookie. "Remove" only takes a list off the home page; the link keeps working.
-- **Amounts**: a wish has a whole number or no limit (`quantity` is `NULL`). Adding one takes only a title; the amount starts at one. Each person has one purchase per wish with their own number. `setPurchase` in `server/domain/purchases.ts` checks the total in one synchronous transaction, so two buyers can't both take the last one.
-- **Images**: the browser scales a picture to at most 1600 pixels and re-encodes it as JPEG before uploading (`app/composables/useImageResize.ts`). The server checks the size (3 MB) and the first bytes of the file, and stores it under a random name.
+- **Amounts**: a wish has a whole number or no limit (`quantity` is `NULL`). Adding one takes only a title; the amount starts at one. Each person has one purchase per wish with their own number, whichever list they bought it through. `setPurchase` in `server/domain/purchases.ts` checks the total in one synchronous transaction, so two buyers can't both take the last one.
+- **Images**: the browser scales a picture to at most 1600 pixels and re-encodes it as JPEG before uploading (`app/composables/useImageResize.ts`). The server checks the size (3 MB) and the first bytes of the file, and stores it under a random name. A copy shares its picture's file with the original, and a link keeps a replaced picture while it may still put it back. A file is removed only when no wish, deleted or not, and no link uses it any more (`unusedImages` in `server/domain/undo.ts`).
+- **Limits**: 200 lists ever and 50 at once per person; 500 wishes ever and 200 at once per list. They also count lists made by "Add to my list" and single-use links, and wishes put on a list by linking, copying or a link. The copy an unlink leaves is not counted, so unlinking never fails.
 - **Languages**: Dutch at `/…`, English at `/en/…`. The server answers with error codes; the words are in the locale files under `errors` and `fields`.
 - **Guard rails**: five wrong passwords lock an account for fifteen minutes, registration is limited per address, and requests that change something are refused when they come from another site. A tab that comes back into view checks who is logged in and reloads if that changed (`app/plugins/session-watch.client.ts`).
 
@@ -176,17 +199,23 @@ Things to know when changing the UI:
 
 - The components need the DOM, so they are only imported in `app/plugins/gesso.client.ts`. The server sends plain HTML and the elements upgrade it. `app.css` styles buttons before they upgrade, so the page doesn't jump.
 - Every page starts with a band in the deep paint (`PageHead.vue`, or the hero on the home page). `<art-header>` takes its paint from the first band.
-- `<art-header>` reads its children and attributes once. To change it, change the element's `key`.
+- `<art-header>` reads its children and attributes once. To change it, change the element's `key`. It also copies each link's text into its scroll repaint, which is why the mark for new notices is an empty element with an `aria-label` and not hidden text.
 - Pass boolean attributes as `value || undefined`. Vue renders `false` as `wet="false"`, which Gesso reads as present.
 - `<art-signature>` writes its text into `innerHTML`. It only gets fixed text.
 - The words inside `<art-scheme>` (System, Light, Dark) and the header's "Menu" come from Gesso and are English in both languages.
 
-`app.css` marks the blocks that fill gaps in Gesso as candidates to move there: among them the rows of a list, the rows that unfold, the tick box and stepper, the + row that turns into the new row, the small picture with its painted study, text edited where it is read (`.inline-edit`, used for an owner's wish and a list's title), the amount with its stepper and switch, and the picture that is its own control.
+`app.css` marks the blocks that fill gaps in Gesso as candidates to move there: among them the rows of a list, the rows that unfold, the tick box and stepper, the + row that turns into the new row, the small picture with its painted study, text edited where it is read (`.inline-edit`, used for an owner's wish and a list's title), the amount with its stepper and switch, the picture that is its own control, the choice of a list in a sentence with a menu, the bar for choosing wishes to make joint, the single-use link, and the mark in the header.
 
 ## Not included
 
-- Joint wishes and joint lists, "Add to my list" and notices: step two in `docs/superpowers/specs/2026-11-17-private-lists-and-joint-wishes-design.md`, designed but not built.
-- Email: no verification and no reset mail.
+- Email: no verification and no reset mail. Notices stay inside the site.
 - Fetching a title or picture from a pasted shop link.
 - Prices, reordering wishes, restoring a deleted wish.
 - Seeing who opened your list, or taking a list away from someone who has the link.
+- Withdrawing a single-use link. An unused one keeps working until it is used or closes; making 20 newer ones on the same list drops it.
+- Telling anyone when someone leaves a list.
+
+Known consequences of joint wishes, accepted in the design:
+
+- Anyone who is logged in and can open your list can link one of your wishes and then, as an owner, change it. The notice's Undo puts their changes back and unlinks them.
+- Once you no longer own a joint wish, you are a buyer of it again wherever you can open a list that shows it, so you then see who bought it. It is no longer your wish.

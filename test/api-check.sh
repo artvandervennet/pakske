@@ -34,6 +34,9 @@ flat() { tr -d ' \n\t' < "$BODY"; }
 has()  { if flat | grep -qF -- "$(printf %s "$2" | tr -d ' ')"; then ok "$1"; else bad "$1: \"$2\" not in: $(flat | head -c 400)"; fi; }
 lacks() { if flat | grep -qF -- "$(printf %s "$2" | tr -d ' ')"; then bad "$1: found \"$2\""; else ok "$1"; fi; }
 json() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const v=JSON.parse(s);console.log(eval("v"+process.argv[1]))})' "$1" < "$BODY"; }
+# lines <file>: the JSON one field per line, so `diff` shows what changed whichever server sent it.
+# The production server sends JSON on one line.
+lines() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s),null,2)))' < "$1"; }
 # What an error answer says beyond the request's own address, its status and the dev server's stack.
 said() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const {url,statusCode,stack,...rest}=JSON.parse(s);console.log(JSON.stringify(rest))})' < "$BODY"; }
 jar_has() { grep -q -- "$2" "$TMP/$1.jar" 2>/dev/null; }
@@ -307,7 +310,7 @@ req art GET "/api/lists/$XMAS"
 if cmp -s "$BODY" "$TMP/xmas-art-before"; then ok "art's list is byte for byte what it was"; else bad "art's list changed after others bought, ticked and wrote"; fi
 for secret in purchases notes bought Moeke Zus fluistertip verrassingsplan; do lacks "… and has no '$secret'" "$secret"; done
 req lot GET "/api/lists/$LOTLIST"
-CHANGED=$(diff "$TMP/lot-before" "$BODY" | grep '^[<>]' | tr -d ' ,\n')
+CHANGED=$(diff <(lines "$TMP/lot-before") <(lines "$BODY") | grep '^[<>]' | tr -d ' ,\n')
 if [ "$CHANGED" = '<"mine":0>"mine":1' ]; then ok "lot's list differs only by her own tick"; else bad "lot's list changed by: $CHANGED"; fi
 for secret in purchases notes bought Moeke Zus fluistertip verrassingsplan; do lacks "… and has no '$secret'" "$secret"; done
 req anon GET "/api/lists/$XMAS"
