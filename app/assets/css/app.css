@@ -658,6 +658,15 @@ textarea.inline-edit { overflow: hidden; }
 /* Edit mode: a row is the label of its box, without the chevron that says it opens. A chosen
    row is marked across its whole width. */
 .wish-row.edit-mode .wish-title::after { display: none; }
+/* On a list of yours, holding a row starts edit mode: no text selection, no phone menu and no
+   dragging the picture out. Fields in the row stay selectable. */
+.wish-list.manageable .wish-head {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.wish-list.manageable .wish-head :is(input, textarea) { -webkit-user-select: text; user-select: text; }
+.wish-list.manageable .wish-head img { -webkit-user-drag: none; }
 .wish-row.edit-mode:has(.joint-pick input:checked) { background: color-mix(in oklab, var(--accent) 10%, transparent); }
 .section-head > .actions:has(art-button[size="s"]) { margin-block-start: var(--space-4); }
 

@@ -260,6 +260,15 @@ watch(editing, (on) => {
   if (!on && !wishes.value.length) nextTick(() => wishesTitle.value?.focus())
 })
 
+// Holding a wish starts edit mode with it chosen; handy on a phone.
+const wishList = useTemplateRef<HTMLElement>('wishList')
+useLongPress(wishList, {
+  enabled: () => canManage.value,
+  onPress: (wishId) => {
+    if (!editing.value) startEditing(wishId)
+  },
+})
+
 const editDeleteDialog = useTemplateRef<HTMLDialogElement>('editDeleteDialog')
 const chosenElsewhere = computed(() => edit.chosen().some(wish => wish.role === 'owner' && wish.alsoElsewhere))
 
@@ -374,7 +383,7 @@ async function addWish(title: string) {
             <p v-if="edit.error.value" class="form-message" role="alert">{{ edit.error.value }}</p>
           </div>
           <OneTimeLink v-else-if="wishLink" ref="wishLinkBox" class="joint-link" :path="wishLink" :text="t('joint.linkText')" />
-          <ul v-if="wishes.length || canManage" class="wish-list" :class="{ editing }">
+          <ul v-if="wishes.length || canManage" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
             <WishRow
               v-for="wish in wishes"
               :key="wish.id"
