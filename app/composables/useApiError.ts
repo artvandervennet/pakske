@@ -3,7 +3,7 @@
 export function useApiError() {
   const { t, te } = useI18n()
 
-  function parse(error: unknown): { message: string, fields: Record<string, string> } {
+  function parse(error: unknown): { code: string, message: string, fields: Record<string, string> } {
     const outer = (error as { data?: { data?: unknown } } | null)?.data
     const data = (outer?.data ?? outer ?? {}) as { code?: string, fields?: Record<string, string> }
     const code = data.code ?? 'unknown'
@@ -11,7 +11,7 @@ export function useApiError() {
     for (const [name, fieldCode] of Object.entries(data.fields ?? {})) {
       fields[name] = te(`fields.${fieldCode}`) ? t(`fields.${fieldCode}`) : t('fields.invalid')
     }
-    return { message: te(`errors.${code}`) ? t(`errors.${code}`) : t('errors.unknown'), fields }
+    return { code, message: te(`errors.${code}`) ? t(`errors.${code}`) : t('errors.unknown'), fields }
   }
 
   return { parse }

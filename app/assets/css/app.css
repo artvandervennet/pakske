@@ -61,9 +61,14 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   art-scheme::part(name) { display: none; }
   art-scheme:not(:defined) { min-inline-size: 2.25rem; }
   /* Without its word the switch still leaves "Uitloggen" and "Menu" a few pixels short
-     beside a desktop browser's scrollbar; a tighter gap between the groups gives them back. */
-  art-header::part(bar) { column-gap: var(--space-3); }
+     beside a desktop browser's scrollbar; a tighter gap between the groups gives them back.
+     The header draws its bar twice (the second copy shows during the repaint between bands)
+     and only the first has a part, so the gap is set through the token both copies read.
+     The header's own children, buttons among them, get the token's real value back. */
+  art-header { --space-6: var(--space-3); }
+  art-header > * { --space-6: var(--space-6-page); }
 }
+:root { --space-6-page: var(--space-6); }
 /* A long word in a big title ("Verlanglijstjes" in the hero, or a list's own name) is wider
    than a phone. Hyphenate where the language allows, and break it anyway where it doesn't. */
 :is(.hero, .page-head) h1 { hyphens: auto; overflow-wrap: break-word; }
@@ -185,20 +190,36 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
    toggle is a real button whose ::after covers the whole row, so the picture and the tag
    are part of what you tap. Anything else you can press in the row sits above it. */
 .wish-list { list-style: none; padding: 0; border-block-start: 1px solid var(--rule); }
+/* The room the tick takes at the start of each row, the gap after it included: none for a
+   visitor, a box, or a stepper. Every row of a list gets the same, so the titles line up. */
+.wish-list { --wish-tick: 0px; --wish-tick-room: 0px; }
+.wish-list:has(.wish-tick) { --wish-tick: 2.75rem; --wish-tick-room: calc(var(--wish-tick) + var(--space-3)); }
+.wish-list:has(.stepper) { --wish-tick: 7rem; }
 .wish-list > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
 .wish-head {
   position: relative;
   display: flex;
+  /* A message from the tick takes a line of its own under the row. */
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   min-block-size: 4rem;
   padding-block: var(--space-2);
 }
-.wish-tick { position: relative; z-index: 1; flex: none; }
-.wish-list .quick-add { --quick-add-plus: 3rem; }
+.wish-tick {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  inline-size: var(--wish-tick);
+}
+/* The + sits under the pictures and the field under the titles, past the tick's room. */
+.wish-list .quick-add { --quick-add-plus: 3rem; padding-inline-start: var(--wish-tick-room); }
 .wish-toggle {
   all: unset;
-  flex: 1 1 auto;
+  /* A basis of 0: with its text's width as basis, a long title would wrap the row. */
+  flex: 1 1 0;
   min-inline-size: 0;
   display: grid;
   gap: var(--space-1);
@@ -234,6 +255,58 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .wish-tags { flex: none; display: flex; flex-direction: column; align-items: end; gap: var(--space-1); }
 .wish-row.removed .wish-title { color: var(--ink-muted); }
 
+/* Candidate for Gesso: a tick box with a target as big as a finger, and a stepper: two
+   buttons around a count. A control that can't be used now is aria-disabled rather than
+   disabled, so it keeps the focus of whoever is pressing it. */
+.tick-box {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  cursor: pointer;
+}
+.tick-box input { inline-size: 1.4rem; block-size: 1.4rem; margin: 0; cursor: inherit; }
+.stepper { display: flex; align-items: center; inline-size: 100%; }
+.stepper > button {
+  all: unset;
+  box-sizing: border-box;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: var(--radius-dab);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font: var(--weight-bold) var(--step-1)/1 var(--font-body);
+  cursor: pointer;
+}
+.stepper > button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stepper-count {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  font-size: var(--step--1);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+:is(.tick-box:has(> [aria-disabled="true"]), .tick-box:has(> :disabled), .stepper > [aria-disabled="true"]) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* Under the row, in line with the title. Above the row's toggle, so tapping it doesn't unfold. */
+.wish-tick-message {
+  position: relative;
+  z-index: 1;
+  order: 2;
+  flex: 1 0 100%;
+  max-inline-size: none;
+  padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+  font-size: var(--step--1);
+  font-weight: var(--weight-medium);
+  color: var(--danger);
+}
+
 /* Candidate for Gesso: a small square picture, or a study in two paints when there is none.
    The thin rule keeps a pale study visible on a pale paint. */
 .wish-thumb {
@@ -254,8 +327,8 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   gap: var(--space-4);
   justify-items: start;
   padding-block: var(--space-2) var(--space-6);
-  /* In line with the title: past the picture and the gap after it. */
-  padding-inline-start: calc(3rem + var(--space-3));
+  /* In line with the title: past the tick, the picture and the gaps after them. */
+  padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
 }
 .wish-details-body > * { max-inline-size: min(100%, var(--measure)); }
 .wish-details-body > .people, .wish-notes { inline-size: 100%; }
@@ -269,7 +342,17 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .wish-notes-list > li { max-inline-size: none; }
 @media (width < 40rem) {
   /* A phone has no room to spare beside the details. */
-  .wish-details-body { padding-inline-start: 0; }
+  .wish-details-body, .wish-tick-message { padding-inline-start: 0; }
+  /* With a tick at the start, the tags at the end leave the title too little room: they go
+     on a line of their own, under the title. */
+  .wish-list:has(.wish-tick) .wish-tags {
+    order: 1;
+    flex: 1 0 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+  }
 }
 .tapes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin-block-start: auto; padding-block-start: var(--space-2); }
 .clamp { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

@@ -44,7 +44,7 @@
     "nobody": "Nobody is buying this yet.",
     "anonHint": "Log in to see who is buying this and to read the notes.",
     "nothingMore": "No text or link yet.",
-    "removedIntro": "{names} took this off the list after someone bought it. It stays here so you can sort it out."
+    "removedIntro": "{names} took this off the list after someone bought it. It stays here so you can sort it out. | {names} took this off the list after someone bought it. It stays here so you can sort it out."
   },
   "item": {
     "unlimited": "No limit",
@@ -77,6 +77,22 @@
     "removedDone": "You're no longer buying this.",
     "left": "None left | {n} left | {n} left",
     "removedItem": "{name} took this off the list. You can only lower your amount or remove it."
+  },
+  "tick": {
+    "box": "I'm getting {title}",
+    "more": "One more of {title}",
+    "less": "One fewer of {title}",
+    "count": "You're getting {n}",
+    "countOf": "You're getting {n} of {quantity}",
+    "warningTitle": "Tick \"{title}\" yourself?",
+    "warning": "You might find out that someone already got this. Continue?",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "taken": "Someone already has this.",
+    "notEnough": "There aren't that many left.",
+    "gone": "That no longer exists.",
+    "removed": "This was taken off the list.",
+    "goneFromList": "\"{title}\" no longer exists and has gone from the list."
   },
   "notes": {
     "title": "Notes for the other buyers",

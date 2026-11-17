@@ -5,7 +5,7 @@ import type { WishView } from '#shared/schemas/list'
 // and for a buyer who is buying it and the notes. A visitor who isn't logged in gets a way to
 // log in that brings them back to this row. An owner sees the text and the link here until
 // their row gets its editor.
-const props = defineProps<{ wish: WishView, token: string, owners: string }>()
+const props = defineProps<{ wish: WishView, token: string, owners: string, ownerCount: number }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const { t } = useI18n()
@@ -27,7 +27,7 @@ const loginLink = computed(() => ({
     </art-button>
 
     <template v-if="wish.role === 'buyer'">
-      <p v-if="wish.removed" class="form-message">{{ t('wish.removedIntro', { names: owners }) }}</p>
+      <p v-if="wish.removed" class="form-message">{{ t('wish.removedIntro', { names: owners }, ownerCount) }}</p>
       <h3 class="wish-subtitle">{{ t('purchase.title') }}</h3>
       <ul v-if="wish.purchases.length" class="people">
         <li v-for="(purchase, index) in wish.purchases" :key="index">

@@ -44,7 +44,7 @@
     "nobody": "Nog niemand koopt dit.",
     "anonHint": "Log in om te zien wie dit al koopt en om notities te lezen.",
     "nothingMore": "Nog geen tekst of link.",
-    "removedIntro": "{names} haalde dit van de lijst nadat iemand het kocht. Het blijft hier staan zodat jullie het kunnen afspreken."
+    "removedIntro": "{names} haalde dit van de lijst nadat iemand het kocht. Het blijft hier staan zodat jullie het kunnen afspreken. | {names} haalden dit van de lijst nadat iemand het kocht. Het blijft hier staan zodat jullie het kunnen afspreken."
   },
   "item": {
     "unlimited": "Onbeperkt",
@@ -77,6 +77,22 @@
     "removedDone": "Je koopt dit niet meer.",
     "left": "Niets meer over | Nog {n} over | Nog {n} over",
     "removedItem": "{name} haalde dit van de lijst. Je kunt je aantal alleen nog verlagen of weghalen."
+  },
+  "tick": {
+    "box": "Ik koop {title}",
+    "more": "Eén meer van {title}",
+    "less": "Eén minder van {title}",
+    "count": "Je koopt er {n}",
+    "countOf": "Je koopt er {n} van {quantity}",
+    "warningTitle": "\"{title}\" zelf aanvinken?",
+    "warning": "Je komt misschien te weten dat iemand dit al heeft. Doorgaan?",
+    "continue": "Doorgaan",
+    "cancel": "Annuleren",
+    "taken": "Iemand heeft dit al.",
+    "notEnough": "Zoveel zijn er niet meer over.",
+    "gone": "Dat bestaat niet meer.",
+    "removed": "Dit is van de lijst gehaald.",
+    "goneFromList": "\"{title}\" bestaat niet meer en is van de lijst verdwenen."
   },
   "notes": {
     "title": "Notities voor de andere kopers",

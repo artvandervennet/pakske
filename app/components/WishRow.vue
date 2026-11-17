@@ -3,7 +3,8 @@ import type { WishView } from '#shared/schemas/list'
 
 // One wish on a list: a row that unfolds in place. The page keeps which rows are open, so
 // several can be open at once and they stay open when the list refreshes.
-const props = defineProps<{ wish: WishView, token: string, open: boolean, owners: string }>()
+// `owners` is the owners' names as one phrase; `ownerCount` picks the singular or plural around it.
+const props = defineProps<{ wish: WishView, token: string, open: boolean, owners: string, ownerCount: number }>()
 const emit = defineEmits<{ toggle: [], changed: [] }>()
 
 const { t } = useI18n()
@@ -18,9 +19,8 @@ const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed
 <template>
   <li :id="`wish-${wish.id}`" class="wish-row" :class="{ open, removed }">
     <div class="wish-head">
-      <div v-if="$slots.tick" class="wish-tick">
-        <slot name="tick" />
-      </div>
+      <!-- The tick and its message (WishTick). The message wraps onto a line of its own. -->
+      <slot name="tick" />
       <WishThumb :wish="wish" />
       <!-- The button stretches over the whole row (see app.css), so tapping the picture or
            the tag unfolds it too; the tick, above it, stays its own control. -->
@@ -40,7 +40,7 @@ const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed
       </div>
     </div>
     <div :id="detailsId" class="wish-details" :hidden="!open">
-      <WishBuyerDetails v-if="open" :wish="wish" :token="token" :owners="owners" @changed="emit('changed')" />
+      <WishBuyerDetails v-if="open" :wish="wish" :token="token" :owners="owners" :owner-count="ownerCount" @changed="emit('changed')" />
     </div>
   </li>
 </template>
