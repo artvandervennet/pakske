@@ -139,7 +139,11 @@
   },
   "purchase": {
     "title": "Wie koopt dit?",
-    "you": "Jij"
+    "you": "Jij",
+    "gives": "{name} geeft {n}",
+    "givesThis": "{name} geeft dit",
+    "youGive": "Jij geeft {n}",
+    "youGiveThis": "Jij geeft dit"
   },
   "tick": {
     "box": "Ik koop {title}",

@@ -139,7 +139,11 @@
   },
   "purchase": {
     "title": "Who is buying this?",
-    "you": "You"
+    "you": "You",
+    "gives": "{name} is giving {n}",
+    "givesThis": "{name} is giving this",
+    "youGive": "You're giving {n}",
+    "youGiveThis": "You're giving this"
   },
   "tick": {
     "box": "I'm getting {title}",

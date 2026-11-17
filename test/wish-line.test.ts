@@ -5,7 +5,9 @@ import { wishLine, wishOwnerTag, type Translate } from '../shared/utils/wish-lin
 // Writes out the key and its arguments instead of a sentence, so a test can see which strings
 // a line is made of without depending on the wording in the locale files.
 const t: Translate = (key: string, arg: number | Record<string, unknown>) =>
-  typeof arg === 'number' ? `[${key} ${arg}]` : `[${key}]`
+  typeof arg === 'number'
+    ? `[${key} ${arg}]`
+    : `[${[key, ...Object.entries(arg).map(([name, value]) => `${name}=${value}`)].join(' ')}]`
 
 const base = {
   id: 1,
@@ -52,15 +54,16 @@ describe("a row's second line", () => {
       { name: 'Moeke', quantity: 1, mine: false },
       { name: 'Art', quantity: 2, mine: true },
     ]), t)
-    expect(line).toBe('Moeke 1 · [purchase.you] 2')
+    expect(line).toBe('[purchase.gives name=Moeke n=1] · [purchase.youGive n=2]')
   })
 
   it('leaves the numbers out next to the names when only one was asked for', () => {
-    expect(wishLine(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toBe('Moeke')
+    expect(wishLine(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toBe('[purchase.givesThis name=Moeke]')
+    expect(wishLine(buyer(1, [{ name: 'Art', quantity: 1, mine: true }]), t)).toBe('[purchase.youGiveThis]')
   })
 
   it('says nothing about what is left to a buyer when the wish is unlimited', () => {
-    expect(wishLine(buyer(null, [{ name: 'Moeke', quantity: 5, mine: false }]), t)).toBe('Moeke 5')
+    expect(wishLine(buyer(null, [{ name: 'Moeke', quantity: 5, mine: false }]), t)).toBe('[purchase.gives name=Moeke n=5]')
   })
 
   it('never says something is left on a removed wish', () => {

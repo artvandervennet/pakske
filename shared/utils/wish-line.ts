@@ -32,12 +32,14 @@ export function wishLine(wish: WishView, t: Translate): string {
   return text ? text.slice(0, 160) : (hostOf(wish.url) ?? '')
 }
 
-/** "Jij 2 · Moeke 1". */
+/** "Jij geeft 2 · Moeke geeft 1", or "Moeke geeft dit" for a wish asked for once. */
 function buyers(wish: BuyerWish, t: Translate): string {
   const parts = wish.purchases.map((purchase) => {
-    const name = purchase.mine ? t('purchase.you', {}) : purchase.name
     // With one asked for, a number after every name says nothing.
-    return wish.quantity === 1 ? name : `${name} ${purchase.quantity}`
+    if (wish.quantity === 1) return purchase.mine ? t('purchase.youGiveThis', {}) : t('purchase.givesThis', { name: purchase.name })
+    return purchase.mine
+      ? t('purchase.youGive', { n: purchase.quantity })
+      : t('purchase.gives', { name: purchase.name, n: purchase.quantity })
   })
   return parts.join(' · ')
 }
