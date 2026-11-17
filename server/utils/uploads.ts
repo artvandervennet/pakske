@@ -31,3 +31,11 @@ export async function saveUpload(data: Buffer, ext: UploadExt): Promise<string> 
 export async function removeUpload(name: string | null): Promise<void> {
   if (name && UPLOAD_NAME.test(name)) await rm(join(uploadsDir(), name), { force: true })
 }
+
+/**
+ * Removes files nothing points at any more. Never throws: the change that freed them is already
+ * saved, and a file left behind costs only disk space.
+ */
+export async function removeUploads(names: string[]): Promise<void> {
+  await Promise.all(names.map(name => removeUpload(name).catch(() => {})))
+}

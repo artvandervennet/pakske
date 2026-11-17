@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { listWishes, wishOwners, wishes } from '../server/db/schema'
 import { ownedListId } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
+import { copyWish } from '../server/domain/sharing'
 import { livePublicWishes } from '../server/domain/public-wishes'
 import { addWish, deleteWish, ownedWishOnList, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput, wishPatchInput } from '../shared/schemas/input'
@@ -100,14 +101,28 @@ describe('wishes', () => {
     expect(livePublicWishes(db, listId).map(w => w.id)).toEqual([a.id, b.id])
   })
 
-  it('sets, replaces and clears an image, reporting the previous one', () => {
+  it('sets, replaces and clears an image, reporting the file nothing uses any more', () => {
     const { db, art, token, listId } = setup()
     const { id } = addWishTo(db, art.id, token, 'Boek')
-    expect(setWishImage(db, art.id, token, id, 'a.png')).toEqual({ previous: null })
+    expect(setWishImage(db, art.id, token, id, 'a.png')).toEqual({ unused: [] })
     expect(livePublicWishes(db, listId)[0]!.image).toBe('/uploads/a.png')
-    expect(setWishImage(db, art.id, token, id, 'b.png')).toEqual({ previous: 'a.png' })
-    expect(setWishImage(db, art.id, token, id, null)).toEqual({ previous: 'b.png' })
+    expect(setWishImage(db, art.id, token, id, 'b.png')).toEqual({ unused: ['a.png'] })
+    expect(setWishImage(db, art.id, token, id, null)).toEqual({ unused: ['b.png'] })
     expect(livePublicWishes(db, listId)[0]!.image).toBeNull()
+  })
+
+  it('keeps a picture a copy shares until neither wish uses it', () => {
+    const { db, art, mom, token } = setup()
+    const { id } = addWishTo(db, art.id, token, 'Boek')
+    setWishImage(db, art.id, token, id, 'a.png')
+    const copy = copyWish(db, mom.id, token, id, { newList: 'Moederdag' })
+    expect(setWishImage(db, art.id, token, id, 'b.png')).toEqual({ unused: [] })
+    expect(setWishImage(db, mom.id, copy.token, copy.wishId, null)).toEqual({ unused: ['a.png'] })
+
+    // The other way round, and a deleted wish still holds on to its picture.
+    setWishImage(db, mom.id, copy.token, copy.wishId, 'b.png')
+    deleteWish(db, mom.id, copy.token, copy.wishId)
+    expect(setWishImage(db, art.id, token, id, null)).toEqual({ unused: [] })
   })
 
   it('refuses the 201st live wish, and counts only live ones', () => {
@@ -142,7 +157,7 @@ describe('wishes', () => {
     it('lets Lotte change it and set its picture through Art\'s list', () => {
       const { db, art, lot, token, theirs, wish } = joint()
       expect(updateWish(db, lot.id, token, wish.id, wishPatchInput.parse({ title: 'Groot bordspel' }))).toMatchObject({ title: 'Groot bordspel' })
-      expect(setWishImage(db, lot.id, token, wish.id, 'a.png')).toEqual({ previous: null })
+      expect(setWishImage(db, lot.id, token, wish.id, 'a.png')).toEqual({ unused: [] })
       for (const list of [token, theirs]) {
         expect(livePublicWishes(db, ownedListId(db, list === token ? art.id : lot.id, list))[0]).toMatchObject({ title: 'Groot bordspel', image: '/uploads/a.png' })
       }

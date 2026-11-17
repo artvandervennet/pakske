@@ -1,27 +1,19 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { WishInput, WishPatchInput } from '../../shared/schemas/input'
 import type { PublicWish } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { wishOwners, wishes } from '../db/schema'
+import { wishes } from '../db/schema'
 import { DomainError } from './errors'
 import { ownedListId } from './lists'
-import { assertRoom, putOnList, takeOffList, wishOnList } from './placement'
+import { assertRoom, ownedWishOnList, putOnList, takeOffList, wishOnList } from './placement'
 import { toPublicWish } from './public-wishes'
+import { recordChanges, unusedImages } from './undo'
 
 // What an owner does with the wishes on their list. Nothing here reads what buyers did, so no
 // answer can depend on it: a delete or a lower amount goes through the same way in every case.
 
-/**
- * The wish, if this list shows it now and the person owns it; otherwise "not found". The list
- * doesn't have to be theirs: an owner of a joint wish may change it wherever it is shown.
- */
-export function ownedWishOnList(db: Db, userId: number, token: string, wishId: number) {
-  const { wish, live } = wishOnList(db, token, wishId)
-  const owns = db.select({ userId: wishOwners.userId }).from(wishOwners)
-    .where(and(eq(wishOwners.wishId, wishId), eq(wishOwners.userId, userId))).get()
-  if (!live || !owns) throw new DomainError('not_found')
-  return wish
-}
+// It lives in placement.ts, next to the other ownership rules, so undo.ts can use it too.
+export { ownedWishOnList }
 
 export function addWish(db: Db, userId: number, token: string, input: WishInput): PublicWish {
   return db.transaction((tx) => {
@@ -35,9 +27,11 @@ export function addWish(db: Db, userId: number, token: string, input: WishInput)
 
 /** Changes the fields that are given and leaves the others as they are. */
 export function updateWish(db: Db, userId: number, token: string, wishId: number, change: WishPatchInput): PublicWish {
-  const given = Object.fromEntries(Object.entries(change).filter(([, value]) => value !== undefined))
+  const given = Object.fromEntries(Object.entries(change).filter(([, value]) => value !== undefined)) as WishPatchInput
   return db.transaction((tx) => {
-    ownedWishOnList(tx, userId, token, wishId)
+    const current = ownedWishOnList(tx, userId, token, wishId)
+    // What it returns are forgotten pictures, and a change without a picture can't forget one.
+    recordChanges(tx, wishId, userId, current, given)
     return toPublicWish(tx.update(wishes).set({ ...given, updatedAt: new Date() }).where(eq(wishes.id, wishId)).returning().get())
   }, { behavior: 'immediate' })
 }
@@ -54,11 +48,16 @@ export function deleteWish(db: Db, userId: number, token: string, wishId: number
   }, { behavior: 'immediate' })
 }
 
-/** Sets or clears the image and returns the file it replaced, so the caller can remove it from disk. */
-export function setWishImage(db: Db, userId: number, token: string, wishId: number, imageFile: string | null): { previous: string | null } {
+/**
+ * Sets or clears the image. Returns the files nothing points at any more, so the caller can
+ * remove them from disk: the one replaced, unless a copy or an undo still needs it, and any
+ * earlier picture a link stopped remembering.
+ */
+export function setWishImage(db: Db, userId: number, token: string, wishId: number, imageFile: string | null): { unused: string[] } {
   return db.transaction((tx) => {
     const current = ownedWishOnList(tx, userId, token, wishId)
+    const forgotten = recordChanges(tx, wishId, userId, current, { imageFile })
     tx.update(wishes).set({ imageFile, updatedAt: new Date() }).where(eq(wishes.id, wishId)).run()
-    return { previous: current.imageFile }
+    return { unused: unusedImages(tx, [current.imageFile, ...forgotten]) }
   }, { behavior: 'immediate' })
 }

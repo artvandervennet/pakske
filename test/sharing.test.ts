@@ -1,13 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { count, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { notices, wishLinks, wishes } from '../server/db/schema'
+import { listWishes, notices, wishLinks, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
 import { createList, deleteList, listMyLists, ownedListId } from '../server/domain/lists'
 import { addNote } from '../server/domain/notes'
 import { addNotice, countUnseen, listNotices, markNoticesSeen } from '../server/domain/notices'
-import { setPurchase } from '../server/domain/purchases'
-import { copyWish, linkWish } from '../server/domain/sharing'
+import { putOnList } from '../server/domain/placement'
+import { removePurchase, setPurchase } from '../server/domain/purchases'
+import { copyWish, linkWish, mayUnlink, unlinkOwner } from '../server/domain/sharing'
 import { updateDisplayName } from '../server/domain/users'
 import { addWish, deleteWish, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput } from '../shared/schemas/input'
@@ -172,6 +173,141 @@ describe('what can be linked or copied', () => {
     for (let i = 1; i < 200; i++) deleteList(db, lot.id, createList(db, lot.id, `Lijst ${i}`).token)
     expect(codeOf(() => linkWish(db, lot.id, A, game.id, { newList: 'Nog een' }))).toBe('list_limit_ever')
     expect(codeOf(() => copyWish(db, lot.id, A, game.id, { newList: 'Nog een' }))).toBe('list_limit_ever')
+  })
+})
+
+describe('unlinking someone', () => {
+  it('leaves the wish as it is and gives the unlinked person a copy and a notice', () => {
+    const { db, art, lot, A, L } = setup()
+    const sis = addUser(db, 'sis')
+    const puzzles = addWishTo(db, art.id, A, 'Puzzels', null)
+    setWishImage(db, art.id, A, puzzles.id, 'puzzels.png')
+    linkWish(db, lot.id, A, puzzles.id, { list: L })
+    setPurchase(db, L, puzzles.id, lot.id, 1)
+    setPurchase(db, L, puzzles.id, sis.id, 2)
+    addNote(db, L, puzzles.id, sis.id, 'Voor de kerst')
+    const before = db.select().from(wishes).where(eq(wishes.id, puzzles.id)).get()
+    later()
+
+    expect(mayUnlink(db, puzzles.id, art.id, lot.id)).toBe(true)
+    unlinkOwner(db, art.id, A, puzzles.id, lot.id)
+
+    expect(db.select().from(wishes).where(eq(wishes.id, puzzles.id)).get()).toEqual(before)
+    expect(ownerIds(db, puzzles.id)).toEqual([art.id])
+    expect(purchaseRows(db, puzzles.id)).toEqual([{ userId: lot.id, quantity: 1 }, { userId: sis.id, quantity: 2 }])
+    const hers = getListView(db, L, lot.id)!.wishes
+    expect(hers).toMatchObject([{ title: 'Puzzels', quantity: null, image: '/uploads/puzzels.png', role: 'owner', mine: 0 }])
+    const copyId = hers[0]!.id
+    expect(copyId).not.toBe(puzzles.id)
+    expect(ownerIds(db, copyId)).toEqual([lot.id])
+    expect(purchaseRows(db, copyId)).toEqual([])
+    expect(listNotices(db, lot.id)).toMatchObject([{ kind: 'wish_unlinked', actor: 'Art', actorId: art.id, title: 'Puzzels', token: L, wishId: copyId, canUndo: false }])
+    // Unlinking is not an undo: Art's notice about the link stays.
+    expect(listNotices(db, art.id)).toMatchObject([{ kind: 'wish_linked', actorId: lot.id }])
+
+    // Sis bought through Lotte's list: she still finds the original there, taken off, and the copy.
+    const forSis = getListView(db, L, sis.id)!.wishes
+    expect(wishIn(getListView(db, L, sis.id), puzzles.id)).toMatchObject({ role: 'buyer', removed: true, mine: 2 })
+    expect(wishIn(getListView(db, L, sis.id), copyId)).toMatchObject({ role: 'buyer', removed: false, bought: 0, notes: [] })
+    expect(forSis).toHaveLength(2)
+    expect(codeOf(() => setPurchase(db, L, puzzles.id, sis.id, 3))).toBe('wish_removed')
+    expect(codeOf(() => removePurchase(db, L, puzzles.id, sis.id))).toBeUndefined()
+    // Lotte is a buyer of the original now, through Art's list (accepted by the spec).
+    expect(wishIn(getListView(db, A, lot.id), puzzles.id)).toMatchObject({ role: 'buyer', mine: 1 })
+    expectOwnersSettled(db)
+  })
+
+  it('takes the wish off every list of the unlinked person\'s, and tells everyone who stops owning it', () => {
+    const { db, art, lot, mom, A, game, L } = setup()
+    const L2 = addList(db, lot.id, 'Verjaardag')
+    addOwner(db, L, mom.id)
+    linkWish(db, lot.id, A, game.id, { list: L })
+    // Linking refuses a wish she owns already, so the second list gets it straight in the tables.
+    putOnList(db, ownedListId(db, lot.id, L2), game.id)
+    unlinkOwner(db, art.id, A, game.id, lot.id)
+
+    expect(ownerIds(db, game.id)).toEqual([art.id])
+    const onL = getListView(db, L, lot.id)!.wishes.find(wish => wish.title === 'Bordspel')!
+    const onL2 = getListView(db, L2, lot.id)!.wishes.find(wish => wish.title === 'Bordspel')!
+    expect(onL.id).not.toBe(onL2.id)
+    expect(ownerIds(db, onL.id)).toEqual([lot.id, mom.id])
+    expect(ownerIds(db, onL2.id)).toEqual([lot.id])
+    expect(listNotices(db, lot.id).filter(notice => notice.kind === 'wish_unlinked')).toMatchObject([{ wishId: onL.id }])
+    expect(listNotices(db, mom.id)).toMatchObject([{ kind: 'wish_unlinked', actor: 'Art', wishId: onL.id, token: L }])
+    expectOwnersSettled(db)
+  })
+
+  it('lets only an earlier owner unlink a later one', () => {
+    const { db, art, lot, A, game, L } = setup()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    expect(mayUnlink(db, game.id, lot.id, art.id)).toBe(false)
+    expect(codeOf(() => unlinkOwner(db, lot.id, L, game.id, art.id))).toBe('forbidden')
+    expect(codeOf(() => unlinkOwner(db, lot.id, A, game.id, art.id))).toBe('forbidden')
+    expect(codeOf(() => unlinkOwner(db, art.id, A, game.id, art.id))).toBe('forbidden')
+    expect(ownerIds(db, game.id)).toEqual([art.id, lot.id])
+    // What a later owner can do: take it off their own list.
+    deleteWish(db, lot.id, L, game.id)
+    expect(ownerIds(db, game.id)).toEqual([art.id])
+    expect(listNotices(db, lot.id)).toEqual([])
+    expectOwnersSettled(db)
+  })
+
+  it('does not let co-owners of one list unlink each other', () => {
+    const { db, art, A, game } = setup()
+    const sis = addUser(db, 'sis')
+    addOwner(db, A, sis.id)
+    expect(mayUnlink(db, game.id, art.id, sis.id)).toBe(false)
+    expect(codeOf(() => unlinkOwner(db, art.id, A, game.id, sis.id))).toBe('forbidden')
+    expect(codeOf(() => unlinkOwner(db, sis.id, A, game.id, art.id))).toBe('forbidden')
+    expect(ownerIds(db, game.id)).toEqual([art.id, sis.id])
+  })
+
+  it('finds nothing for someone who doesn\'t own the wish there, or a target who doesn\'t own it', () => {
+    const { db, art, lot, mom, A, game, L } = setup()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    expect(codeOf(() => unlinkOwner(db, mom.id, A, game.id, lot.id))).toBe('not_found')
+    expect(codeOf(() => unlinkOwner(db, art.id, A, game.id, mom.id))).toBe('not_found')
+    expect(codeOf(() => unlinkOwner(db, art.id, addList(db, art.id, 'Verjaardag'), game.id, lot.id))).toBe('not_found')
+    expect(codeOf(() => unlinkOwner(db, art.id, 'no-such-list-token-00', game.id, lot.id))).toBe('not_found')
+    deleteWish(db, art.id, A, game.id)
+    // Art no longer owns it, so nothing is his to unlink, through either list.
+    expect(codeOf(() => unlinkOwner(db, art.id, A, game.id, lot.id))).toBe('not_found')
+    expect(codeOf(() => unlinkOwner(db, art.id, L, game.id, lot.id))).toBe('not_found')
+    expect(ownerIds(db, game.id)).toEqual([lot.id])
+    expect(listNotices(db, lot.id)).toEqual([])
+  })
+
+  it('makes the copy even when the list is full', () => {
+    const { db, art, lot, A, game, L } = setup()
+    for (let i = 0; i < 199; i++) addWishTo(db, lot.id, L, `Wens ${i}`)
+    linkWish(db, lot.id, A, game.id, { list: L })
+    const lId = ownedListId(db, lot.id, L)
+    // Up to 500 placements ever, so the copy is the 501st.
+    for (let i = 0; i < 300; i++) {
+      const id = db.insert(wishes).values({ title: `Weg ${i}`, deletedAt: new Date() }).returning().get().id
+      db.insert(listWishes).values({ listId: lId, wishId: id, removedAt: new Date() }).run()
+    }
+    expect(codeOf(() => addWishTo(db, lot.id, L, 'Te veel'))).toBe('wish_limit_ever')
+    unlinkOwner(db, art.id, A, game.id, lot.id)
+    expect(titles(getListView(db, L, lot.id))).toHaveLength(200)
+    expect(titles(getListView(db, L, lot.id))).toContain('Bordspel')
+    expect(ownerIds(db, game.id)).toEqual([art.id])
+    expectOwnersSettled(db)
+  })
+
+  it('lets someone unlinked link again, without a second placement', () => {
+    const { db, art, lot, A, game, L } = setup()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    unlinkOwner(db, art.id, A, game.id, lot.id)
+    later()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    const lId = ownedListId(db, lot.id, L)
+    const placements = db.select().from(listWishes).where(eq(listWishes.wishId, game.id)).all()
+    expect(placements.filter(placement => placement.listId === lId)).toMatchObject([{ removedAt: null, joinOrder: 2 }])
+    expect(ownerIds(db, game.id)).toEqual([art.id, lot.id])
+    expect(titles(getListView(db, L, lot.id))).toEqual(['Bordspel', 'Bordspel'])
+    expect(listNotices(db, art.id)).toHaveLength(2)
+    expectOwnersSettled(db)
   })
 })
 

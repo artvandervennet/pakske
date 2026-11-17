@@ -14,9 +14,9 @@ export default defineEventHandler(async (event) => {
   if (!ext) fail(422, 'invalid_image')
 
   const name = await saveUpload(file.data, ext)
-  let previous: string | null
+  let unused: string[]
   try {
-    previous = domain(() => setWishImage(useDb(), user.id, token, id, name)).previous
+    unused = domain(() => setWishImage(useDb(), user.id, token, id, name)).unused
   }
   catch (error) {
     // The wish isn't theirs, isn't on this list, or is gone: don't keep the file.
@@ -24,6 +24,6 @@ export default defineEventHandler(async (event) => {
     throw error
   }
   // The row points at the new file now. Failing to clean up the old one must not undo that.
-  await removeUpload(previous).catch(() => {})
+  await removeUploads(unused)
   return { image: `/uploads/${name}` }
 })

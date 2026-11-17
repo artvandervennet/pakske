@@ -32,6 +32,21 @@ export function wishOnList(db: Db, token: string, wishId: number) {
   return { ...row, live }
 }
 
+export function ownsWish(db: Db, wishId: number, userId: number): boolean {
+  return db.select({ userId: wishOwners.userId }).from(wishOwners)
+    .where(and(eq(wishOwners.wishId, wishId), eq(wishOwners.userId, userId))).get() !== undefined
+}
+
+/**
+ * The wish, if this list shows it now and the person owns it; otherwise "not found". The list
+ * doesn't have to be theirs: an owner of a joint wish may change it wherever it is shown.
+ */
+export function ownedWishOnList(db: Db, userId: number, token: string, wishId: number) {
+  const { wish, live } = wishOnList(db, token, wishId)
+  if (!live || !ownsWish(db, wishId, userId)) throw new DomainError('not_found')
+  return wish
+}
+
 /** Refuses when the list has no room for this many more wishes. */
 export function assertRoom(db: Db, listId: number, adding = 1): void {
   const { ever } = db.select({ ever: count() }).from(listWishes).where(eq(listWishes.listId, listId)).get()!
