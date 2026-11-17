@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { listWishes, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
-import { createList, deleteList, listOwnedLists, ownedListId, renameList } from '../server/domain/lists'
+import { createList, deleteList, leaveList, listOwnedLists, ownedListId, renameList } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
 import { LIST_TOKEN } from '../server/domain/tokens'
 import { deleteWish } from '../server/domain/wishes'
-import { addList, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, titles } from './helpers'
+import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, titles } from './helpers'
 
 function setup() {
   const db = makeDb()
@@ -32,8 +32,8 @@ describe('lists', () => {
       db.insert(listWishes).values({ listId: ownedListId(db, art.id, verjaardag), wishId: id }).run()
     }
     expect(listOwnedLists(db, art.id)).toEqual([
-      { token: kerst, title: 'Kerst', wishes: 0 },
-      { token: verjaardag, title: 'Verjaardag', wishes: 2 },
+      { token: kerst, title: 'Kerst', wishes: 0, sharedWith: [] },
+      { token: verjaardag, title: 'Verjaardag', wishes: 2, sharedWith: [] },
     ])
   })
 
@@ -41,7 +41,7 @@ describe('lists', () => {
     const { db, art } = setup()
     const token = addList(db, art.id)
     renameList(db, art.id, token, 'Sinterklaas')
-    expect(listOwnedLists(db, art.id)).toEqual([{ token, title: 'Sinterklaas', wishes: 0 }])
+    expect(listOwnedLists(db, art.id)).toEqual([{ token, title: 'Sinterklaas', wishes: 0, sharedWith: [] }])
   })
 
   it('does not let someone else rename or delete it', () => {
@@ -83,7 +83,7 @@ describe('lists', () => {
     expect(db.select().from(wishes).where(eq(wishes.id, joint.id)).get()?.deletedAt).toBeNull()
     expect(db.select().from(wishes).where(eq(wishes.id, own.id)).get()?.deletedAt).toBeInstanceOf(Date)
     expect(titles(getListView(db, theirs, lot.id))).toEqual(['Bordspel'])
-    expect(listOwnedLists(db, lot.id)).toEqual([{ token: theirs, title: 'Verjaardag', wishes: 1 }])
+    expect(listOwnedLists(db, lot.id)).toEqual([{ token: theirs, title: 'Verjaardag', wishes: 1, sharedWith: [] }])
     expectOwnersSettled(db)
   })
 
@@ -96,8 +96,42 @@ describe('lists', () => {
     putOnList(db, ownedListId(db, lot.id, theirs), joint.id)
     deleteWish(db, art.id, mine, joint.id)
     // The wish lives on, on Lotte's list; Art's list no longer shows it.
-    expect(listOwnedLists(db, art.id)).toEqual([{ token: mine, title: 'Kerst', wishes: 0 }])
-    expect(listOwnedLists(db, lot.id)).toEqual([{ token: theirs, title: 'Verjaardag', wishes: 1 }])
+    expect(listOwnedLists(db, art.id)).toEqual([{ token: mine, title: 'Kerst', wishes: 0, sharedWith: [] }])
+    expect(listOwnedLists(db, lot.id)).toEqual([{ token: theirs, title: 'Verjaardag', wishes: 1, sharedWith: [] }])
+  })
+
+  it('names the other owners of a list, in the order they joined', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-12-01T10:00:00Z'))
+      const { db, art, mom } = setup()
+      const ann = addUser(db, 'ann')
+      const token = addList(db, art.id)
+      vi.setSystemTime(new Date('2026-12-01T11:00:00Z'))
+      addOwner(db, token, mom.id)
+      vi.setSystemTime(new Date('2026-12-01T12:00:00Z'))
+      addOwner(db, token, ann.id)
+      expect(listOwnedLists(db, art.id)[0]!.sharedWith).toEqual(['Mom', 'Ann'])
+      expect(listOwnedLists(db, mom.id)[0]!.sharedWith).toEqual(['Art', 'Ann'])
+      expect(listOwnedLists(db, ann.id)[0]!.sharedWith).toEqual(['Art', 'Mom'])
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('lets only an owner leave, and refuses to delete a list someone else owns too', () => {
+    const { db, art, mom } = setup()
+    const token = addList(db, art.id)
+    expect(codeOf(() => leaveList(db, mom.id, token))).toBe('not_found')
+    addOwner(db, token, mom.id)
+    expect(codeOf(() => deleteList(db, art.id, token))).toBe('list_shared')
+    leaveList(db, art.id, token)
+    expect(listOwnedLists(db, art.id)).toEqual([])
+    expect(listOwnedLists(db, mom.id)).toEqual([{ token, title: 'Kerst', wishes: 0, sharedWith: [] }])
+    expect(codeOf(() => leaveList(db, mom.id, token))).toBe('last_owner')
+    deleteList(db, mom.id, token)
+    expect(listOwnedLists(db, mom.id)).toEqual([])
   })
 
   it('refuses a 51st list', () => {

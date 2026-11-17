@@ -6,6 +6,8 @@ export interface HomeList {
   title: string
   /** Live wishes only. */
   wishes: number
+  /** The display names of the list's other owners, in the order they joined. */
+  sharedWith: string[]
 }
 
 /** A wish as everyone who can see the list gets it. Nothing about buyers is in here. */
@@ -95,6 +97,23 @@ export interface MyLists {
   lists: { token: string, title: string }[]
   /** The list a wish was most recently put on, or null. */
   last: string | null
+}
+
+/**
+ * A link that works once, as the person who opened it gets it. It never holds the token of the
+ * list it came from, so the link can't be used to reach that list later.
+ */
+export interface InviteView {
+  kind: 'wishes' | 'list'
+  /** `own` for the person who made it; `closed` once it can't be used any more. */
+  state: 'open' | 'closed' | 'own'
+  /** The display name of the person who made it. */
+  from: string
+  listTitle: string
+  /** The wishes it would make joint that are still on the list; empty unless it is open. */
+  wishes: { id: number, title: string, image: string | null }[]
+  /** The opener's own lists, to choose where the wishes go. */
+  mine: MyLists
 }
 
 export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined'

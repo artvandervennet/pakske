@@ -46,6 +46,25 @@ export const targetInput = z.union([
   z.strictObject({ newList: listInput.shape.title }),
 ])
 
+/** A link that works once: for some wishes on the list, or for the list itself. */
+export const inviteInput = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('wishes'),
+    wishIds: z.array(z.number('invalid').int('invalid').positive('invalid'), 'required').min(1, 'required').max(50, 'too_long'),
+  }),
+  z.strictObject({ kind: z.literal('list') }),
+])
+
+/**
+ * Accepting a link: wishes need a list to land on; a link to a list needs nothing, which parses to
+ * null. The empty shape names both keys as never, so `{ newList: ' ' }` still reports the field
+ * rather than a union that matched nothing.
+ */
+export const acceptInput = z.union([
+  ...targetInput.options,
+  z.strictObject({ list: z.never().optional(), newList: z.never().optional() }).transform(() => null),
+])
+
 const wishFields = {
   title: requiredText(120),
   description: optionalText(2000),
@@ -81,6 +100,7 @@ export const noteInput = z.object({ body: requiredText(1000) })
 export type WishInput = z.infer<typeof wishInput>
 export type WishPatchInput = z.infer<typeof wishPatchInput>
 export type ListTarget = z.infer<typeof targetInput>
+export type InviteInput = z.infer<typeof inviteInput>
 
 /** The first error code per field, e.g. `{ title: 'required' }`. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

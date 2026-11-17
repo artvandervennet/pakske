@@ -1,10 +1,10 @@
-import { and, count, desc, eq, isNull, max } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNull, max } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listOwners, lists, listWishes, wishes } from '../db/schema'
+import { listOwners, lists, listWishes, users, wishes } from '../db/schema'
 import type { ListTarget } from '../../shared/schemas/input'
 import type { HomeList, MyLists } from '../../shared/schemas/list'
 import { DomainError } from './errors'
-import { onListNow, takeOffList } from './placement'
+import { onListNow, settleOwners, takeOffList } from './placement'
 import { newListToken } from './tokens'
 
 const MAX_LISTS_PER_USER = 50
@@ -66,18 +66,48 @@ export function renameList(db: Db, userId: number, token: string, title: string)
 }
 
 /**
+ * The wishes still marked as on the list, also those deleted before placements could be taken
+ * off, so their owners are settled too.
+ */
+export function wishesMarkedOn(db: Db, listId: number): number[] {
+  return db.select({ wishId: listWishes.wishId }).from(listWishes)
+    .where(and(eq(listWishes.listId, listId), isNull(listWishes.removedAt))).all()
+    .map(row => row.wishId)
+}
+
+/** The list's owners, in the order they joined. */
+export function ownersOfList(db: Db, listId: number): { userId: number, name: string }[] {
+  return db.select({ userId: listOwners.userId, name: users.displayName }).from(listOwners)
+    .innerJoin(users, eq(users.id, listOwners.userId))
+    .where(eq(listOwners.listId, listId))
+    .orderBy(asc(listOwners.addedAt), asc(listOwners.userId))
+    .all()
+}
+
+/**
  * Takes every wish off the list, then deletes the list. A wish that is on no other list is deleted
- * with it; a joint wish stays on the other lists, with their owners.
+ * with it; a joint wish stays on the other lists, with their owners. A list that has other owners
+ * can't be deleted: one owner may not take it away from the others, so they leave instead.
  */
 export function deleteList(db: Db, userId: number, token: string): void {
   db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
-    // Every placement still marked as on the list, also those of wishes deleted before placements
-    // could be taken off, so their owners are settled now too.
-    const onList = tx.select({ wishId: listWishes.wishId }).from(listWishes)
-      .where(and(eq(listWishes.listId, listId), isNull(listWishes.removedAt))).all()
-    for (const { wishId } of onList) takeOffList(tx, listId, wishId)
+    if (ownersOfList(tx, listId).length > 1) throw new DomainError('list_shared')
+    for (const wishId of wishesMarkedOn(tx, listId)) takeOffList(tx, listId, wishId)
     tx.update(lists).set({ deletedAt: new Date() }).where(eq(lists.id, listId)).run()
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * Stops owning a joint list. The list and its wishes stay for the other owners; the person keeps
+ * only the wishes that are also on another list of theirs. The last owner deletes it instead.
+ */
+export function leaveList(db: Db, userId: number, token: string): void {
+  db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    if (ownersOfList(tx, listId).length === 1) throw new DomainError('last_owner')
+    tx.delete(listOwners).where(and(eq(listOwners.listId, listId), eq(listOwners.userId, userId))).run()
+    settleOwners(tx, wishesMarkedOn(tx, listId))
   }, { behavior: 'immediate' })
 }
 
@@ -93,7 +123,8 @@ export function listOwnedLists(db: Db, userId: number): HomeList[] {
         .innerJoin(lists, eq(lists.id, listWishes.listId))
         .where(and(eq(listWishes.listId, id), onListNow))
         .get()!
-      return { token, title, wishes: total }
+      const sharedWith = ownersOfList(db, id).filter(owner => owner.userId !== userId).map(owner => owner.name)
+      return { token, title, wishes: total, sharedWith }
     })
 }
 

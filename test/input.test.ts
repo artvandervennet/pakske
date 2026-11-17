@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fieldErrors, listInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
+import { acceptInput, fieldErrors, inviteInput, listInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
 const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', url: '', quantity: 1, ...over })
 
@@ -75,6 +75,31 @@ describe('the list a wish should land on', () => {
     expect(fieldErrors(targetInput.safeParse({ list: '' }).error!)).toEqual({ list: 'required' })
     expect(fieldErrors(targetInput.safeParse({ list: 'x'.repeat(65) }).error!)).toEqual({ list: 'too_long' })
     expect(fieldErrors(targetInput.safeParse({ newList: 'x'.repeat(81) }).error!)).toEqual({ newList: 'too_long' })
+  })
+})
+
+describe('a link that works once', () => {
+  it('is for 1 to 50 wishes, or for the list', () => {
+    expect(inviteInput.parse({ kind: 'wishes', wishIds: [3, 7] })).toEqual({ kind: 'wishes', wishIds: [3, 7] })
+    expect(inviteInput.parse({ kind: 'list' })).toEqual({ kind: 'list' })
+    expect(inviteInput.safeParse({ kind: 'wishes', wishIds: Array.from({ length: 50 }, (_, i) => i + 1) }).success).toBe(true)
+    expect(fieldErrors(inviteInput.safeParse({ kind: 'wishes', wishIds: [] }).error!)).toEqual({ wishIds: 'required' })
+    expect(fieldErrors(inviteInput.safeParse({ kind: 'wishes', wishIds: Array.from({ length: 51 }, (_, i) => i + 1) }).error!)).toEqual({ wishIds: 'too_long' })
+    for (const bad of [0, -1, 1.5, '3']) {
+      expect(inviteInput.safeParse({ kind: 'wishes', wishIds: [bad] }).success).toBe(false)
+    }
+    expect(inviteInput.safeParse({ kind: 'list', wishIds: [1] }).success).toBe(false)
+    expect(inviteInput.safeParse({ kind: 'other' }).success).toBe(false)
+  })
+
+  it('is accepted onto a list of the person\'s, or with nothing for a list link', () => {
+    expect(acceptInput.parse({})).toBeNull()
+    expect(acceptInput.parse({ list: 'abc' })).toEqual({ list: 'abc' })
+    expect(acceptInput.parse({ newList: '  Samen ' })).toEqual({ newList: 'Samen' })
+    expect(acceptInput.safeParse({ other: 1 }).success).toBe(false)
+    expect(acceptInput.safeParse({ list: 'abc', newList: 'Samen' }).success).toBe(false)
+    expect(fieldErrors(acceptInput.safeParse({ newList: '   ' }).error!)).toEqual({ newList: 'required' })
+    expect(fieldErrors(acceptInput.safeParse({ list: '' }).error!)).toEqual({ list: 'required' })
   })
 })
 
