@@ -62,6 +62,15 @@ describe("a row's second line", () => {
     expect(wishLine(buyer(1, [{ name: 'Art', quantity: 1, mine: true }]), t)).toBe('[purchase.youGiveThis]')
   })
 
+  it('says "someone" for a buyer who stays anonymous, and keeps your own name as "you"', () => {
+    const line = wishLine(buyer(4, [
+      { name: null, quantity: 1, mine: false, anonymous: true },
+      { name: 'Art', quantity: 2, mine: true, anonymous: true },
+    ]), t)
+    expect(line).toBe('[purchase.someoneGives n=1] · [purchase.youGive n=2]')
+    expect(wishLine(buyer(1, [{ name: null, quantity: 1, mine: false, anonymous: true }]), t)).toBe('[purchase.someoneGivesThis]')
+  })
+
   it('says nothing about what is left to a buyer when the wish is unlimited', () => {
     expect(wishLine(buyer(null, [{ name: 'Moeke', quantity: 5, mine: false }]), t)).toBe('[purchase.gives name=Moeke n=5]')
   })

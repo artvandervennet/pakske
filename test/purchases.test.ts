@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { getListView } from '../server/domain/list-view'
 import { deleteList, ownedListId } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
 import { removePurchase, setPurchase } from '../server/domain/purchases'
 import { deleteWish, updateWish } from '../server/domain/wishes'
-import { wishInput } from '../shared/schemas/input'
+import { purchaseInput, wishInput } from '../shared/schemas/input'
 import { addList, addUser, addWishTo, codeOf, makeDb, purchaseRows } from './helpers'
 
 function setup(quantity: number | null = 3) {
@@ -210,5 +211,55 @@ describe('buying', () => {
       expect(codeOf(() => removePurchase(db, token, wish.id, mom.id))).toBeUndefined()
       expect(purchaseRows(db, wish.id)).toEqual([])
     })
+  })
+})
+
+describe('buying without your name', () => {
+  const purchasesSeenBy = (db: ReturnType<typeof makeDb>, token: string, wishId: number, userId: number) => {
+    const wish = getListView(db, token, userId)!.wishes.find(w => w.id === wishId)!
+    return wish.role === 'buyer' ? wish.purchases : []
+  }
+
+  it('hides the name from the other buyers', () => {
+    const { db, token, wish, mom, sis } = setup(3)
+    setPurchase(db, token, wish.id, mom.id, 2, true)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toEqual([{ name: null, quantity: 2, mine: false, anonymous: true }])
+    expect(JSON.stringify(getListView(db, token, sis.id))).not.toContain('Mom')
+  })
+
+  it('shows the buyer their own purchase, marked as anonymous', () => {
+    const { db, token, wish, mom } = setup(3)
+    setPurchase(db, token, wish.id, mom.id, 2, true)
+    expect(purchasesSeenBy(db, token, wish.id, mom.id)).toEqual([{ name: 'Mom', quantity: 2, mine: true, anonymous: true }])
+  })
+
+  it('keeps the choice when only the number changes, and changes it when asked', () => {
+    const { db, token, wish, mom, sis } = setup(3)
+    setPurchase(db, token, wish.id, mom.id, 1, true)
+    setPurchase(db, token, wish.id, mom.id, 2)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toMatchObject([{ name: null, quantity: 2, anonymous: true }])
+    setPurchase(db, token, wish.id, mom.id, 2, false)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toMatchObject([{ name: 'Mom', quantity: 2, anonymous: false }])
+  })
+
+  it('gives the owner and a logged-out visitor the same list either way', () => {
+    const { db, token, wish, art, mom } = setup(3)
+    setPurchase(db, token, wish.id, mom.id, 1, false)
+    const owner = getListView(db, token, art.id)
+    const visitor = getListView(db, token, null)
+    setPurchase(db, token, wish.id, mom.id, 1, true)
+    expect(getListView(db, token, art.id)).toEqual(owner)
+    expect(getListView(db, token, null)).toEqual(visitor)
+  })
+
+  it('shows names by default', () => {
+    const { db, token, wish, mom, sis } = setup(3)
+    setPurchase(db, token, wish.id, mom.id, 1)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toEqual([{ name: 'Mom', quantity: 1, mine: false, anonymous: false }])
+  })
+
+  it('takes the choice from the request', () => {
+    expect(purchaseInput.parse({ quantity: 1, anonymous: true })).toEqual({ quantity: 1, anonymous: true })
+    expect(purchaseInput.parse({ quantity: 1 })).toEqual({ quantity: 1 })
   })
 })

@@ -104,7 +104,8 @@ export const wishPatchInput = z.object({
   quantity: wishFields.quantity.optional(),
 }).refine(change => Object.values(change).some(value => value !== undefined), 'required')
 
-export const purchaseInput = z.object({ quantity: amount })
+/** How many this person is getting, and, when given, whether the other buyers see their name. */
+export const purchaseInput = z.object({ quantity: amount, anonymous: z.boolean('invalid').optional() })
 
 export const noteInput = z.object({ body: requiredText(1000) })
 

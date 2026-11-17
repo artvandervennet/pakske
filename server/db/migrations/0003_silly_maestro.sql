@@ -1,0 +1,1 @@
+ALTER TABLE `purchases` ADD `anonymous` integer DEFAULT false NOT NULL;

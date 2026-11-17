@@ -143,7 +143,13 @@
     "gives": "{name} geeft {n}",
     "givesThis": "{name} geeft dit",
     "youGive": "Jij geeft {n}",
-    "youGiveThis": "Jij geeft dit"
+    "youGiveThis": "Jij geeft dit",
+    "youAnonymous": "Jij (anoniem)",
+    "someone": "Iemand",
+    "someoneGives": "Iemand geeft {n}",
+    "someoneGivesThis": "Iemand geeft dit",
+    "anonymous": "Anoniem geven",
+    "anonymousHint": "De andere kopers zien „Iemand” in plaats van je naam. De eigenaars zien sowieso niet wie wat geeft."
   },
   "tick": {
     "box": "Ik koop {title}",

@@ -8,6 +8,6 @@ export default defineEventHandler(async (event) => {
   const id = idParam(event)
   const input = await readInput(event, purchaseInput)
   // No await between here and the end of setPurchase: see server/domain/purchases.ts.
-  domain(() => setPurchase(useDb(), token, id, user.id, input.quantity))
+  domain(() => setPurchase(useDb(), token, id, user.id, input.quantity, input.anonymous))
   return sendNoContent(event)
 })

@@ -70,9 +70,11 @@ export const buyerWishSchema = z.strictObject({
   bought: z.number().int(),
   mine: z.number().int(),
   purchases: z.array(z.strictObject({
-    name: z.string(),
+    /** Null for someone else who stays anonymous. */
+    name: z.string().nullable(),
     quantity: z.number().int(),
     mine: z.boolean(),
+    anonymous: z.boolean(),
   })),
   notes: z.array(z.strictObject({
     id: z.string(),

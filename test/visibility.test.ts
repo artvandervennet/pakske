@@ -140,8 +140,8 @@ describe('a logged-in visitor who is not an owner', () => {
     const wish = buyerWishSchema.parse(wishIn(view, plugs.id))
     expect(wish).toMatchObject({ role: 'buyer', removed: false, bought: 2, mine: 1, quantity: 3 })
     expect(wish.purchases).toEqual([
-      { name: 'Mom', quantity: 1, mine: true },
-      { name: 'Sis', quantity: 1, mine: false },
+      { name: 'Mom', quantity: 1, mine: true, anonymous: false },
+      { name: 'Sis', quantity: 1, mine: false, anonymous: false },
     ])
     expect(wish.notes).toEqual([
       { id: expect.any(String), author: 'Mom', body: 'Ik neem er een.', createdAt: expect.any(String), mine: true },
@@ -430,9 +430,9 @@ describe('a wish with several owners', () => {
     expect(throughA).toMatchObject({ removed: false, bought: 3, mine: 1 })
     expect(throughL).toMatchObject({ removed: false, bought: 3, mine: 1 })
     expect(throughA.purchases).toEqual([
-      { name: 'Mom', quantity: 1, mine: true },
-      { name: 'Sis', quantity: 1, mine: false },
-      { name: 'Art', quantity: 1, mine: false },
+      { name: 'Mom', quantity: 1, mine: true, anonymous: false },
+      { name: 'Sis', quantity: 1, mine: false, anonymous: false },
+      { name: 'Art', quantity: 1, mine: false, anonymous: false },
     ])
     expect(throughA.notes.map(note => [note.author, note.body, note.mine])).toEqual([
       ['Mom', 'Ik neem de rode.', true],

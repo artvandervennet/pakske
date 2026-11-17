@@ -12,6 +12,7 @@ const emit = defineEmits<{ changed: [reason?: 'gone'] }>()
 const { t } = useI18n()
 const { parse } = useApiError()
 const askWarning = useTickWarning()
+const { isAnonymous, choose } = useBuyAnonymously()
 
 const url = computed(() => `/api/lists/${props.token}/wishes/${props.wish.id}/purchase`)
 const messageId = computed(() => `wish-${props.wish.id}-tick-message`)
@@ -60,8 +61,11 @@ async function setMine(target: number) {
   message.value = ''
   try {
     if (needsWarning(props.wish, mine.value, target) && !(await askWarning(props.wish.title))) return
+    // A buyer's choice to stay anonymous goes along with every number, and outlives taking it back.
+    const anonymous = props.wish.role === 'buyer' ? isAnonymous(props.wish) : undefined
+    if (anonymous !== undefined) choose(props.wish.id, anonymous)
     if (target === 0) await $fetch(url.value, { method: 'DELETE' })
-    else await $fetch(url.value, { method: 'PUT', body: { quantity: target } })
+    else await $fetch(url.value, { method: 'PUT', body: { quantity: target, anonymous } })
     pending.value = target
     emit('changed')
   }

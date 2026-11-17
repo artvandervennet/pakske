@@ -12,8 +12,11 @@ import { wishOnList } from './placement'
  *
  * Only an increase is checked. Lowering always works, also when the owner has since lowered
  * the amount, taken the wish off this list, or deleted the wish or the list.
+ *
+ * `anonymous` says whether the other buyers see "someone" instead of this person's name. Left
+ * out, a purchase keeps what it had, and a new one shows the name.
  */
-export function setPurchase(db: Db, token: string, wishId: number, userId: number, quantity: number): void {
+export function setPurchase(db: Db, token: string, wishId: number, userId: number, quantity: number, anonymous?: boolean): void {
   if (!Number.isInteger(quantity) || quantity < 1) throw new DomainError('validation')
 
   db.transaction((tx) => {
@@ -35,8 +38,8 @@ export function setPurchase(db: Db, token: string, wishId: number, userId: numbe
       }
     }
 
-    if (mine) tx.update(purchases).set({ quantity, updatedAt: new Date() }).where(eq(purchases.id, mine.id)).run()
-    else tx.insert(purchases).values({ wishId, userId, quantity }).run()
+    if (mine) tx.update(purchases).set({ quantity, anonymous: anonymous ?? mine.anonymous, updatedAt: new Date() }).where(eq(purchases.id, mine.id)).run()
+    else tx.insert(purchases).values({ wishId, userId, quantity, anonymous: anonymous ?? false }).run()
   }, { behavior: 'immediate' })
 }
 

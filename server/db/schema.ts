@@ -80,6 +80,8 @@ export const purchases = sqliteTable('purchases', {
   wishId: integer('wish_id').notNull().references(() => wishes.id, { onDelete: 'cascade' }),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   quantity: integer('quantity').notNull(),
+  // The other buyers see "someone" instead of this buyer's name.
+  anonymous: integer('anonymous', { mode: 'boolean' }).notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, t => [

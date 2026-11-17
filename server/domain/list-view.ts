@@ -114,7 +114,7 @@ function buyerWishes(
   if (rows.length === 0) return []
   const ids = rows.map(row => row.wish.id)
   const bought = db
-    .select({ wishId: purchases.wishId, userId: purchases.userId, name: users.displayName, quantity: purchases.quantity })
+    .select({ wishId: purchases.wishId, userId: purchases.userId, name: users.displayName, quantity: purchases.quantity, anonymous: purchases.anonymous })
     .from(purchases)
     .innerJoin(users, eq(users.id, purchases.userId))
     .where(inArray(purchases.wishId, ids))
@@ -138,7 +138,11 @@ function buyerWishes(
       removed,
       bought: wishPurchases.reduce((sum, p) => sum + p.quantity, 0),
       mine: wishPurchases.find(p => p.userId === viewerId)?.quantity ?? 0,
-      purchases: wishPurchases.map(p => ({ name: p.name, quantity: p.quantity, mine: p.userId === viewerId })),
+      // A buyer who stays anonymous is "someone" to the others; the name never leaves the server.
+      purchases: wishPurchases.map((p) => {
+        const mine = p.userId === viewerId
+        return { name: p.anonymous && !mine ? null : p.name, quantity: p.quantity, mine, anonymous: p.anonymous }
+      }),
       notes: written.filter(n => n.wishId === row.id).map(n => ({
         id: n.id,
         author: n.author,

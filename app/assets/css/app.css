@@ -523,6 +523,9 @@ textarea.inline-edit { overflow: hidden; }
 .amount-edit > .inline-field-error { flex: 1 0 100%; }
 .switch { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 2.75rem; cursor: pointer; }
 .switch input { inline-size: 1.25rem; block-size: 1.25rem; margin: 0; cursor: inherit; }
+/* Giving without your name, under who gives what. */
+.anonymous-choice { display: grid; gap: 0; margin-block-start: calc(-1 * var(--space-2)); }
+.anonymous-hint { font-size: var(--step--1); color: var(--ink-muted); }
 
 /* Candidate for Gesso: a picture that is its own control. Activated, it opens the file
    chooser; "Remove" sits on its corner. Without one, the painted study and its words. */
