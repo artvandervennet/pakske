@@ -54,6 +54,20 @@ art-canvas:not(:defined) > [slot="media"] {
 art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-ratio: 1; }
 art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-block-size: 2.25rem; }
 
+/* ── Header ───────────────────────────────────────────────────────────────
+   On a phone the header's actions don't fit beside the menu, and the page scrolls sideways.
+   Gesso's remedy: the colour-scheme switch keeps its dab and drops its word. */
+@media (width < 40rem) {
+  art-scheme::part(name) { display: none; }
+  art-scheme:not(:defined) { min-inline-size: 2.25rem; }
+  /* Without its word the switch still leaves "Uitloggen" and "Menu" a few pixels short
+     beside a desktop browser's scrollbar; a tighter gap between the groups gives them back. */
+  art-header::part(bar) { column-gap: var(--space-3); }
+}
+/* A long word in a big title ("Verlanglijstjes" in the hero, or a list's own name) is wider
+   than a phone. Hyphenate where the language allows, and break it anyway where it doesn't. */
+:is(.hero, .page-head) h1 { hyphens: auto; overflow-wrap: break-word; }
+
 /* ── Page head ────────────────────────────────────────────────────────────
    Every page opens with a band in the deep paint. On the home page that is Gesso's hero;
    on the other pages it is this quieter title band. */
@@ -116,9 +130,12 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
    row's content starts. The field only shows its edge on hover and focus, so at rest it
    reads as the last row of the list. */
 .quick-add {
+  /* The size of the +; a list of wishes makes it as wide as the pictures above it. */
+  --quick-add-plus: 2rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   min-block-size: 3.5rem;
   padding-block: var(--space-2);
 }
@@ -126,8 +143,8 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   flex: none;
   display: inline-grid;
   place-items: center;
-  inline-size: 2rem;
-  block-size: 2rem;
+  inline-size: var(--quick-add-plus);
+  block-size: var(--quick-add-plus);
   border-radius: var(--radius-dab);
   background: var(--accent-wash);
   color: var(--accent);
@@ -135,7 +152,8 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   cursor: pointer;
 }
 .quick-add input {
-  flex: 1 1 auto;
+  /* A basis of 0, so the field shares the line with the + instead of wrapping under it. */
+  flex: 1 1 0;
   min-inline-size: 0;
   background: transparent;
   border-color: transparent;
@@ -143,6 +161,17 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .quick-add input:is(:hover, :focus) { border-color: var(--rule-strong); background: var(--surface-raised); }
 .quick-add input::placeholder { color: var(--ink-muted); opacity: 1; }
 .quick-add input[readonly] { color: var(--ink-muted); }
+.quick-add input[aria-invalid="true"] { border-color: var(--danger); border-width: 2px; }
+/* Under the field, lined up with it rather than with the +. */
+.quick-add-error {
+  flex: 1 0 100%;
+  /* Gesso caps a paragraph at a reading measure; that would let it fit beside the field. */
+  max-inline-size: none;
+  padding-inline-start: calc(var(--quick-add-plus) + var(--space-3));
+  font-size: var(--step--1);
+  font-weight: var(--weight-medium);
+  color: var(--danger);
+}
 
 /* Candidate for Gesso: a button that copies a link and says so beside it. */
 .share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
@@ -150,6 +179,98 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .share > .field { flex: 1 1 100%; }
 
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
+
+/* Candidate for Gesso: rows that unfold in place. Each row is a picture, a title with a line
+   of detail, and a tag; the details open under it, and several can be open at once. The
+   toggle is a real button whose ::after covers the whole row, so the picture and the tag
+   are part of what you tap. Anything else you can press in the row sits above it. */
+.wish-list { list-style: none; padding: 0; border-block-start: 1px solid var(--rule); }
+.wish-list > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
+.wish-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 4rem;
+  padding-block: var(--space-2);
+}
+.wish-tick { position: relative; z-index: 1; flex: none; }
+.wish-list .quick-add { --quick-add-plus: 3rem; }
+.wish-toggle {
+  all: unset;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+.wish-toggle::after { content: ""; position: absolute; inset: 0; }
+.wish-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+.wish-title { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+/* A chevron right after the title, where the eye already is; it turns when the row opens. */
+.wish-title::after {
+  content: "";
+  display: inline-block;
+  inline-size: 0.45em;
+  block-size: 0.45em;
+  margin-inline-start: 0.5em;
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  rotate: 45deg;
+  translate: 0 -0.2em;
+  color: var(--ink-muted);
+}
+.wish-row.open .wish-title::after { rotate: 225deg; translate: 0 0.05em; }
+@media (prefers-reduced-motion: no-preference) {
+  .wish-title::after { transition: rotate var(--dur-dab) var(--ease-brush), translate var(--dur-dab) var(--ease-brush); }
+}
+.wish-line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+}
+.wish-tags { flex: none; display: flex; flex-direction: column; align-items: end; gap: var(--space-1); }
+.wish-row.removed .wish-title { color: var(--ink-muted); }
+
+/* Candidate for Gesso: a small square picture, or a study in two paints when there is none.
+   The thin rule keeps a pale study visible on a pale paint. */
+.wish-thumb {
+  flex: none;
+  inline-size: 3rem;
+  block-size: 3rem;
+  border-radius: var(--radius-chip);
+  object-fit: cover;
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.wish-thumb.study {
+  background: linear-gradient(var(--study-angle), var(--study-a) 55%, var(--study-b) 55%);
+}
+
+.wish-details-body {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  padding-block: var(--space-2) var(--space-6);
+  /* In line with the title: past the picture and the gap after it. */
+  padding-inline-start: calc(3rem + var(--space-3));
+}
+.wish-details-body > * { max-inline-size: min(100%, var(--measure)); }
+.wish-details-body > .people, .wish-notes { inline-size: 100%; }
+.wish-subtitle {
+  margin-block: var(--space-2) calc(-1 * var(--space-2));
+  font: var(--weight-bold) var(--step--1)/1.3 var(--font-body);
+  color: var(--ink-muted);
+}
+.wish-notes { display: grid; gap: var(--space-4); }
+.wish-notes-list { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
+.wish-notes-list > li { max-inline-size: none; }
+@media (width < 40rem) {
+  /* A phone has no room to spare beside the details. */
+  .wish-details-body { padding-inline-start: 0; }
+}
 .tapes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin-block-start: auto; padding-block-start: var(--space-2); }
 .clamp { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 

@@ -31,6 +31,21 @@
     "copied": "Link gekopieerd",
     "manual": "Kopieer deze link"
   },
+  "list": {
+    "owners": "van {names}",
+    "wishes": "Wensen",
+    "add": "Voeg iets toe…",
+    "empty": "Er staat nog niets op deze lijst.",
+    "deleted": "{names} heeft deze lijst verwijderd. Wat al gekocht was, blijft hier staan. | {names} hebben deze lijst verwijderd. Wat al gekocht was, blijft hier staan."
+  },
+  "wish": {
+    "yours": "Je hebt dit zelf | Je hebt er zelf {n}",
+    "left": "niets meer over | nog {n} over | nog {n} over",
+    "nobody": "Nog niemand koopt dit.",
+    "anonHint": "Log in om te zien wie dit al koopt en om notities te lezen.",
+    "nothingMore": "Nog geen tekst of link.",
+    "removedIntro": "{names} haalde dit van de lijst nadat iemand het kocht. Het blijft hier staan zodat jullie het kunnen afspreken."
+  },
   "item": {
     "unlimited": "Onbeperkt",
     "wanted": "{n} gevraagd",
@@ -65,7 +80,7 @@
   },
   "notes": {
     "title": "Notities voor de andere kopers",
-    "hint": "{name} ziet deze notities niet.",
+    "hint": "Niet zichtbaar voor {names}.",
     "empty": "Nog geen notities.",
     "label": "Notitie",
     "add": "Notitie plaatsen",

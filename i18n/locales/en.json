@@ -31,6 +31,21 @@
     "copied": "Link copied",
     "manual": "Copy this link"
   },
+  "list": {
+    "owners": "by {names}",
+    "wishes": "Wishes",
+    "add": "Add something…",
+    "empty": "There is nothing on this list yet.",
+    "deleted": "{names} deleted this list. What was already bought stays here. | {names} deleted this list. What was already bought stays here."
+  },
+  "wish": {
+    "yours": "You got this yourself | You got {n} yourself",
+    "left": "none left | {n} left | {n} left",
+    "nobody": "Nobody is buying this yet.",
+    "anonHint": "Log in to see who is buying this and to read the notes.",
+    "nothingMore": "No text or link yet.",
+    "removedIntro": "{names} took this off the list after someone bought it. It stays here so you can sort it out."
+  },
   "item": {
     "unlimited": "No limit",
     "wanted": "{n} wanted",
@@ -65,7 +80,7 @@
   },
   "notes": {
     "title": "Notes for the other buyers",
-    "hint": "{name} can't see these notes.",
+    "hint": "Not visible to {names}.",
     "empty": "No notes yet.",
     "label": "Note",
     "add": "Post note",

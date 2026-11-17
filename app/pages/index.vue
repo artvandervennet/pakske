@@ -90,10 +90,9 @@ const openedSplatter = computed(() => !loggedIn.value || owned.value.length > 0)
               <span class="row-meta">{{ t('home.wishes', list.wishes) }}</span>
             </li>
             <li>
-              <QuickAdd :label="t('home.newList')" :pending="creating" @add="createList" />
+              <QuickAdd :label="t('home.newList')" :pending="creating" :error="createError" @add="createList" />
             </li>
           </ul>
-          <p v-if="createError" class="form-message" role="alert">{{ createError }}</p>
         </div>
         <div v-else class="section-body">
           <p class="intro">{{ t('home.loggedOut') }}</p>
