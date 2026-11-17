@@ -36,6 +36,21 @@ function setup() {
 
 const noticeRows = (db: ReturnType<typeof makeDb>) => db.select({ n: count() }).from(notices).get()!.n
 
+describe('the place of a copy', () => {
+  it('keeps the copy where the wish was when someone is unlinked', () => {
+    const { db, art, lot, A, game, L } = setup()
+    addWishTo(db, lot.id, L, 'L1')
+    later()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    addWishTo(db, lot.id, L, 'L2')
+    // The linked wish went to the bottom, so the list is no longer in the order wishes were made.
+    expect(titles(getListView(db, L, lot.id))).toEqual(['L1', 'Bordspel', 'L2'])
+    unlinkOwner(db, art.id, A, game.id, lot.id)
+    expect(titles(getListView(db, L, lot.id))).toEqual(['L1', 'Bordspel', 'L2'])
+    expect(wishIn(getListView(db, L, lot.id), game.id)).toBeUndefined()
+  })
+})
+
 describe('linking a wish', () => {
   it('makes the linker an owner at once, of the same wish, and tells the earlier owner', () => {
     const { db, art, lot, A, game, L } = setup()

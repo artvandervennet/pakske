@@ -20,13 +20,13 @@ export function toPublicWish(row: typeof wishes.$inferSelect): PublicWish {
   }
 }
 
-/** The wishes on a list now, oldest first. The order never depends on anything but the wishes. */
+/** The wishes on a list now, in the list's order. The order depends on nothing but what its owners did. */
 export function livePublicWishes(db: Db, listId: number): PublicWish[] {
   return db.select({ wish: wishes }).from(listWishes)
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
     .innerJoin(lists, eq(lists.id, listWishes.listId))
     .where(and(eq(listWishes.listId, listId), onListNow))
-    .orderBy(asc(wishes.createdAt), asc(wishes.id))
+    .orderBy(asc(listWishes.position), asc(wishes.createdAt), asc(wishes.id))
     .all()
     .map(({ wish }) => toPublicWish(wish))
 }

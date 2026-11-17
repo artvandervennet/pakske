@@ -68,6 +68,8 @@ export const listWishes = sqliteTable('list_wishes', {
   joinOrder: integer('join_order').notNull().default(0),
   // Null while the wish is on the list.
   removedAt: integer('removed_at', { mode: 'timestamp_ms' }),
+  // Where the wish stands on this list; set by the list's owners. Lists show the lowest first.
+  position: integer('position').notNull().default(0),
 }, t => [
   primaryKey({ columns: [t.listId, t.wishId] }),
   index('list_wishes_wish_idx').on(t.wishId),

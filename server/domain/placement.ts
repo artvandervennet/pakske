@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull, min, type SQL } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull, max, min, type SQL } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { listOwners, lists, listWishes, wishOwners, wishes } from '../db/schema'
 import { DomainError } from './errors'
@@ -63,9 +63,10 @@ export function assertRoom(db: Db, listId: number, adding = 1): void {
 /**
  * Shows the wish on the list and makes the list's owners owners of the wish. A placement the wish
  * had there before comes back rather than a second row. The join order goes up with every
- * arrival, so a wish that comes back to a list ranks as having joined last.
+ * arrival, so a wish that comes back to a list ranks as having joined last. It goes to the bottom
+ * of the list, unless the caller gives it a place of its own.
  */
-export function putOnList(db: Db, listId: number, wishId: number): void {
+export function putOnList(db: Db, listId: number, wishId: number, position?: number): void {
   const placements = db.select({ listId: listWishes.listId, joinOrder: listWishes.joinOrder, removedAt: listWishes.removedAt })
     .from(listWishes).where(eq(listWishes.wishId, wishId)).all()
   const here = placements.find(placement => placement.listId === listId)
@@ -74,14 +75,22 @@ export function putOnList(db: Db, listId: number, wishId: number): void {
   // A join order is only ever raised, so the highest one now is the highest one ever.
   const joinOrder = placements.length === 0 ? 0 : Math.max(...placements.map(placement => placement.joinOrder)) + 1
   const addedAt = new Date()
+  const place = position ?? bottomOf(db, listId)
   if (here) {
-    db.update(listWishes).set({ removedAt: null, addedAt, joinOrder })
+    db.update(listWishes).set({ removedAt: null, addedAt, joinOrder, position: place })
       .where(and(eq(listWishes.listId, listId), eq(listWishes.wishId, wishId))).run()
   }
   else {
-    db.insert(listWishes).values({ listId, wishId, addedAt, joinOrder }).run()
+    db.insert(listWishes).values({ listId, wishId, addedAt, joinOrder, position: place }).run()
   }
   settleOwners(db, [wishId])
+}
+
+/** The position after every placement the list has had, live or not. */
+function bottomOf(db: Db, listId: number): number {
+  const { highest } = db.select({ highest: max(listWishes.position) }).from(listWishes)
+    .where(eq(listWishes.listId, listId)).get()!
+  return highest === null ? 0 : highest + 1
 }
 
 /** Takes the wish off the list, and returns the ids of the people who no longer own it. */

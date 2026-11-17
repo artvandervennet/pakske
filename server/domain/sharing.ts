@@ -64,7 +64,7 @@ export function copyWish(db: Db, userId: number, token: string, wishId: number, 
 
 /** The lists of this person's that show the wish now, with when the wish came to each. */
 function theirPlacements(db: Db, wishId: number, userId: number) {
-  return db.select({ listId: listWishes.listId, joinOrder: listWishes.joinOrder }).from(listWishes)
+  return db.select({ listId: listWishes.listId, joinOrder: listWishes.joinOrder, position: listWishes.position }).from(listWishes)
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
     .innerJoin(lists, eq(lists.id, listWishes.listId))
     .innerJoin(listOwners, eq(listOwners.listId, lists.id))
@@ -96,7 +96,7 @@ export function unlink(db: Db, actorId: number, wishId: number, targetId: number
   const wish = db.select().from(wishes).where(eq(wishes.id, wishId)).get()!
   const copies = new Map<number, number>()
   const stopped = new Set<number>()
-  for (const { listId } of theirPlacements(db, wishId, targetId)) {
+  for (const { listId, position } of theirPlacements(db, wishId, targetId)) {
     for (const userId of takeOffList(db, listId, wishId)) stopped.add(userId)
     const copy = db.insert(wishes).values({
       title: wish.title,
@@ -104,10 +104,10 @@ export function unlink(db: Db, actorId: number, wishId: number, targetId: number
       url: wish.url,
       imageFile: wish.imageFile,
       quantity: wish.quantity,
-      // Lists are in the order wishes were made, so this keeps the copy where the wish was.
+      // The original's age and its place on the list, so the copy stays where the wish was.
       createdAt: wish.createdAt,
     }).returning({ id: wishes.id }).get()
-    putOnList(db, listId, copy.id)
+    putOnList(db, listId, copy.id, position)
     copies.set(listId, copy.id)
   }
   for (const userId of stopped) {

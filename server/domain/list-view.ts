@@ -178,7 +178,7 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
     .leftJoin(wishOwners, and(eq(wishOwners.wishId, wishes.id), eq(wishOwners.userId, viewerId)))
     .where(eq(listWishes.listId, list.id))
-    .orderBy(asc(wishes.createdAt), asc(wishes.id))
+    .orderBy(asc(listWishes.position), asc(wishes.createdAt), asc(wishes.id))
     .all()
     .map(row => ({ wish: row.wish, owns: row.ownerId !== null, live: !deleted && row.removedAt === null && row.wish.deletedAt === null }))
   const owned = rows.filter(row => row.live && row.owns).map(row => row.wish)
