@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }, { maxUsers: Number(useRuntimeConfig().maxUsers) }))
 
   countHit(key, HOUR)
-  await setUserSession(event, { user: { id: user.id, displayName: user.displayName } })
+  await setUserSession(event, { user: sessionUserOf(user) })
   // The lists opened before making the account move into it, so the cookie isn't needed any more.
   mergeVisits(db, user.id, readOpened(event))
   clearOpened(event)

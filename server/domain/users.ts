@@ -28,6 +28,20 @@ export function findUserById(db: Db, id: number) {
   return db.select().from(users).where(eq(users.id, id)).get()
 }
 
+/**
+ * Does a login cookie still belong to this account? An id alone isn't enough: after a restore
+ * the same id can belong to someone else. The moment the account was made tells them apart.
+ * A cookie from before that moment was stored in it doesn't belong to anyone.
+ */
+export function sessionBelongsTo(
+  session: { id: number, createdAt?: number },
+  account: { id: number, createdAt: Date } | undefined,
+): boolean {
+  return account !== undefined
+    && account.id === session.id
+    && account.createdAt.getTime() === session.createdAt
+}
+
 export function updateDisplayName(db: Db, userId: number, displayName: string): void {
   db.update(users).set({ displayName }).where(eq(users.id, userId)).run()
 }

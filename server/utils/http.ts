@@ -3,7 +3,7 @@ import type { ZodType } from 'zod'
 import { fieldErrors } from '../../shared/schemas/input'
 import { DomainError, type DomainErrorCode } from '../domain/errors'
 import { LIST_TOKEN } from '../domain/tokens'
-import { findUserById } from '../domain/users'
+import { findUserById, sessionBelongsTo } from '../domain/users'
 
 const STATUS: Record<DomainErrorCode, number> = {
   not_found: 404,
@@ -55,16 +55,25 @@ export function tokenParam(event: H3Event): string {
   return token
 }
 
+/** What the login cookie holds about an account. */
+export function sessionUserOf(user: { id: number, displayName: string, createdAt: Date }) {
+  return { id: user.id, displayName: user.displayName, createdAt: user.createdAt.getTime() }
+}
+
 /**
- * The logged-in person's account, or undefined. A cookie for an account that is gone (say, after
- * the database was replaced) is cleared, so whoever holds it is simply logged out.
+ * The logged-in person's account, or undefined. A cookie for an account that is gone, or whose
+ * id now belongs to another account (say, after a restore), is cleared, so whoever holds it is
+ * simply logged out. The page's own idea of who is logged in gets the same check
+ * (server/plugins/02.session-check.ts).
  */
 async function sessionUser(event: H3Event) {
   const session = await getUserSession(event)
-  const id = session.user?.id
-  if (id === undefined) return undefined
-  const user = findUserById(useDb(), id)
-  if (!user) await clearUserSession(event)
+  if (!session.user) return undefined
+  const user = findUserById(useDb(), session.user.id)
+  if (!sessionBelongsTo(session.user, user)) {
+    await clearUserSession(event)
+    return undefined
+  }
   return user
 }
 

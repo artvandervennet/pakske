@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   }
 
   clearHits(accountKey)
-  await replaceUserSession(event, { user: { id: user.id, displayName: user.displayName } })
+  await replaceUserSession(event, { user: sessionUserOf(user) })
   // The lists opened while logged out move into the account, so the cookie isn't needed any more.
   mergeVisits(db, user.id, readOpened(event))
   clearOpened(event)
