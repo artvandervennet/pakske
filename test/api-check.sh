@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks the HTTP API as three people (art owns a list; mom and sis buy from it) and as visitors
-# who aren't logged in. Needs a server with an empty database:
+# Checks the HTTP API as four people (art owns a list; mom and sis buy from it; lot shares wishes
+# and a list with art) and as visitors who aren't logged in. Needs a server with an empty database:
 #
 #   NUXT_DATA_DIR=$(mktemp -d) pnpm dev --port 3112   # in one terminal (stop any other `pnpm dev` first)
 #   test/api-check.sh http://localhost:3112           # in another
@@ -37,6 +37,12 @@ json() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const 
 # What an error answer says beyond the request's own address, its status and the dev server's stack.
 said() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const {url,statusCode,stack,...rest}=JSON.parse(s);console.log(JSON.stringify(rest))})' < "$BODY"; }
 jar_has() { grep -q -- "$2" "$TMP/$1.jar" 2>/dev/null; }
+same() { # same <description> <json expression> <expected>
+  local got; got=$(json "$2" 2>/dev/null)
+  if [ "$got" = "$3" ]; then ok "$1"; else bad "$1: expected $3, got \"$got\""; fi
+}
+# status_of <path>: the status of a plain GET, for files
+status_of() { STATUS=$(curl -s -o "$BODY" -w '%{http_code}' "$BASE$1"); }
 
 register() { req "$1" POST /api/auth/register "{\"email\":\"$1@example.test\",\"displayName\":\"$2\",\"password\":\"correct horse battery\"}"; }
 login() { req "$1" POST /api/auth/login "{\"email\":\"$2@example.test\",\"password\":\"correct horse battery\"}"; }
@@ -49,6 +55,7 @@ echo "── accounts"
 register art Art;  check "art registers without a username" 201; has "… and gets the display name back" '"displayName":"Art"'; lacks "… and no username" username
 register mom Moeke; check "mom registers" 201
 register sis Zus;  check "sis registers" 201
+register lot Lotte; check "lot registers" 201
 req anon POST /api/auth/register '{"email":"art@example.test","displayName":"X","password":"correct horse battery"}'
 check "a second account with the same email is refused" 409; has "… with the code email_taken" email_taken
 req anon POST /api/auth/register '{"email":"nope","displayName":"","password":"short"}'
@@ -157,7 +164,8 @@ if grep -qi 'cache-control: private, no-store' "$TMP/headers"; then ok "the list
 
 echo "── the page Nuxt renders for each viewer"
 # The page carries the API's answer in its HTML. Fetched as a page, it may hold no more than the API gave.
-page() { STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/$1.jar" -c "$TMP/$1.jar" "$BASE/l/$TOKEN"); }
+# page <who> [token]: the page of art's first list unless another token is given.
+page() { STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/$1.jar" -c "$TMP/$1.jar" "$BASE/l/${2:-$TOKEN}"); }
 page art; check "art opens the page of his list" 200
 for secret in Moeke Zus geheimpje; do lacks "… and the HTML has no '$secret'" "$secret"; done
 page page-visitor; check "a visitor opens the page" 200
@@ -224,6 +232,209 @@ req stranger GET /api/home; lacks "… and it is gone from the home page" "$TOKE
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "opened-lists=junk.%%%.$UNKNOWN..$TOKEN.$(head -c 300 /dev/zero | tr '\0' 'x')" "$BASE/api/home")
 check "a cookie with junk in it still gives a home page" 200
 has "… with the list it could find" "\"token\":\"$TOKEN\""; lacks "… and not the token that matches nothing" "$UNKNOWN"
+
+# From here on, joint wishes and lists, on lists of their own, so art's first list stays as the
+# comparisons above left it.
+echo "── a link that makes wishes joint"
+req lot POST /api/lists '{"title":"Lotte haar lijst"}'; check "lot makes a list" 201; LOTLIST=$(json .token)
+req sis POST /api/lists '{"title":"Zus haar lijst"}'; check "sis makes a list" 201; SISLIST=$(json .token)
+req art POST /api/lists '{"title":"Kerst"}'; check "art makes a second list" 201; XMAS=$(json .token)
+req art POST "/api/lists/$XMAS/wishes" '{"title":"Speelgoedtrein","quantity":3}'; check "art adds a wish with amount 3" 201; TRAIN=$(json .id)
+req art POST "/api/lists/$XMAS/wishes" '{"title":"Lamp"}'; check "art adds a lamp" 201; LAMP=$(json .id)
+upload art "/api/lists/$XMAS/wishes/$LAMP/image" "$TMP/pic.png"; check "… with a picture" 200; LAMPIMG=$(json .image)
+req art POST "/api/lists/$XMAS/wishes" '{"title":"Vaas"}'; check "art adds a vase" 201; VASE=$(json .id)
+upload art "/api/lists/$XMAS/wishes/$VASE/image" "$TMP/pic.png"; check "… with a picture" 200; VASEIMG=$(json .image)
+req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"wishIds\":[$TRAIN]}"; check "art makes a link for the train" 201; INVITE=$(json .invite)
+if [ "${#INVITE}" = 22 ]; then ok "… its token has 22 characters"; else bad "the link's token is \"$INVITE\""; fi
+if [ "$INVITE" != "$XMAS" ]; then ok "… and is not the list's token"; else bad "the link hands out the list's token"; fi
+req mom POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"wishIds\":[$TRAIN]}"; check "mom cannot make a link on art's list" 404
+req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"wishIds\":[$TRAIN,$BOOK]}"; check "a link with a wish of another list is not found" 404
+req art POST "/api/lists/$XMAS/invites" '{"kind":"wishes","wishIds":[]}'; check "a link for no wishes is refused" 422
+req anon POST "/api/lists/$XMAS/invites" '{"kind":"list"}'; check "making a link needs a login" 401
+
+echo "── opening the link"
+req anon GET "/api/invites/$INVITE"; check "a visitor who isn't logged in gets 401" 401
+req lot GET "/api/invites/$UNKNOWN"; check "a well-formed token no link has is not found" 404
+req lot GET "/api/invites/not-a-token"; check "a malformed one too" 404
+req lot GET "/api/invites/$INVITE"; check "lot opens it" 200
+has "… and it is open" '"state":"open"'; has "… from Art" '"from":"Art"'; has "… with the train" '"title":"Speelgoedtrein"'
+has "… and her own lists to choose from" "\"token\":\"$LOTLIST\""; lacks "… and no trace of art's list token" "$XMAS"
+req art GET "/api/invites/$INVITE"; check "art opens his own link" 200; has "… and is told it is his" '"state":"own"'
+req art POST "/api/invites/$INVITE/accept" '{"newList":"Van mezelf"}'; check "art cannot use his own link" 403
+req anon POST "/api/invites/$INVITE/accept" "{\"list\":\"$LOTLIST\"}"; check "using a link needs a login" 401
+req lot POST "/api/invites/$INVITE/accept" '{}'; check "wishes need a list to go on" 422
+req lot POST "/api/invites/$INVITE/accept" "{\"list\":\"$LOTLIST\"}"; check "lot puts the train on her list" 200
+has "… and is sent to that list" "\"token\":\"$LOTLIST\""
+req mom POST "/api/invites/$INVITE/accept" "{\"list\":\"$MOMLIST\"}"; check "the link works once" 409; has "… with the code invite_closed" invite_closed
+req lot GET "/api/invites/$INVITE"; has "… and now says it is closed" '"state":"closed"'; lacks "… showing no wishes" Speelgoedtrein
+
+echo "── notices"
+req art GET /api/home; check "art opens the home page" 200; has "… and is told Lotte used his link" '"kind":"joint_link_used","actor":"Lotte"'
+req art GET /api/notices/unseen; check "art asks how many notices are new" 200; has "… one" '"unseen":1'
+req art POST /api/notices/seen; check "art has seen them" 204
+req art GET /api/notices/unseen; has "… and none are new" '"unseen":0'
+req anon GET /api/notices/unseen; check "notices need a login" 401
+req anon POST /api/notices/seen; check "… seeing them too" 401
+req anon GET /api/home; has "a visitor's home page has no notices" '"notices":[]'
+
+echo "── two people use one link at the same moment"
+req art POST /api/lists '{"title":"Ruimte"}'; RACELIST=$(json .token)
+req art POST "/api/lists/$RACELIST/wishes" '{"title":"Raket"}'; ROCKET=$(json .id)
+req art POST "/api/lists/$RACELIST/invites" "{\"kind\":\"wishes\",\"wishIds\":[$ROCKET]}"; RACEINVITE=$(json .invite)
+for who in lot mom; do
+  curl -s -o /dev/null -w '%{http_code}' -X POST -b "$TMP/$who.jar" -H 'Content-Type: application/json' \
+    --data "{\"newList\":\"Raket voor $who\"}" "$BASE/api/invites/$RACEINVITE/accept" > "$TMP/race-$who" &
+done
+wait
+RACE=$(printf '%s\n%s\n' "$(cat "$TMP/race-lot")" "$(cat "$TMP/race-mom")" | sort | tr '\n' ' ')
+if [ "$RACE" = "200 409 " ]; then ok "exactly one of them gets it"; else bad "racing for the link gave: $RACE"; fi
+req mom GET "/api/invites/$RACEINVITE"; has "… and afterwards the link says it is closed" '"state":"closed"'
+req art POST /api/notices/seen
+
+echo "── a joint wish, bought through both lists"
+req art GET "/api/lists/$XMAS"; cp "$BODY" "$TMP/xmas-art-before"
+same "art owns the train" ".wishes.find(w=>w.id===$TRAIN).role" owner
+req lot GET "/api/lists/$LOTLIST"; cp "$BODY" "$TMP/lot-before"
+same "lot owns it too, on her list" ".wishes.find(w=>w.id===$TRAIN).role" owner
+req anon GET "/api/lists/$XMAS"; cp "$BODY" "$TMP/xmas-anon-before"
+req anon GET "/api/lists/$LOTLIST"; cp "$BODY" "$TMP/lot-anon-before"
+req mom PUT "/api/lists/$XMAS/wishes/$TRAIN/purchase" '{"quantity":1}'; check "mom buys one through art's list" 204
+req sis PUT "/api/lists/$LOTLIST/wishes/$TRAIN/purchase" '{"quantity":1}'; check "sis buys one through lot's list" 204
+req mom POST "/api/lists/$XMAS/wishes/$TRAIN/notes" '{"body":"Ik regel de bel, fluistertip."}'; check "mom writes a note" 201
+req sis POST "/api/lists/$LOTLIST/wishes/$TRAIN/notes" '{"body":"Ik neem de rails, verrassingsplan."}'; check "sis writes a note" 201
+req lot PUT "/api/lists/$LOTLIST/wishes/$TRAIN/purchase" '{"quantity":1}'; check "lot ticks one herself" 204
+req art GET "/api/lists/$XMAS"
+if cmp -s "$BODY" "$TMP/xmas-art-before"; then ok "art's list is byte for byte what it was"; else bad "art's list changed after others bought, ticked and wrote"; fi
+for secret in purchases notes bought Moeke Zus fluistertip verrassingsplan; do lacks "… and has no '$secret'" "$secret"; done
+req lot GET "/api/lists/$LOTLIST"
+CHANGED=$(diff "$TMP/lot-before" "$BODY" | grep '^[<>]' | tr -d ' ,\n')
+if [ "$CHANGED" = '<"mine":0>"mine":1' ]; then ok "lot's list differs only by her own tick"; else bad "lot's list changed by: $CHANGED"; fi
+for secret in purchases notes bought Moeke Zus fluistertip verrassingsplan; do lacks "… and has no '$secret'" "$secret"; done
+req anon GET "/api/lists/$XMAS"
+if cmp -s "$BODY" "$TMP/xmas-anon-before"; then ok "a visitor gets art's list byte for byte as before"; else bad "the visitor's view of art's list changed"; fi
+req anon GET "/api/lists/$LOTLIST"
+if cmp -s "$BODY" "$TMP/lot-anon-before"; then ok "… and lot's list"; else bad "the visitor's view of lot's list changed"; fi
+for who in mom sis; do
+  [ "$who" = mom ] && list=$XMAS || list=$LOTLIST
+  req $who GET "/api/lists/$list"; check "$who opens the list she bought through" 200
+  has "… and sees all three bought" '"bought":3'
+  for name in Moeke Zus Lotte; do has "… by $name" "\"name\":\"$name\""; done
+  for text in fluistertip verrassingsplan; do has "… and the note with '$text'" "$text"; done
+done
+
+echo "── the pages of the joint wish's lists"
+for list in "$XMAS" "$LOTLIST"; do
+  for who in art lot page-visitor; do
+    page $who "$list"; check "$who opens the page of $([ "$list" = "$XMAS" ] && echo "art's" || echo "lot's") list" 200
+    for secret in Moeke Zus fluistertip verrassingsplan; do lacks "… and the HTML has no '$secret'" "$secret"; done
+  done
+  page mom "$list"; check "mom opens it" 200
+  for secret in Moeke Zus fluistertip verrassingsplan; do has "… and the HTML has '$secret'" "$secret"; done
+done
+
+echo "── the owners of a joint wish"
+req art PUT "/api/lists/$XMAS/wishes/$TRAIN/purchase" '{"quantity":1}'; check "art ticks the train, which is gone" 409; has "… with the code quantity_exceeded" quantity_exceeded
+REFUSAL=$(said)
+if printf %s "$REFUSAL" | grep -qE 'Moeke|Zus|Lotte'; then bad "the refusal names someone: $REFUSAL"; else ok "… the refusal names nobody"; fi
+if printf %s "$REFUSAL" | grep -q '[0-9]'; then bad "the refusal holds a number: $REFUSAL"; else ok "… and holds no number"; fi
+req lot POST "/api/lists/$LOTLIST/wishes/$TRAIN/notes" '{"body":"Wie koopt hem?"}'; check "lot cannot write a note on it" 403
+req lot PATCH "/api/lists/$XMAS/wishes/$TRAIN" '{"description":"Met bel"}'; check "lot changes it through art's list" 200
+req art GET "/api/lists/$XMAS"; has "… and art sees the change" '"description":"Met bel"'
+
+echo "── Linked"
+req sis POST "/api/lists/$XMAS/wishes/$LAMP/link" "{\"list\":\"$SISLIST\"}"; check "sis puts art's lamp on her list, linked" 201
+has "… and is told which list" "\"token\":\"$SISLIST\""; same "… and that it is the same wish" .wishId "$LAMP"
+req sis POST "/api/lists/$XMAS/wishes/$LAMP/link" "{\"list\":\"$SISLIST\"}"; check "she cannot link it twice" 403
+req art POST "/api/lists/$XMAS/wishes/$LAMP/copy" "{\"list\":\"$XMAS\"}"; check "art cannot add his own wish to his list" 403
+req anon POST "/api/lists/$XMAS/wishes/$LAMP/link" "{\"list\":\"$SISLIST\"}"; check "linking needs a login" 401
+req mom POST "/api/lists/$XMAS/wishes/$LAMP/link" '{"list":""}'; check "a link without a list is refused" 422
+req mom POST "/api/lists/$XMAS/wishes/$SOCKS/link" "{\"list\":\"$MOMLIST\"}"; check "a wish of another list is not found" 404
+req art GET /api/home
+same "art is told, with undo" ".notices.find(n=>n.kind==='wish_linked').canUndo" true
+same "… by Zus" ".notices.find(n=>n.kind==='wish_linked').actor" Zus
+SIS_ID=$(json ".notices.find(n=>n.kind==='wish_linked').actorId")
+req sis PATCH "/api/lists/$SISLIST/wishes/$LAMP" '{"title":"Leeslamp"}'; check "sis renames it through her own list" 200
+upload sis "/api/lists/$SISLIST/wishes/$LAMP/image" "$TMP/pic.png"; check "… and gives it a picture of her own" 200; SISIMG=$(json .image)
+req art GET "/api/lists/$XMAS"; has "art's list shows the new title" '"title":"Leeslamp"'
+req mom POST "/api/lists/$XMAS/wishes/$LAMP/owners/$SIS_ID/undo"; check "mom, who holds no notice, cannot undo it" 404
+req art POST "/api/lists/$XMAS/wishes/$LAMP/owners/$SIS_ID/undo"; check "art undoes the link" 204
+req art GET "/api/lists/$XMAS"; has "… and his list has the old title" '"title":"Lamp"'; lacks "… not the new one" Leeslamp; has "… and the old picture" "$LAMPIMG"
+status_of "$LAMPIMG"; check "the old picture is still there" 200
+status_of "$SISIMG"; check "the picture sis set is gone" 404
+req sis GET "/api/lists/$SISLIST"
+same "sis's list has a copy with the old title" ".wishes.filter(w=>w.title==='Lamp').map(w=>w.id===$LAMP?'the wish':'a copy').join()" "a copy"
+req sis GET /api/home; has "sis is told she was unlinked" '"kind":"wish_unlinked","actor":"Art"'
+req art POST "/api/lists/$XMAS/wishes/$LAMP/owners/$SIS_ID/undo"; check "a second undo finds nothing" 404
+
+echo "── Copy"
+req art POST /api/notices/seen
+req mom POST "/api/lists/$XMAS/wishes/$VASE/copy" "{\"list\":\"$MOMLIST\"}"; check "mom copies the vase to her list" 201; COPY=$(json .wishId)
+if [ -n "$COPY" ] && [ "$COPY" != "$VASE" ]; then ok "… as a wish of its own"; else bad "the copy is wish \"$COPY\""; fi
+req mom GET "/api/lists/$MOMLIST"; same "… which she owns" ".wishes.find(w=>w.id===$COPY).role" owner
+same "… with the same picture" ".wishes.find(w=>w.id===$COPY).image" "$VASEIMG"
+req art GET /api/notices/unseen; has "art is not told" '"unseen":0'
+req art GET /api/home; lacks "… and has no notice about the vase" Vaas
+upload mom "/api/lists/$MOMLIST/wishes/$COPY/image" "$TMP/pic.png"; check "mom replaces the picture on her copy" 200
+status_of "$VASEIMG"; check "… and art's picture is still there" 200
+req art GET "/api/lists/$XMAS"; has "… on his vase" "$VASEIMG"
+
+echo "── the lists a wish can go on"
+req lot GET /api/me/lists; check "lot asks for her lists" 200; has "… and gets hers" "\"token\":\"$LOTLIST\""; has "… and which one was used last" '"last":'
+lacks "… and not art's" "$XMAS"
+req anon GET /api/me/lists; check "that needs a login" 401
+
+echo "── unlinking"
+req lot GET "/api/lists/$LOTLIST"; ART_ID=$(json ".wishes.find(w=>w.id===$TRAIN).coOwners[0].id")
+same "lot may not unlink art" ".wishes.find(w=>w.id===$TRAIN).coOwners[0].canUnlink" false
+req art GET "/api/lists/$XMAS"; LOT_ID=$(json ".wishes.find(w=>w.id===$TRAIN).coOwners[0].id")
+same "art may unlink lot" ".wishes.find(w=>w.id===$TRAIN).coOwners[0].canUnlink" true
+req lot DELETE "/api/lists/$LOTLIST/wishes/$TRAIN/owners/$ART_ID"; check "lot cannot unlink art, who was there first" 403
+req mom DELETE "/api/lists/$XMAS/wishes/$TRAIN/owners/$LOT_ID"; check "mom cannot unlink anyone" 404
+req art DELETE "/api/lists/$XMAS/wishes/$TRAIN/owners/$LOT_ID"; check "art unlinks lot" 204
+req lot GET "/api/lists/$LOTLIST"
+same "lot's list has a copy, nothing ticked" ".wishes.filter(w=>w.title==='Speelgoedtrein').map(w=>(w.id===$TRAIN?'the wish':'a copy')+' '+w.role+' '+w.mine).join()" "a copy owner 0"
+req lot GET /api/home; has "lot is told she was unlinked" '"kind":"wish_unlinked","actor":"Art"'
+req sis GET "/api/lists/$LOTLIST"; same "sis, who bought through lot's list, still gets the train there" ".wishes.find(w=>w.id===$TRAIN).removed" true
+req sis PUT "/api/lists/$LOTLIST/wishes/$TRAIN/purchase" '{"quantity":2}'; check "… cannot raise" 409; has "… with the code wish_removed" wish_removed
+req sis DELETE "/api/lists/$LOTLIST/wishes/$TRAIN/purchase"; check "… and can withdraw" 204
+req art DELETE "/api/lists/$XMAS/wishes/$TRAIN/owners/$LOT_ID"; check "unlinking her again finds nothing" 404
+
+echo "── taking a joint wish off one list"
+upload art "/api/lists/$XMAS/wishes/$TRAIN/image" "$TMP/pic.png"; check "art gives the train a picture" 200; TRAINIMG=$(json .image)
+req lot POST "/api/lists/$XMAS/wishes/$TRAIN/link" "{\"list\":\"$LOTLIST\"}"; check "lot links the train again" 201
+upload lot "/api/lists/$LOTLIST/wishes/$TRAIN/image" "$TMP/pic.png"; check "… and replaces its picture" 200
+status_of "$TRAINIMG"; check "art's picture stays while the link may still put it back" 200
+req art GET /api/home; RELINKED=$(json ".notices.find(n=>n.kind==='wish_linked').id")
+req art DELETE "/api/notices/$RELINKED"; check "art dismisses the notice" 204
+status_of "$TRAINIMG"; check "… and then it is gone" 404
+req art DELETE "/api/notices/$RELINKED"; check "a second dismiss finds nothing" 404
+req lot DELETE "/api/lists/$LOTLIST/wishes/$TRAIN"; check "lot takes the train off her list" 204
+req art GET "/api/lists/$XMAS"; same "… and it is still on art's list, as his" ".wishes.find(w=>w.id===$TRAIN).role" owner
+
+echo "── a list with two owners"
+req art POST /api/lists '{"title":"Samen"}'; check "art makes a list" 201; JOINT=$(json .token)
+req art POST "/api/lists/$JOINT/invites" '{"kind":"list"}'; check "art makes a link for the whole list" 201; LISTINVITE=$(json .invite)
+req lot GET "/api/invites/$LISTINVITE"; check "lot opens it" 200; has "… and it is for a list" '"kind":"list"'; lacks "… without the list's token" "$JOINT"
+req lot POST "/api/invites/$LISTINVITE/accept" '{}'; check "lot accepts" 200; has "… and is sent to the list" "\"token\":\"$JOINT\""
+req lot GET /api/home; has "lot's home page has it, shared with Art" "\"token\":\"$JOINT\",\"title\":\"Samen\",\"wishes\":0,\"sharedWith\":[\"Art\"]"
+req art GET /api/home; has "art is told Lotte joined" '"kind":"list_joined","actor":"Lotte"'; has "… and his row names her" '"title":"Samen","wishes":0,"sharedWith":["Lotte"]'
+req lot POST "/api/lists/$JOINT/wishes" '{"title":"Picknickmand"}'; check "lot adds a wish" 201; BASKET=$(json .id)
+req art GET "/api/lists/$JOINT"; same "… and it is art's too" ".wishes.find(w=>w.id===$BASKET).role" owner
+req art DELETE "/api/lists/$JOINT"; check "art cannot delete a list lot owns too" 409; has "… with the code list_shared" list_shared
+req mom POST "/api/lists/$JOINT/leave"; check "mom cannot leave a list that isn't hers" 404
+req lot POST "/api/lists/$JOINT/leave"; check "lot leaves it" 204
+req lot GET /api/home; lacks "… and it is gone from her home page" "$JOINT"
+req art POST "/api/lists/$JOINT/leave"; check "art cannot leave as the last owner" 409; has "… with the code last_owner" last_owner
+req art DELETE "/api/lists/$JOINT"; check "art deletes it" 204
+
+echo "── dismissing notices"
+req lot GET /api/home; LOTNOTICE=$(json ".notices[0].id")
+req art GET /api/home; NOTICE=$(json ".notices.find(n=>n.kind==='list_joined').id")
+req art DELETE "/api/notices/$LOTNOTICE"; check "art cannot dismiss lot's notice" 404
+req anon DELETE "/api/notices/$NOTICE"; check "dismissing needs a login" 401
+req art DELETE "/api/notices/$NOTICE"; check "art dismisses his own" 204
+req art DELETE "/api/notices/$NOTICE"; check "… and a second time finds nothing" 404
+req lot GET /api/home; has "lot's notice is still there" "\"id\":\"$LOTNOTICE\""
 
 echo "── deleting a list"
 req art DELETE "/api/lists/$TOKEN"; check "art deletes his list" 204

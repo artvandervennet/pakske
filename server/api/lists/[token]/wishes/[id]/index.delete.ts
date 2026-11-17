@@ -1,7 +1,7 @@
 import { deleteWish } from '../../../../../domain/wishes'
 
-// Always the same answer for a wish of yours that is on the list: 204. What buyers did with it
-// plays no part, and its image stays on disk either way.
+// Always the same answer for a wish on a list of yours: 204. It comes off this list only, so what
+// buyers did with it and whoever else it is shared with play no part, and its image stays on disk.
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const token = tokenParam(event)

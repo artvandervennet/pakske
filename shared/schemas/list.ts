@@ -156,8 +156,10 @@ export interface NoticeView {
   createdAt: string
 }
 
-/** What the home page shows: the lists a person owns and the ones they opened. */
+/** What the home page shows: the lists a person owns, the ones they opened, and their notices. */
 export interface HomeView {
   owned: HomeList[]
   opened: OpenedList[]
+  /** Newest first; empty when logged out. */
+  notices: NoticeView[]
 }

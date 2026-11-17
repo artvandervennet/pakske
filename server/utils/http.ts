@@ -54,9 +54,12 @@ export function idParam(event: H3Event, name = 'id'): number {
   return id
 }
 
-/** The list token from the route. A malformed one is "not found", the same as one that matches no list. */
-export function tokenParam(event: H3Event): string {
-  const token = String(getRouterParam(event, 'token'))
+/**
+ * A token from the route: a list's, or a link's, which is made the same way. A malformed one is
+ * "not found", the same as one that matches nothing.
+ */
+export function tokenParam(event: H3Event, name = 'token'): string {
+  const token = String(getRouterParam(event, name))
   if (!LIST_TOKEN.test(token)) fail(404, 'not_found')
   return token
 }
