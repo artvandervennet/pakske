@@ -47,16 +47,16 @@ describe("a row's second line", () => {
     expect(wishLine(owner(3, 0, { url: 'https://www.coolblue.be/x' }), t)).toBe('coolblue.be')
   })
 
-  it('names who bought and says what is left to a buyer', () => {
+  it('names who bought, and leaves what is left to the stepper', () => {
     const line = wishLine(buyer(4, [
       { name: 'Moeke', quantity: 1, mine: false },
       { name: 'Art', quantity: 2, mine: true },
     ]), t)
-    expect(line).toBe('Moeke 1 · [purchase.you] 2 · [wish.left 1]')
+    expect(line).toBe('Moeke 1 · [purchase.you] 2')
   })
 
   it('leaves the numbers out next to the names when only one was asked for', () => {
-    expect(wishLine(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toBe('Moeke · [wish.left 0]')
+    expect(wishLine(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toBe('Moeke')
   })
 
   it('says nothing about what is left to a buyer when the wish is unlimited', () => {

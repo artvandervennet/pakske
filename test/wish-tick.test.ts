@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnonWish, BuyerWish, OwnerWish } from '../shared/schemas/list'
-import { canRaise, needsWarning, tickRefusal, tickState } from '../shared/utils/wish-tick'
+import { canRaise, needsWarning, tickCeiling, tickRefusal, tickState } from '../shared/utils/wish-tick'
 
 const base = {
   id: 1,
@@ -106,5 +106,32 @@ describe("a wish's tick state", () => {
 
   it("stays the same when only the wish's words change", () => {
     expect(tickState(buyer(3, 1, 0, { title: 'Iets anders', description: 'Rood' }))).toBe(tickState(buyer(3, 1, 0)))
+  })
+})
+
+describe('the number after the slash in the stepper', () => {
+  it('shows a buyer the most they can get: their own and what is left', () => {
+    expect(tickCeiling(buyer(4, 2, 0))).toBe(2)
+    expect(tickCeiling(buyer(4, 3, 1))).toBe(2)
+    expect(tickCeiling(buyer(4, 0, 0))).toBe(4)
+    expect(tickCeiling(buyer(4, 4, 4))).toBe(4)
+  })
+
+  it('never shows a buyer less than they have, even when others bought too many', () => {
+    expect(tickCeiling(buyer(2, 4, 0))).toBe(0)
+    expect(tickCeiling(buyer(2, 4, 1))).toBe(1)
+  })
+
+  it('shows a buyer of a removed wish only what they have', () => {
+    expect(tickCeiling(buyer(4, 1, 1, { removed: true }))).toBe(1)
+  })
+
+  it('shows an owner what was asked for, never what is left', () => {
+    for (const mine of [0, 1, 3]) expect(tickCeiling(owner(4, mine))).toBe(4)
+  })
+
+  it('has no number for an unlimited wish', () => {
+    expect(tickCeiling(buyer(null, 3, 1))).toBeNull()
+    expect(tickCeiling(owner(null, 0))).toBeNull()
   })
 })

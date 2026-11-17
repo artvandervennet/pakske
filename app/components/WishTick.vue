@@ -21,8 +21,11 @@ const messageId = computed(() => `wish-${props.wish.id}-tick-message`)
 const pending = ref<number | null>(null)
 const mine = computed(() => (props.wish.role === 'anon' ? 0 : pending.value ?? props.wish.mine))
 const isBox = computed(() => props.wish.quantity === 1)
+// After the slash: for a buyer the most they can have, so what is left shows here and not in
+// the line under the title (tickCeiling). Null for an unlimited wish.
+const ceiling = computed(() => tickCeiling(props.wish))
 // A count like "100 / 120" needs a wider column than "1 / 3" (see .wish-list in app.css).
-const longCount = computed(() => props.wish.quantity !== null && Math.max(props.wish.quantity, mine.value) >= 10)
+const longCount = computed(() => ceiling.value !== null && Math.max(ceiling.value, mine.value) >= 10)
 
 const message = ref('')
 // The tick state a refusal is about. A refusal asks for a refresh, and that refresh brings the
@@ -117,9 +120,9 @@ const describedBy = computed(() => (message.value ? messageId.value : undefined)
         >
           −
         </button>
-        <span class="stepper-count" aria-hidden="true">{{ wish.quantity === null ? mine : `${mine} / ${wish.quantity}` }}</span>
+        <span class="stepper-count" aria-hidden="true">{{ ceiling === null ? mine : `${mine} / ${ceiling}` }}</span>
         <span class="visually-hidden" aria-live="polite">
-          {{ wish.quantity === null ? t('tick.count', { n: mine }) : t('tick.countOf', { n: mine, quantity: wish.quantity }) }}
+          {{ ceiling === null ? t('tick.count', { n: mine }) : t('tick.countOf', { n: mine, quantity: ceiling }) }}
         </span>
         <button
           type="button"

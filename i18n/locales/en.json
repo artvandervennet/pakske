@@ -66,7 +66,6 @@
   },
   "wish": {
     "yours": "You got this yourself | You got {n} yourself",
-    "left": "none left | {n} left | {n} left",
     "nobody": "Nobody is buying this yet.",
     "anonHint": "Log in to tick what you are getting.",
     "removedIntro": "{names} took this off the list after someone bought it. It stays here so you can sort it out. | {names} took this off the list after someone bought it. It stays here so you can sort it out.",

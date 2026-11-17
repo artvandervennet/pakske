@@ -15,6 +15,18 @@ export function canRaise(wish: WishView, mine: number): boolean {
   return wish.bought + (mine - wish.mine) < wish.quantity
 }
 
+/**
+ * The number after the slash in the stepper, or null for an unlimited wish. A buyer sees the most
+ * they can have: their own plus what is left, so "0 / 2" when two of four are taken; a removed
+ * wish leaves them only what they have. An owner sees what was asked for, never what is left.
+ */
+export function tickCeiling(wish: WishView): number | null {
+  if (wish.quantity === null) return null
+  if (wish.role !== 'buyer') return wish.quantity
+  if (wish.removed) return wish.mine
+  return Math.max(wish.mine, wish.quantity - (wish.bought - wish.mine))
+}
+
 /** Does going from `from` to `to` need the owner's warning first? Only an owner's increase. */
 export function needsWarning(wish: WishView, from: number, to: number): boolean {
   return wish.role === 'owner' && to > from

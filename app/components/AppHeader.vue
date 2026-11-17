@@ -3,6 +3,16 @@ const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const { loggedIn, user, clear } = useUserSession()
 const { unseen } = useNotices()
+const route = useRoute()
+
+// Logging in brings you back to the page you were on. From the login or register page itself,
+// the way back that page already carries is kept; from the home page there is nowhere to go back to.
+const loginLink = computed(() => {
+  const login = localePath('/login')
+  const onAuthPage = [login, localePath('/register')].includes(route.path)
+  const next = onAuthPage ? route.query.next : route.fullPath === localePath('/') ? undefined : route.fullPath
+  return { path: login, query: typeof next === 'string' ? { next } : {} }
+})
 
 // <art-header> reads its links and its actions once, when it connects. A new key makes Vue
 // replace the element when the person, the language or the mark for new notices changes.
@@ -30,7 +40,7 @@ async function logout() {
       <button type="button" @click="logout">{{ t('nav.logout') }}</button>
     </art-button>
     <art-button v-else slot="actions" size="s">
-      <NuxtLink :to="localePath('/login')">{{ t('nav.login') }}</NuxtLink>
+      <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
     </art-button>
   </art-header>
 </template>
