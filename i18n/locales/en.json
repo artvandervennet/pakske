@@ -43,7 +43,13 @@
     "deleteTitle": "Delete \"{title}\"?",
     "deleteBody": "The list disappears, with every wish on it. You can't undo this.",
     "deleteConfirm": "Delete list",
-    "deleteCancel": "Cancel"
+    "deleteCancel": "Cancel",
+    "invite": "Invite a co-owner",
+    "inviteText": "This link works once. Whoever opens it becomes a co-owner of this list and of every wish on it.",
+    "leave": "Leave list",
+    "leaveTitle": "Leave \"{title}\"?",
+    "leaveBody": "You will no longer own this list, nor the wishes on it that aren't on another list of yours. The list stays with {names}.",
+    "leaveConfirm": "Leave list"
   },
   "wish": {
     "yours": "You got this yourself | You got {n} yourself",
@@ -68,7 +74,14 @@
     "cancel": "Cancel"
   },
   "joint": {
-    "sharedWith": "Shared with"
+    "sharedWith": "Shared with",
+    "make": "Make joint",
+    "select": "Choose {title}",
+    "selected": "Choose the wishes you want to share | {n} wish chosen | {n} wishes chosen",
+    "createLink": "Make link",
+    "cancel": "Cancel",
+    "tooMany": "Choose 50 at most.",
+    "linkText": "This link works once. Whoever opens it becomes a co-owner of the chosen wishes and from then on no longer sees who buys them."
   },
   "unlink": {
     "action": "Unlink",
@@ -87,6 +100,18 @@
     "copyHint": "A wish of your own, separate from this one. Nobody is told.",
     "done": "\"{title}\" is now on {list}.",
     "removed": "This wish is no longer on the list."
+  },
+  "invite": {
+    "title": "A link that works once",
+    "wishes": "{from} shares a wish with you | {from} shares {n} wishes with you",
+    "wishesLead": "Choose which of your lists it goes on. You become a co-owner of it and from then on no longer see who buys it. | Choose which of your lists they go on. You become a co-owner of them and from then on no longer see who buys them.",
+    "accept": "Add to my list",
+    "list": "{from} invites you to \"{title}\"",
+    "listLead": "You become a co-owner of this list and of every wish on it. From then on you no longer see who buys what there.",
+    "acceptList": "Become a co-owner",
+    "closed": "This link no longer works. Ask {from} for a new one.",
+    "own": "This is your own link. Send it to the person you want to share with.",
+    "alreadyOwner": "You are already a co-owner of this list."
   },
   "purchase": {
     "title": "Who is buying this?",
@@ -189,7 +214,10 @@
     "wrong_password": "Your current password is wrong.",
     "too_large": "That is too large. Choose a smaller image or shorten your text.",
     "invalid_image": "That file isn't a JPEG, PNG or WebP. Choose another image.",
-    "bad_origin": "This request came from another site and was refused."
+    "bad_origin": "This request came from another site and was refused.",
+    "list_shared": "Someone else owns this list too. Leave it instead; the last owner can delete it.",
+    "last_owner": "You are the last owner of this list. Delete it instead of leaving it.",
+    "invite_closed": "This link no longer works. Ask for a new one."
   },
   "fields": {
     "required": "Fill this in.",

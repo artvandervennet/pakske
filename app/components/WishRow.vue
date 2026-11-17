@@ -8,7 +8,8 @@ import type { WishView } from '#shared/schemas/list'
 // `owners` is the list's owners; `viewerOwnsList` says whether the viewer is one of them.
 // `refresh` refreshes the list after an owner's edit saved; `changed` is for what can take the
 // focused control away with it, such as deleting. `added` and `removed` come from "Op mijn lijst
-// zetten": where the wish went, or that it left this list meanwhile.
+// zetten": where the wish went, or that it left this list meanwhile. `joint` comes from the
+// owner's "Gezamenlijk maken".
 // The `message` slot is for what the page says about this row, at the top of its details.
 const props = defineProps<{
   wish: WishView
@@ -18,7 +19,7 @@ const props = defineProps<{
   viewerOwnsList: boolean
   refresh: () => Promise<unknown>
 }>()
-const emit = defineEmits<{ toggle: [], changed: [], added: [list: { token: string, title: string }], removed: [] }>()
+const emit = defineEmits<{ toggle: [], changed: [], added: [list: { token: string, title: string }], removed: [], joint: [] }>()
 
 const { t } = useI18n()
 const { secondLine, amountTag } = useWishStatus()
@@ -101,7 +102,7 @@ watch(() => props.open, (open) => {
     <div :id="detailsId" class="wish-details" :hidden="!open">
       <template v-if="open">
         <slot name="message" />
-        <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :can-remove="viewerOwnsList" @changed="emit('changed')" />
+        <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :can-remove="viewerOwnsList" @changed="emit('changed')" @joint="emit('joint')" />
         <WishBuyerDetails
           v-else
           :wish="wish"

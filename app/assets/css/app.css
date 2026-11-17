@@ -594,6 +594,41 @@ textarea.inline-edit { overflow: hidden; }
 .add-to-list-ways art-button > button { inline-size: 100%; justify-content: center; }
 .add-to-list-hint { flex: 1 1 16rem; font-size: var(--step--1); color: var(--ink-muted); }
 
+/* Candidate for Gesso: a bar for choosing several rows at once. It holds how many are chosen
+   and what to do with them, and stays in view under the header while the list scrolls. */
+.joint-bar {
+  position: sticky;
+  inset-block-start: var(--art-header-height, 3.5rem);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-block-end: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-chip);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.joint-bar-count { flex: 1 1 12rem; font-weight: var(--weight-medium); }
+.joint-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.joint-bar > .form-message { flex: 1 0 100%; }
+
+/* Candidate for Gesso: a link that works once, just made. What it does, its address to read or
+   select, and the button that copies it. */
+.one-time-link { display: grid; gap: var(--space-3); justify-items: start; max-inline-size: var(--measure); }
+.one-time-link-text { font-weight: var(--weight-medium); }
+.one-time-link-address { font-size: var(--step--1); text-overflow: ellipsis; }
+.joint-link { margin-block-end: var(--space-6); }
+/* Under the title band's buttons, on a line of its own, as is what the band says back. */
+.page-head .actions > :is(.one-time-link, .form-message) { flex: 1 0 100%; }
+.page-head .actions > .one-time-link { margin-block-start: var(--space-2); }
+
+/* The page a link that works once opens. */
+.invite-body { display: grid; gap: var(--space-6); justify-items: start; max-inline-size: var(--measure); }
+.invite-body > .rows { inline-size: 100%; }
+.invite-body > .actions { margin-block-start: 0; }
+
 /* A band that is one column at every width: a form, or the error page. */
 .band.wide > .inner { padding-block: var(--space-12) var(--space-16); }
 

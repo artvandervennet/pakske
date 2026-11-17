@@ -43,7 +43,13 @@
     "deleteTitle": "\"{title}\" verwijderen?",
     "deleteBody": "De lijst verdwijnt, met alle wensen erop. Dat kun je niet ongedaan maken.",
     "deleteConfirm": "Lijst verwijderen",
-    "deleteCancel": "Annuleren"
+    "deleteCancel": "Annuleren",
+    "invite": "Mede-eigenaar uitnodigen",
+    "inviteText": "Deze link werkt één keer. Wie hem opent, wordt mede-eigenaar van deze lijst en van alle wensen erop.",
+    "leave": "Lijst verlaten",
+    "leaveTitle": "\"{title}\" verlaten?",
+    "leaveBody": "Je bent dan geen eigenaar meer van deze lijst, en ook niet van de wensen erop die niet op een andere lijst van jou staan. De lijst blijft van {names}.",
+    "leaveConfirm": "Lijst verlaten"
   },
   "wish": {
     "yours": "Je hebt dit zelf | Je hebt er zelf {n}",
@@ -68,7 +74,14 @@
     "cancel": "Annuleren"
   },
   "joint": {
-    "sharedWith": "Samen met"
+    "sharedWith": "Samen met",
+    "make": "Gezamenlijk maken",
+    "select": "Kies {title}",
+    "selected": "Kies de wensen die je wilt delen | {n} wens gekozen | {n} wensen gekozen",
+    "createLink": "Link maken",
+    "cancel": "Annuleren",
+    "tooMany": "Kies er hoogstens 50.",
+    "linkText": "Deze link werkt één keer. Wie hem opent, wordt mede-eigenaar van de gekozen wensen en ziet daarna niet meer wie ze koopt."
   },
   "unlink": {
     "action": "Ontkoppelen",
@@ -87,6 +100,18 @@
     "copyHint": "Een eigen wens die losstaat van deze. Niemand krijgt er bericht van.",
     "done": "\"{title}\" staat nu op {list}.",
     "removed": "Deze wens staat niet meer op de lijst."
+  },
+  "invite": {
+    "title": "Een link die één keer werkt",
+    "wishes": "{from} deelt een wens met je | {from} deelt {n} wensen met je",
+    "wishesLead": "Kies op welke lijst van jou hij komt. Je wordt er mede-eigenaar van en ziet daarna niet meer wie hem koopt. | Kies op welke lijst van jou ze komen. Je wordt er mede-eigenaar van en ziet daarna niet meer wie ze koopt.",
+    "accept": "Op mijn lijst zetten",
+    "list": "{from} nodigt je uit voor \"{title}\"",
+    "listLead": "Je wordt mede-eigenaar van deze lijst en van elke wens erop. Je ziet daarna niet meer wie daar wat koopt.",
+    "acceptList": "Mede-eigenaar worden",
+    "closed": "Deze link werkt niet meer. Vraag {from} om een nieuwe.",
+    "own": "Dit is je eigen link. Stuur hem naar de persoon met wie je wilt delen.",
+    "alreadyOwner": "Je bent al mede-eigenaar van deze lijst."
   },
   "purchase": {
     "title": "Wie koopt dit?",
@@ -189,7 +214,10 @@
     "wrong_password": "Je huidige wachtwoord klopt niet.",
     "too_large": "Dat is te groot. Kies een kleinere afbeelding of kort je tekst in.",
     "invalid_image": "Dat bestand is geen JPEG, PNG of WebP. Kies een andere afbeelding.",
-    "bad_origin": "Dit verzoek kwam van een andere site en is geweigerd."
+    "bad_origin": "Dit verzoek kwam van een andere site en is geweigerd.",
+    "list_shared": "Deze lijst is ook van iemand anders. Verlaat hem; wie als laatste overblijft, kan hem verwijderen.",
+    "last_owner": "Je bent de laatste eigenaar van deze lijst. Verwijder hem in plaats van hem te verlaten.",
+    "invite_closed": "Deze link werkt niet meer. Vraag om een nieuwe."
   },
   "fields": {
     "required": "Vul dit in.",

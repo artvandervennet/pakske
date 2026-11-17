@@ -134,31 +134,153 @@ async function onRenameDone(how: 'enter' | 'escape' | 'blur') {
   renameButton.value?.focus()
 }
 
-// Deleting the list asks first. Afterwards the owner goes home, where it is gone.
+// A list with more than one owner can't be deleted: each owner leaves, and the last one
+// deletes it. The band offers the one that applies. Either asks first, and afterwards the
+// owner goes home, where the list is gone.
+const shared = computed(() => list.value.owners.length > 1)
+const { user } = useUserSession()
+// The other owners, for "it stays with …": the viewer's own name taken out once, since two
+// owners can have the same name.
+const otherOwners = computed(() => {
+  const others = [...list.value.owners]
+  const own = others.indexOf(user.value?.displayName ?? '')
+  if (own !== -1) others.splice(own, 1)
+  return names(others)
+})
+
 const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
-const deleteError = ref('')
+const leaveDialog = useTemplateRef<HTMLDialogElement>('leaveDialog')
+const bandError = ref('')
 const deleting = ref(false)
 
-function askToDelete() {
-  if (!deleting.value) deleteDialog.value?.showModal()
+function askToDeleteOrLeave() {
+  if (deleting.value) return
+  ;(shared.value ? leaveDialog : deleteDialog).value?.showModal()
 }
 
-async function onDeleteDialogClose() {
-  // Escape sets no value, and browsers differ on whether it clears the last one: reset it.
-  const choice = deleteDialog.value?.returnValue
-  if (deleteDialog.value) deleteDialog.value.returnValue = ''
-  if (choice !== 'delete' || deleting.value) return
+/** The dialog's answer. Escape sets none, and browsers differ on whether it clears the last one. */
+function answer(dialog: HTMLDialogElement | null): string {
+  const choice = dialog?.returnValue ?? ''
+  if (dialog) dialog.returnValue = ''
+  return choice
+}
+
+async function deleteOrLeave(how: 'delete' | 'leave') {
   deleting.value = true
-  deleteError.value = ''
+  bandError.value = ''
   try {
-    await $fetch(`/api/lists/${token.value}`, { method: 'DELETE' })
+    if (how === 'delete') await $fetch(`/api/lists/${token.value}`, { method: 'DELETE' })
+    else await $fetch(`/api/lists/${token.value}/leave`, { method: 'POST' })
     await navigateTo(localePath('/'))
   }
   catch (error) {
-    deleteError.value = parse(error).message
+    bandError.value = parse(error).message
+    // Someone joined or left since the page loaded: the band then offers the other one.
+    await refresh()
   }
   finally {
     deleting.value = false
+  }
+}
+
+function onDeleteDialogClose() {
+  if (answer(deleteDialog.value) === 'delete' && !deleting.value) deleteOrLeave('delete')
+}
+
+function onLeaveDialogClose() {
+  if (answer(leaveDialog.value) === 'leave' && !deleting.value) deleteOrLeave('leave')
+}
+
+// A link that makes someone a co-owner of the list. It shows under the band's buttons, with
+// the focus on its address.
+const listLink = ref<string | null>(null)
+const listLinkBox = useTemplateRef<{ focus: () => void }>('listLinkBox')
+const inviting = ref(false)
+
+async function inviteCoOwner() {
+  if (inviting.value) return
+  inviting.value = true
+  bandError.value = ''
+  try {
+    const made = await $fetch<{ invite: string }>(`/api/lists/${token.value}/invites`, { method: 'POST', body: { kind: 'list' } })
+    listLink.value = localePath(`/j/${made.invite}`)
+    await nextTick()
+    listLinkBox.value?.focus()
+  }
+  catch (error) {
+    bandError.value = parse(error).message
+  }
+  finally {
+    inviting.value = false
+  }
+}
+
+// Making wishes joint. "Gezamenlijk maken" on one of them starts it with that wish chosen;
+// the ticks of the owner's rows turn into boxes to choose more, and the bar above the list
+// makes the link. Cancel puts the ticks back and the focus where it was.
+const selecting = ref(false)
+const selected = reactive(new Set<number>())
+const selectError = ref('')
+const makingLink = ref(false)
+const wishLink = ref<string | null>(null)
+const wishLinkBox = useTemplateRef<{ focus: () => void }>('wishLinkBox')
+let selectionStart: HTMLElement | null = null
+
+/** A box instead of the tick: the viewer owns this wish, here on a list of theirs. */
+const pickable = (wish: WishView) => selecting.value && canManage.value && wish.role === 'owner'
+
+async function startSelecting(wish: WishView) {
+  if (!selecting.value) {
+    selectionStart = document.activeElement as HTMLElement | null
+    selected.clear()
+  }
+  selecting.value = true
+  selected.add(wish.id)
+  selectError.value = ''
+  wishLink.value = null
+  await nextTick()
+  document.querySelector<HTMLElement>(`#wish-${wish.id} .joint-pick input`)?.focus()
+}
+
+function choose(id: number, event: Event) {
+  if ((event.target as HTMLInputElement).checked) selected.add(id)
+  else selected.delete(id)
+  selectError.value = ''
+}
+
+async function stopSelecting() {
+  selecting.value = false
+  selected.clear()
+  selectError.value = ''
+  await nextTick()
+  // Back to "Gezamenlijk maken" while its row is open, else to the list's heading.
+  if (selectionStart?.isConnected) selectionStart.focus()
+  else wishesTitle.value?.focus()
+  selectionStart = null
+}
+
+async function makeWishLink() {
+  // Only wishes still on the list: one may have gone since it was chosen.
+  const wishIds = list.value.wishes.filter(wish => selected.has(wish.id)).map(wish => wish.id)
+  if (makingLink.value || !wishIds.length) return
+  makingLink.value = true
+  selectError.value = ''
+  try {
+    const made = await $fetch<{ invite: string }>(`/api/lists/${token.value}/invites`, { method: 'POST', body: { kind: 'wishes', wishIds } })
+    wishLink.value = localePath(`/j/${made.invite}`)
+    selecting.value = false
+    selected.clear()
+    selectionStart = null
+    await nextTick()
+    wishLinkBox.value?.focus()
+  }
+  catch (error) {
+    const parsed = parse(error)
+    selectError.value = parsed.fields.wishIds ? t('joint.tooMany') : parsed.message
+    if (parsed.code === 'not_found') await refresh()
+  }
+  finally {
+    makingLink.value = false
   }
 }
 
@@ -209,9 +331,14 @@ async function addWish(title: string) {
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
         <ShareButton v-if="!list.deleted" :path="localePath(`/l/${list.token}`)" />
         <template v-if="canManage">
-          <art-button variant="quiet">
-            <button type="button" :aria-disabled="deleting || undefined" @click="askToDelete">{{ t('list.delete') }}</button>
+          <art-button variant="secondary">
+            <button type="button" :aria-disabled="inviting || undefined" @click="inviteCoOwner">{{ t('list.invite') }}</button>
           </art-button>
+          <art-button variant="quiet">
+            <button type="button" :aria-disabled="deleting || undefined" @click="askToDeleteOrLeave">{{ shared ? t('list.leave') : t('list.delete') }}</button>
+          </art-button>
+          <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" />
+          <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
         </template>
       </template>
     </PageHead>
@@ -227,8 +354,20 @@ async function addWish(title: string) {
           </p>
           <p v-if="list.deleted" class="form-message">{{ t('list.deleted', { names: owners }, list.owners.length) }}</p>
           <p v-else-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
-          <p v-if="deleteError" class="form-message" role="alert">{{ deleteError }}</p>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>
+          <div v-if="selecting" class="joint-bar" role="group" :aria-label="t('joint.make')">
+            <p class="joint-bar-count" role="status">{{ t('joint.selected', { n: selected.size }, selected.size) }}</p>
+            <div class="joint-bar-actions">
+              <art-button size="s">
+                <button type="button" :aria-disabled="!selected.size || makingLink || undefined" @click="makeWishLink">{{ t('joint.createLink') }}</button>
+              </art-button>
+              <art-button variant="quiet" size="s">
+                <button type="button" @click="stopSelecting">{{ t('joint.cancel') }}</button>
+              </art-button>
+            </div>
+            <p v-if="selectError" class="form-message" role="alert">{{ selectError }}</p>
+          </div>
+          <OneTimeLink v-else-if="wishLink" ref="wishLinkBox" class="joint-link" :path="wishLink" :text="t('joint.linkText')" />
           <ul v-if="wishes.length || canManage" class="wish-list">
             <WishRow
               v-for="wish in wishes"
@@ -243,6 +382,7 @@ async function addWish(title: string) {
               @changed="onWishChanged(wish)"
               @added="landed => onAdded(wish, landed)"
               @removed="onAddRemoved(wish)"
+              @joint="startSelecting(wish)"
             >
               <template #message>
                 <!-- Always there in an open row, so the words are announced when they appear. -->
@@ -259,7 +399,13 @@ async function addWish(title: string) {
                 </p>
               </template>
               <template v-if="wish.role !== 'anon'" #tick>
-                <WishTick :wish="wish" :token="list.token" @changed="reason => onTickChanged(wish, reason)" />
+                <div v-if="pickable(wish)" class="wish-tick joint-pick">
+                  <label class="tick-box">
+                    <input type="checkbox" :checked="selected.has(wish.id)" @change="event => choose(wish.id, event)">
+                    <span class="visually-hidden">{{ t('joint.select', { title: wish.title }) }}</span>
+                  </label>
+                </div>
+                <WishTick v-else :wish="wish" :token="list.token" @changed="reason => onTickChanged(wish, reason)" />
               </template>
             </WishRow>
             <li v-if="canManage" class="wish-add">
@@ -272,7 +418,20 @@ async function addWish(title: string) {
 
     <TickWarning v-if="hasOwnWishes" ref="warning" />
 
-    <dialog v-if="canManage" ref="deleteDialog" class="dialog" aria-labelledby="list-delete-title" aria-describedby="list-delete-text" @close="onDeleteDialogClose">
+    <dialog v-if="canManage && shared" ref="leaveDialog" class="dialog" aria-labelledby="list-leave-title" aria-describedby="list-leave-text" @close="onLeaveDialogClose">
+      <h2 id="list-leave-title">{{ t('list.leaveTitle', { title: list.title }) }}</h2>
+      <p id="list-leave-text">{{ t('list.leaveBody', { names: otherOwners }) }}</p>
+      <form method="dialog" class="actions">
+        <art-button variant="secondary">
+          <button value="cancel" autofocus>{{ t('list.deleteCancel') }}</button>
+        </art-button>
+        <art-button>
+          <button value="leave">{{ t('list.leaveConfirm') }}</button>
+        </art-button>
+      </form>
+    </dialog>
+
+    <dialog v-if="canManage && !shared" ref="deleteDialog" class="dialog" aria-labelledby="list-delete-title" aria-describedby="list-delete-text" @close="onDeleteDialogClose">
       <h2 id="list-delete-title">{{ t('list.deleteTitle', { title: list.title }) }}</h2>
       <p id="list-delete-text">{{ t('list.deleteBody') }}</p>
       <form method="dialog" class="actions">

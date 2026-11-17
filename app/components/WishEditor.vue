@@ -8,8 +8,9 @@ import type { WishSave } from '~/composables/useWishSave'
 // taking it off, deleting and unlinking go the same way whatever they did.
 // `canRemove`: the wish is on the viewer's own list, so they can take it off. On someone else's
 // list they can still edit it and unlink the owners who came after them.
+// `joint`: "Gezamenlijk maken" was pressed; the page lets them choose more wishes for one link.
 const props = defineProps<{ wish: OwnerWish, saving: WishSave, canRemove: boolean }>()
-const emit = defineEmits<{ changed: [] }>()
+const emit = defineEmits<{ changed: [], joint: [] }>()
 
 const { t } = useI18n()
 const { parse } = useApiError()
@@ -95,6 +96,9 @@ function onUnlinkClose() {
     <WishPictureEdit :wish="wish" :saving="saving" />
 
     <div class="wish-edit-foot">
+      <art-button v-if="canRemove" variant="secondary" size="s">
+        <button type="button" @click="emit('joint')">{{ t('joint.make') }}</button>
+      </art-button>
       <art-button v-if="canRemove" variant="quiet" size="s">
         <button type="button" :aria-disabled="busy || undefined" @click="askToRemove">{{ removeWords.action }}</button>
       </art-button>
