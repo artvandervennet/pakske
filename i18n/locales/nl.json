@@ -9,7 +9,8 @@
     "settings": "Instellingen",
     "login": "Inloggen",
     "logout": "Uitloggen",
-    "language": "Taal"
+    "language": "Taal",
+    "newNotices": "{n} nieuwe melding | {n} nieuwe meldingen"
   },
   "home": {
     "title": "Verlanglijstjes",
@@ -22,7 +23,19 @@
     "openedIntro": "Stuurt iemand je de link van een lijst, dan vind je die hier terug. Weghalen neemt een lijst alleen van deze pagina; de link blijft werken.",
     "openedEmpty": "Nog geen lijsten. Open de link die iemand je stuurde.",
     "deleted": "Verwijderd",
-    "remove": "Weghalen"
+    "remove": "Weghalen",
+    "notices": "Meldingen"
+  },
+  "notice": {
+    "wish_linked": "{actor} zette \"{title}\" ook op een eigen lijst. Jullie delen die wens nu.",
+    "wish_unlinked": "{actor} heeft je losgekoppeld van \"{title}\". Je hebt nu een eigen kopie.",
+    "joint_link_used": "{actor} gebruikte je link. \"{title}\" is nu ook van {actor}. | {actor} gebruikte je link. \"{title}\" en nog {n} andere wens zijn nu ook van {actor}. | {actor} gebruikte je link. \"{title}\" en nog {n} andere wensen zijn nu ook van {actor}.",
+    "list_joined": "{actor} is nu mede-eigenaar van \"{title}\".",
+    "undo": "Ongedaan maken",
+    "dismiss": "Sluiten",
+    "view": "Bekijken",
+    "undone": "Ongedaan gemaakt.",
+    "dismissed": "Melding gesloten."
   },
   "share": {
     "copy": "Link kopiëren",

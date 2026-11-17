@@ -9,7 +9,8 @@
     "settings": "Settings",
     "login": "Log in",
     "logout": "Log out",
-    "language": "Language"
+    "language": "Language",
+    "newNotices": "{n} new notice | {n} new notices"
   },
   "home": {
     "title": "Wishlists",
@@ -22,7 +23,19 @@
     "openedIntro": "When someone sends you the link to a list, you find it here again. Removing a list only takes it off this page; the link keeps working.",
     "openedEmpty": "No lists yet. Open the link someone sent you.",
     "deleted": "Deleted",
-    "remove": "Remove"
+    "remove": "Remove",
+    "notices": "Notices"
+  },
+  "notice": {
+    "wish_linked": "{actor} added \"{title}\" to a list of their own. You now share that wish.",
+    "wish_unlinked": "{actor} unlinked you from \"{title}\". You now have a copy of your own.",
+    "joint_link_used": "{actor} used your link. \"{title}\" now belongs to {actor} too. | {actor} used your link. \"{title}\" and {n} other wish now belong to {actor} too. | {actor} used your link. \"{title}\" and {n} other wishes now belong to {actor} too.",
+    "list_joined": "{actor} is now a co-owner of \"{title}\".",
+    "undo": "Undo",
+    "dismiss": "Dismiss",
+    "view": "View",
+    "undone": "Undone.",
+    "dismissed": "Notice dismissed."
   },
   "share": {
     "copy": "Copy link",

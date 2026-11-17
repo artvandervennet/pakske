@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HomeView, OpenedList } from '#shared/schemas/list'
+import type { HomeView, NoticeView, OpenedList } from '#shared/schemas/list'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -11,6 +11,7 @@ useHead({ title: () => t('home.title') })
 const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api/home')
 const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
+const notices = computed(() => home.value?.notices ?? [])
 // Without it a failed load would look like having no lists at all.
 const loadError = computed(() => (homeError.value ? parse(homeError.value).message : ''))
 
@@ -65,6 +66,61 @@ const canOpen = (list: OpenedList) => !list.deleted || loggedIn.value
 
 const ownerNames = useNames()
 
+// Notices. Opening this page counts as having seen them, which takes the header's mark away.
+const { markSeen } = useNotices()
+onMounted(() => {
+  // If it fails, the mark stays until the next visit; nothing on this page depends on it.
+  if (loggedIn.value) markSeen().catch(() => {})
+})
+
+const noticesTitle = ref<HTMLElement>()
+const noticeBusy = ref<string | null>(null)
+const noticeStatus = ref('')
+const noticeError = ref('')
+
+// Undo and dismiss each take the notice away, the row and its focused button with it. A notice
+// someone already dealt with elsewhere (another tab, another owner's undo) answers 404; the
+// page then catches up and says so. Either way the focus goes to the section's heading, which
+// stays while there is something to say, even when the last notice has gone.
+async function settleNotice(notice: NoticeView, request: () => Promise<unknown>, done: string) {
+  if (noticeBusy.value) return
+  noticeBusy.value = notice.id
+  noticeStatus.value = ''
+  noticeError.value = ''
+  try {
+    await request()
+    noticeStatus.value = done
+  }
+  catch (error) {
+    const parsed = parse(error)
+    noticeError.value = parsed.message
+    if (parsed.code !== 'not_found') return
+  }
+  finally {
+    noticeBusy.value = null
+  }
+  await refresh()
+  await nextTick()
+  if (!document.activeElement || document.activeElement === document.body) noticesTitle.value?.focus()
+}
+
+function undo(notice: NoticeView) {
+  return settleNotice(
+    notice,
+    () => $fetch<unknown>(`/api/lists/${notice.token}/wishes/${notice.wishId}/owners/${notice.actorId}/undo`, { method: 'POST' }),
+    t('notice.undone'),
+  )
+}
+
+function dismiss(notice: NoticeView) {
+  return settleNotice(notice, () => $fetch<unknown>(`/api/notices/${notice.id}`, { method: 'DELETE' }), t('notice.dismissed'))
+}
+
+const noticeLink = (notice: NoticeView) =>
+  localePath(`/l/${notice.token}${notice.wishId === null ? '' : `#wish-${notice.wishId}`}`)
+
+const showNotices = computed(() => loggedIn.value && (notices.value.length > 0 || !!noticeStatus.value || !!noticeError.value))
+
 // Logged out, the page is the hero and the lists opened before; with none, one quiet sentence.
 const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !!loadError.value)
 </script>
@@ -97,7 +153,7 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
           <ul class="rows">
             <li v-for="list in owned" :key="list.token" class="row">
               <NuxtLink class="row-title" :to="localePath(`/l/${list.token}`)">{{ list.title }}</NuxtLink>
-              <span class="row-meta">{{ t('home.wishes', list.wishes) }}</span>
+              <span class="row-meta">{{ t('home.wishes', list.wishes) }}<template v-if="list.sharedWith.length"> · {{ t('wish.with', { names: ownerNames(list.sharedWith) }) }}</template></span>
             </li>
             <li>
               <QuickAdd :label="t('home.newList')" :field-label="t('home.newListName')" :pending="creating" :error="createError" @add="createList" />
@@ -141,5 +197,33 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
         <p class="muted">{{ t('home.openedEmpty') }}</p>
       </div>
     </div>
+
+    <section v-if="showNotices" class="band section" data-paint="1" aria-labelledby="notices-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="notices-title" ref="noticesTitle" class="section-title" tabindex="-1">{{ t('home.notices') }}</h2>
+        </div>
+        <div class="section-body">
+          <p class="form-message" role="status">{{ noticeStatus }}</p>
+          <p v-if="noticeError" class="form-message" role="alert">{{ noticeError }}</p>
+          <ul v-if="notices.length" class="rows">
+            <li v-for="notice in notices" :key="notice.id" class="row notice">
+              <p :id="`notice-${notice.id}`" class="notice-line">{{ noticeLine(notice, t) }}</p>
+              <div class="notice-actions">
+                <art-button v-if="notice.token" variant="quiet" size="s">
+                  <NuxtLink :to="noticeLink(notice)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
+                </art-button>
+                <art-button v-if="notice.canUndo" variant="quiet" size="s">
+                  <button type="button" :aria-describedby="`notice-${notice.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="undo(notice)">{{ t('notice.undo') }}</button>
+                </art-button>
+                <art-button variant="quiet" size="s">
+                  <button type="button" :aria-describedby="`notice-${notice.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="dismiss(notice)">{{ t('notice.dismiss') }}</button>
+                </art-button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

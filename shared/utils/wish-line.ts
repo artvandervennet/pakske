@@ -1,9 +1,10 @@
 import type { BuyerWish, WishView } from '../schemas/list'
 
-/** vue-i18n's `t`, narrowed to the two ways the row's words call it. */
+/** vue-i18n's `t`, narrowed to the ways the rows' and notices' words call it. */
 export interface Translate {
   (key: string, plural: number): string
   (key: string, named: Record<string, unknown>): string
+  (key: string, named: Record<string, unknown>, plural: number): string
 }
 
 /** The shop's name from a link, without "www.", or null when the link doesn't parse. */
