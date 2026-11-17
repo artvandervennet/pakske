@@ -27,6 +27,8 @@ export function useListEdit(options: {
   const editing = ref(false)
   const selected = reactive(new Set<number>())
   const error = ref('')
+  // A failed order save, said in the bar and also above the list when edit mode has ended.
+  const orderError = ref('')
   const busy = ref(false)
 
   // The order on screen follows the server's, except while a move is waiting to be saved.
@@ -34,9 +36,9 @@ export function useListEdit(options: {
   const ids = () => options.wishes().map(wish => wish.id)
   let saveTimer: ReturnType<typeof setTimeout> | undefined
   let saving: Promise<void> = Promise.resolve()
-  let unsaved = 0
+  const unsaved = ref(0)
   watch(() => ids().join(), () => {
-    if (!unsaved) order.value = ids()
+    if (!unsaved.value) order.value = ids()
   }, { immediate: true })
 
   /** Moves a wish to place `to` (0 is the top) in the order on screen. */
@@ -48,7 +50,7 @@ export function useListEdit(options: {
 
   /** Saves the order on screen, now or after `delay` ms without another call. */
   function saveOrder(saveOptions: { delay?: number } = {}) {
-    if (saveTimer === undefined) unsaved++
+    if (saveTimer === undefined) unsaved.value++
     clearTimeout(saveTimer)
     saveTimer = setTimeout(sendOrder, saveOptions.delay ?? 0)
   }
@@ -67,15 +69,17 @@ export function useListEdit(options: {
     saving = saving.then(async () => {
       try {
         if (wishIds.length) await $fetch<unknown>(`/api/lists/${options.token()}/order`, { method: 'PUT', body: { wishIds } })
+        orderError.value = ''
       }
       catch {
-        error.value = t('listEdit.orderFailed')
+        orderError.value = t('listEdit.orderFailed')
       }
       finally {
-        unsaved--
-        if (!unsaved) {
+        unsaved.value--
+        if (!unsaved.value) {
           await options.refresh()
-          order.value = ids()
+          // A move made while the list was refreshing is still waiting to be saved: keep it.
+          if (!unsaved.value) order.value = ids()
         }
       }
     })
@@ -85,6 +89,13 @@ export function useListEdit(options: {
   const chosen = () => options.wishes().filter(wish => selected.has(wish.id))
 
   async function enter(wishId?: number): Promise<boolean> {
+    // A field in an open row that still has the focus, as when a finger holds another row, is
+    // left first, so what was typed in it is saved rather than folded away.
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active.closest('.wish-row.open')) {
+      active.blur()
+      await nextTick()
+    }
     for (const id of [...options.open]) {
       const row = options.rows.get(id)
       if (row && !(await row.settle())) return false
@@ -93,6 +104,7 @@ export function useListEdit(options: {
     if (!editing.value) {
       selected.clear()
       error.value = ''
+      orderError.value = ''
     }
     editing.value = true
     if (wishId !== undefined) selected.add(wishId)
@@ -158,7 +170,10 @@ export function useListEdit(options: {
     if (!count && editing.value) leave()
   })
 
-  return { editing, selected, error, busy, chosen, enter, leave, toggle, deleteSelected, makeLink, order, move, saveOrder }
+  /** True while a move waits to be saved: the page keeps showing `order` until then. */
+  const orderPending = computed(() => unsaved.value > 0)
+
+  return { editing, selected, error, orderError, busy, chosen, enter, leave, toggle, deleteSelected, makeLink, order, orderPending, move, saveOrder }
 }
 
 export type ListEdit = ReturnType<typeof useListEdit>

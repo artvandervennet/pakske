@@ -18,6 +18,8 @@ export function useLongPress(target: Ref<HTMLElement | null>, options: {
 
   let timer: ReturnType<typeof setTimeout> | undefined
   let start: PointerEvent | null = null
+  // The pointer of the press that fired, until it is up again.
+  let held: number | null = null
 
   function cancel() {
     clearTimeout(timer)
@@ -65,6 +67,7 @@ export function useLongPress(target: Ref<HTMLElement | null>, options: {
       start = null
       if (!pressed) return
       navigator.vibrate?.(10)
+      held = pressed.pointerId
       swallowClick(pressed.pointerId)
       options.onPress(id, pressed)
     }, ms)
@@ -76,6 +79,7 @@ export function useLongPress(target: Ref<HTMLElement | null>, options: {
   }
 
   function onEnd(event: PointerEvent) {
+    if (event.pointerId === held) held = null
     if (start && event.pointerId === start.pointerId) cancel()
   }
 
@@ -108,4 +112,7 @@ export function useLongPress(target: Ref<HTMLElement | null>, options: {
     window.removeEventListener('pointercancel', onEnd)
     window.removeEventListener('scroll', cancel)
   })
+
+  /** Whether the pointer of a fired press is still down, so something can still follow it. */
+  return { isHeld: (pointerId: number) => held === pointerId }
 }

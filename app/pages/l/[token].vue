@@ -265,7 +265,8 @@ watch(editing, (on) => {
 const wishList = useTemplateRef<HTMLElement>('wishList')
 const { order } = edit
 const shownWishes = computed(() => {
-  if (!editing.value) return wishes.value
+  // Also just after edit mode, while a move is still being saved, so the row doesn't jump back.
+  if (!editing.value && !edit.orderPending.value) return wishes.value
   const byId = new Map(wishes.value.map(wish => [wish.id, wish]))
   return order.value.flatMap(id => byId.get(id) ?? [])
 })
@@ -276,17 +277,18 @@ function onHandleDown(wishId: number, event: PointerEvent) {
 }
 
 // Holding a wish starts edit mode with it chosen, and keeps going as a drag if the finger moves.
-useLongPress(wishList, {
+const longPress = useLongPress(wishList, {
   enabled: () => canManage.value,
   onPress: async (wishId, event) => {
     if (editing.value) return drag.start(wishId, event)
+    // Edit mode can wait for a save; a finger lifted meanwhile has nothing left to drag.
     // The bar that edit mode puts above the list pushes the rows down; the page scrolls along, so
     // the row stays under the finger that holds it.
     const top = () => document.getElementById(`wish-${wishId}`)?.getBoundingClientRect().top ?? 0
     const before = top()
     if (!(await startEditing(wishId))) return
     window.scrollBy({ top: top() - before, behavior: 'instant' })
-    drag.start(wishId, event)
+    if (longPress.isHeld(event.pointerId)) drag.start(wishId, event)
   },
 })
 
@@ -432,8 +434,10 @@ async function addWish(title: string) {
               </art-button>
             </div>
             <p v-if="edit.error.value" class="form-message" role="alert">{{ edit.error.value }}</p>
+            <p v-if="edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
           </div>
           <OneTimeLink v-else-if="wishLink" ref="wishLinkBox" class="joint-link" :path="wishLink" :text="t('joint.linkText')" />
+          <p v-if="!editing && edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
           <p v-if="editing" class="visually-hidden" role="status">{{ orderStatus }}</p>
           <p v-if="editing" id="order-help" class="visually-hidden">{{ t('listEdit.moveHelp') }}</p>
           <ul v-if="wishes.length || canManage" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
