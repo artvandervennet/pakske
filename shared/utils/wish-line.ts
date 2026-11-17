@@ -48,6 +48,6 @@ function buyers(wish: BuyerWish, t: Translate): string {
 
 /** "3 gevraagd", "Onbeperkt", or null for a single one. */
 export function wishAmountTag(wish: WishView, t: Translate): string | null {
-  if (wish.quantity === null) return t('item.unlimited', {})
-  return wish.quantity > 1 ? t('item.wanted', { n: wish.quantity }) : null
+  if (wish.quantity === null) return t('wish.unlimited', {})
+  return wish.quantity > 1 ? t('wish.wanted', { n: wish.quantity }) : null
 }

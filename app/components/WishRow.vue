@@ -16,12 +16,22 @@ const line = computed(() => secondLine(props.wish))
 const amount = computed(() => amountTag(props.wish))
 const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed)
 
+// While the editor saves or deletes, the row stays open, as its Cancel button already does:
+// folding would take the editor away before it could tell the page what changed.
+const editorBusy = ref(false)
+function toggle() {
+  if (!editorBusy.value) emit('toggle')
+}
+
 // When the row folds while the focus is inside it (the editor saved or was cancelled), the
 // focus would drop to the page's start. It goes back to the row's own button instead.
 const toggleButton = useTemplateRef<HTMLButtonElement>('toggleButton')
 const details = useTemplateRef<HTMLElement>('details')
 watch(() => props.open, (open) => {
-  if (!open && details.value?.contains(document.activeElement)) toggleButton.value?.focus()
+  if (open) return
+  // The editor folds the row itself after saving, while it still counts as busy.
+  editorBusy.value = false
+  if (details.value?.contains(document.activeElement)) toggleButton.value?.focus()
 })
 </script>
 
@@ -39,19 +49,20 @@ watch(() => props.open, (open) => {
         class="wish-toggle"
         :aria-expanded="open ? 'true' : 'false'"
         :aria-controls="detailsId"
-        @click="emit('toggle')"
+        :aria-disabled="editorBusy || undefined"
+        @click="toggle"
       >
         <span class="wish-title">{{ wish.title }}</span>
         <span v-if="line" class="wish-line">{{ line }}</span>
       </button>
       <div v-if="amount || removed" class="wish-tags">
-        <art-tape v-if="removed" pigment="complement" :seed="`removed-${wish.id}`">{{ t('item.removed') }}</art-tape>
+        <art-tape v-if="removed" pigment="complement" :seed="`removed-${wish.id}`">{{ t('wish.removed') }}</art-tape>
         <art-tape v-if="amount" :seed="`wish-${wish.id}`">{{ amount }}</art-tape>
       </div>
     </div>
     <div :id="detailsId" ref="details" class="wish-details" :hidden="!open">
       <template v-if="open">
-        <WishEditor v-if="wish.role === 'owner'" :wish="wish" :token="token" @changed="emit('changed')" @closed="emit('closed')" />
+        <WishEditor v-if="wish.role === 'owner'" :wish="wish" :token="token" @changed="emit('changed')" @closed="emit('closed')" @busy="busy => editorBusy = busy" />
         <WishBuyerDetails v-else :wish="wish" :token="token" :owners="owners" :owner-count="ownerCount" @changed="emit('changed')" />
       </template>
     </div>

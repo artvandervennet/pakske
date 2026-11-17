@@ -8,9 +8,11 @@ const { parse } = useApiError()
 
 useHead({ title: () => t('home.title') })
 
-const { data: home, refresh } = await useFetch<HomeView>('/api/home')
+const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api/home')
 const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
+// Without it a failed load would look like having no lists at all.
+const loadError = computed(() => (homeError.value ? parse(homeError.value).message : ''))
 
 const creating = ref(false)
 const createError = ref('')
@@ -80,7 +82,8 @@ const openedSplatter = computed(() => !loggedIn.value || owned.value.length > 0)
           <h2 id="yours-title" class="section-title">{{ t('home.yourLists') }}</h2>
         </div>
         <div v-if="loggedIn" class="section-body">
-          <div v-if="!owned.length" class="empty">
+          <p v-if="loadError" class="form-message">{{ loadError }}</p>
+          <div v-else-if="!owned.length" class="empty">
             <art-splatter pigment="complement" seed="no-lists" />
             <p>{{ t('home.yourListsEmpty') }}</p>
           </div>
@@ -121,7 +124,7 @@ const openedSplatter = computed(() => !loggedIn.value || owned.value.length > 0)
               <div class="row-text">
                 <NuxtLink v-if="canOpen(list)" :id="`opened-${list.token}`" class="row-title" :to="localePath(`/l/${list.token}`)">{{ list.title }}</NuxtLink>
                 <span v-else :id="`opened-${list.token}`" class="row-title">{{ list.title }}</span>
-                <span v-if="list.owners.length" class="row-meta">{{ t('home.owners', { names: ownerNames(list.owners) }) }}</span>
+                <span v-if="list.owners.length" class="row-meta">{{ t('list.owners', { names: ownerNames(list.owners) }) }}</span>
               </div>
               <art-tape v-if="list.deleted" :seed="list.token">{{ t('home.deleted') }}</art-tape>
               <art-button variant="quiet" size="s">
@@ -129,6 +132,7 @@ const openedSplatter = computed(() => !loggedIn.value || owned.value.length > 0)
               </art-button>
             </li>
           </ul>
+          <p v-else-if="loadError" class="form-message">{{ loadError }}</p>
           <div v-else class="empty">
             <art-splatter v-if="openedSplatter" pigment="complement" seed="none-opened" />
             <p>{{ t('home.openedEmpty') }}</p>

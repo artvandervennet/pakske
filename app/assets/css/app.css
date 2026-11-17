@@ -53,6 +53,12 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   art-header > * { --space-6: var(--space-6-page); }
 }
 :root { --space-6-page: var(--space-6); }
+/* Interim remedy, until Gesso's header handles it: on the narrowest phones (below about
+   372px) the wordmark, the switch, Log in or Log out and Menu still don't fit, and the page
+   scrolls sideways. The switch goes; the colour scheme then follows the system. */
+@media (width < 24rem) {
+  art-header art-scheme { display: none; }
+}
 /* A long word in a big title ("Verlanglijstjes" in the hero, or a list's own name) is wider
    than a phone. Hyphenate where the language allows, and break it anyway where it doesn't. */
 :is(.hero, .page-head) h1 { hyphens: auto; overflow-wrap: break-word; }
@@ -187,6 +193,9 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .wish-list { --wish-tick: 0px; --wish-tick-room: 0px; }
 .wish-list:has(.wish-tick) { --wish-tick: 2.75rem; --wish-tick-room: calc(var(--wish-tick) + var(--space-3)); }
 .wish-list:has(.stepper) { --wish-tick: 7rem; }
+/* A count of two or three digits on both sides ("100 / 120") doesn't fit between the buttons
+   in 7rem; the column grows for the whole list, so the titles still line up. */
+.wish-list:has(.stepper[data-long]) { --wish-tick: 9rem; }
 .wish-list > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
 .wish-head {
   position: relative;
@@ -348,7 +357,9 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+    /* Under the title, unless a wide stepper on a narrow phone leaves less than a tag's
+       width there ("120 gevraagd"); then the tags move left instead of past the edge. */
+    padding-inline-start: min(calc(var(--wish-tick-room) + 3rem + var(--space-3)), 100% - 7rem);
   }
 }
 .wish-text { white-space: pre-line; overflow-wrap: anywhere; }

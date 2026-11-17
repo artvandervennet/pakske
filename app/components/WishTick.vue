@@ -21,6 +21,8 @@ const messageId = computed(() => `wish-${props.wish.id}-tick-message`)
 const pending = ref<number | null>(null)
 const mine = computed(() => (props.wish.role === 'anon' ? 0 : pending.value ?? props.wish.mine))
 const isBox = computed(() => props.wish.quantity === 1)
+// A count like "100 / 120" needs a wider column than "1 / 3" (see .wish-list in app.css).
+const longCount = computed(() => props.wish.quantity !== null && Math.max(props.wish.quantity, mine.value) >= 10)
 
 const message = ref('')
 // The tick state a refusal is about. A refusal asks for a refresh, and that refresh brings the
@@ -105,7 +107,7 @@ const describedBy = computed(() => (message.value ? messageId.value : undefined)
         >
         <span class="visually-hidden">{{ t('tick.box', { title: wish.title }) }}</span>
       </label>
-      <div v-else class="stepper">
+      <div v-else class="stepper" :data-long="longCount || undefined">
         <button
           type="button"
           :aria-label="t('tick.less', { title: wish.title })"

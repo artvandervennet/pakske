@@ -6,7 +6,9 @@ import type { OwnerWish, PublicWish } from '#shared/schemas/list'
 // The editor only has the owner's view of the wish, so nothing in it can depend on buyers:
 // lowering the amount or deleting goes the same way whatever they did.
 const props = defineProps<{ wish: OwnerWish, token: string }>()
-const emit = defineEmits<{ changed: [], closed: [] }>()
+// `busy` while saving or deleting, so the row doesn't fold and take the editor away before it
+// can report `changed`.
+const emit = defineEmits<{ changed: [], closed: [], busy: [busy: boolean] }>()
 
 const { t } = useI18n()
 const { parse } = useApiError()
@@ -88,6 +90,8 @@ async function onDialogClose() {
     deleting.value = false
   }
 }
+
+watch(() => pending.value || deleting.value, busy => emit('busy', busy))
 </script>
 
 <template>
@@ -176,20 +180,20 @@ async function onDialogClose() {
           <button type="button" :aria-disabled="pending || undefined" @click="cancel">{{ t('form.cancel') }}</button>
         </art-button>
         <art-button variant="quiet">
-          <button type="button" :aria-disabled="deleting || undefined" @click="askToDelete">{{ t('item.delete') }}</button>
+          <button type="button" :aria-disabled="deleting || undefined" @click="askToDelete">{{ t('wish.delete') }}</button>
         </art-button>
       </div>
     </form>
 
     <dialog ref="dialog" class="dialog" :aria-labelledby="`${id}-delete-title`" :aria-describedby="`${id}-delete-text`" @close="onDialogClose">
-      <h2 :id="`${id}-delete-title`">{{ t('item.deleteTitle', { title: wish.title }) }}</h2>
-      <p :id="`${id}-delete-text`">{{ t('item.deleteBody') }}</p>
+      <h2 :id="`${id}-delete-title`">{{ t('wish.deleteTitle', { title: wish.title }) }}</h2>
+      <p :id="`${id}-delete-text`">{{ t('wish.deleteBody') }}</p>
       <form method="dialog" class="actions">
         <art-button variant="secondary">
-          <button value="cancel" autofocus>{{ t('item.cancel') }}</button>
+          <button value="cancel" autofocus>{{ t('wish.cancel') }}</button>
         </art-button>
         <art-button>
-          <button value="delete">{{ t('item.deleteConfirm') }}</button>
+          <button value="delete">{{ t('wish.deleteConfirm') }}</button>
         </art-button>
       </form>
     </dialog>

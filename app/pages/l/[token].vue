@@ -8,19 +8,14 @@ const localePath = useLocalePath()
 const { parse } = useApiError()
 
 const token = computed(() => String(route.params.token))
-const { list, refresh } = await useListView(token)
+const { list, gone, refresh } = await useListView(token)
 
 useHead({ title: () => list.value.title })
 
 const owners = computed(() =>
   new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(list.value.owners),
 )
-// Removed wishes only reach buyers, who still need them to sort out what they bought. They
-// go last, below everything that is still wanted.
-const wishes = computed(() => {
-  const isRemoved = (wish: WishView) => wish.role === 'buyer' && wish.removed
-  return [...list.value.wishes.filter(wish => !isRemoved(wish)), ...list.value.wishes.filter(isRemoved)]
-})
+const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
 
 const open = reactive(new Set<number>())
@@ -184,7 +179,8 @@ async function addWish(title: string) {
         </form>
       </template>
       <template #actions>
-        <ShareButton :path="localePath(`/l/${list.token}`)" />
+        <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
+        <ShareButton v-if="!list.deleted" :path="localePath(`/l/${list.token}`)" />
         <template v-if="canManage && !renaming">
           <art-button variant="secondary">
             <button ref="renameButton" type="button" @click="startRenaming">{{ t('list.rename') }}</button>
@@ -202,6 +198,9 @@ async function addWish(title: string) {
           <h2 id="wishes-title" ref="wishesTitle" class="section-title" tabindex="-1">{{ t('list.wishes') }}</h2>
         </div>
         <div class="section-body">
+          <p v-if="gone" class="form-message" role="alert">
+            {{ t('list.gone') }} <NuxtLink :to="localePath('/')">{{ t('error.home') }}</NuxtLink>
+          </p>
           <p v-if="list.deleted" class="form-message">{{ t('list.deleted', { names: owners }, list.owners.length) }}</p>
           <p v-else-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           <p v-if="deleteError" class="form-message" role="alert">{{ deleteError }}</p>

@@ -22,7 +22,7 @@ const loginLink = computed(() => ({
   <div class="wish-details-body">
     <p v-if="wish.description" class="wish-text">{{ wish.description }}</p>
     <art-button v-if="wish.url && host" variant="secondary" size="s">
-      <a :href="wish.url" target="_blank" rel="noopener noreferrer">{{ t('item.viewOn', { host }) }}</a>
+      <a :href="wish.url" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host }) }}</a>
     </art-button>
 
     <template v-if="wish.role === 'buyer'">

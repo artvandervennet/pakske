@@ -28,8 +28,16 @@ export async function useListView(token: MaybeRefOrGetter<string>) {
   // A refresh that fails (the connection dropped, the server is restarting) resets the data.
   // The page keeps the last list it got.
   const list = shallowRef(result.data.value) as Ref<ListView>
+  // A refresh answered with "not found": the list was deleted, say in another tab. The page
+  // keeps the last list and says the list is gone.
+  const gone = ref(false)
   watch(result.data, (value) => {
-    if (value) list.value = value
+    if (!value) return
+    list.value = value
+    gone.value = false
   })
-  return { list, refresh: result.refresh }
+  watch(result.error, (error) => {
+    if (error?.statusCode === 404) gone.value = true
+  })
+  return { list, gone: readonly(gone), refresh: result.refresh }
 }
