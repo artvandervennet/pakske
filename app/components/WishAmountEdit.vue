@@ -18,10 +18,12 @@ const draft = ref(props.wish.quantity)
 const lastNumber = ref(props.wish.quantity ?? 1)
 const error = ref('')
 const sending = ref(false)
-const focused = ref(false)
 
+// Nothing is typed here: every step goes out at once, so the stepper never holds an unsent
+// change outside a step on its way or a failed one. Having the focus doesn't count, then; the
+// stepper shows the list's amount, also one changed elsewhere, and steps on from that.
 watch(() => props.wish.quantity, (quantity) => {
-  if (!followsSaved({ focused: focused.value, saving: sending.value, failed: !!error.value })) return
+  if (!followsSaved({ focused: false, saving: sending.value, failed: !!error.value })) return
   confirmed.value = draft.value = quantity
   if (quantity !== null) lastNumber.value = quantity
 })
@@ -60,10 +62,6 @@ function onKeydown(event: KeyboardEvent) {
   error.value = ''
   draft.value = confirmed.value
 }
-
-function onFocusout(event: FocusEvent) {
-  focused.value = (event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)
-}
 </script>
 
 <template>
@@ -73,8 +71,6 @@ function onFocusout(event: FocusEvent) {
     :aria-labelledby="`${id}-label`"
     :aria-invalid="error ? 'true' : undefined"
     @keydown="onKeydown"
-    @focusin="focused = true"
-    @focusout="onFocusout"
   >
     <span :id="`${id}-label`" class="amount-edit-label">{{ t('edit.amount') }}</span>
     <div v-if="draft !== null" class="stepper">

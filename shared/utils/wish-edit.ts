@@ -18,17 +18,42 @@ export function oneLine(text: string): string {
 }
 
 /**
- * The PATCH body for what a field holds, or null when it says what is saved already (spaces
- * around it don't count, as the server trims them). An emptied text or link is cleared; an
- * emptied title is sent, so the server's "fill this in" shows beside it.
+ * The text a field holds once it is saved: what was sent, as the server keeps it (trimmed;
+ * a title on one line). A field shows this from the moment the save worked, also when the
+ * refresh after it fails.
  */
-export function textChange(wish: Pick<PublicWish, WishTextField>, field: WishTextField, text: string): WishChange | null {
-  if (field === 'title') {
-    const title = oneLine(text).trim()
-    return title === wish.title ? null : { title }
+export function cleanText(text: string, kind: 'line' | 'text' | 'url'): string {
+  return (kind === 'line' ? oneLine(text) : text).trim()
+}
+
+/**
+ * What leaving a field, or Enter, does with what it holds:
+ *   send   a change since the field got the focus (or since its save failed) goes out
+ *   adopt  nothing was changed: take the list's value, which may be newer than the field's
+ *   keep   a failed text, left unchanged: it stays, with its reason; Enter tries it again
+ * A field left as it was never sends, so it can't overwrite a change made elsewhere meanwhile.
+ */
+export function commitAction(
+  field: { draft: string, atFocus: string, failedText: string | null },
+  how: 'enter' | 'blur',
+): 'send' | 'adopt' | 'keep' {
+  if (field.failedText !== null) {
+    if (field.draft !== field.failedText || how === 'enter') return 'send'
+    return 'keep'
   }
-  const value = text.trim() || null
-  return value === wish[field] ? null : { [field]: value }
+  return field.draft === field.atFocus ? 'adopt' : 'send'
+}
+
+/**
+ * The PATCH body for what a field holds, or null when it says what is saved already (spaces
+ * around it don't count, as the server trims them). `saved` is the field's saved text. An
+ * emptied text or link is cleared; an emptied title is sent, so the server's "fill this in"
+ * shows beside it.
+ */
+export function fieldChange(field: WishTextField, text: string, saved: string): WishChange | null {
+  const value = cleanText(text, field === 'title' ? 'line' : 'text')
+  if (value === saved) return null
+  return field === 'title' ? { title: value } : { [field]: value || null }
 }
 
 /** The PATCH body for an amount (null: no limit), or null when it is the saved one. */

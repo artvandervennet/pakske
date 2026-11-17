@@ -1,4 +1,4 @@
-import type { OwnerWish, PublicWish } from '#shared/schemas/list'
+import type { PublicWish } from '#shared/schemas/list'
 import type { WishChange } from '#shared/utils/wish-edit'
 
 /**
@@ -7,11 +7,13 @@ import type { WishChange } from '#shared/utils/wish-edit'
  * whether anything is still on its way.
  *
  * `run` does a request and answers null when it worked, or the sentence to show beside the
- * field when it didn't; it never throws, so a field keeps what was typed.
+ * field when it didn't; it never throws, so a field keeps what was typed. It answers after
+ * `refresh` (the list's own refresh) is done, so the row already shows what was saved.
+ * A save only refreshes the list: nothing in the row went away, so the focus stays where it is.
  */
-export function useWishSave(wish: () => OwnerWish, token: () => string, onChanged: () => void) {
+export function useWishSave(wishId: () => number, token: () => string, refresh: () => Promise<unknown>) {
   const { parse } = useApiError()
-  const url = (): string => `/api/lists/${token()}/wishes/${wish().id}`
+  const url = (): string => `/api/lists/${token()}/wishes/${wishId()}`
 
   const inFlight = ref(0)
   const saved = ref(false)
@@ -27,7 +29,7 @@ export function useWishSave(wish: () => OwnerWish, token: () => string, onChange
       saved.value = true
       clearTimeout(savedTimer)
       savedTimer = setTimeout(() => (saved.value = false), 2500)
-      onChanged()
+      await refresh()
       return null
     }
     catch (error) {

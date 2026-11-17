@@ -283,8 +283,21 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .wish-row.editing .wish-toggle { position: absolute; inset: 0; }
 .wish-row.editing .wish-toggle:focus-visible { outline-offset: -3px; }
 .wish-heading { flex: 1 1 0; min-inline-size: 0; display: grid; gap: var(--space-1); }
-.wish-heading .inline-edit { position: relative; z-index: 1; }
-.wish-title-edit .inline-edit { font-weight: var(--weight-medium); }
+.wish-title-edit .inline-edit {
+  font-weight: var(--weight-medium);
+}
+/* The title's field sits above the row's button, in a taller target than its line of text:
+   a tap just above or below the title edits it rather than folding the row (EditableText
+   puts the cursor in the field). The margin takes the room back, so the title stays put;
+   the field itself keeps the look of the text. The chevron after it still folds the row. */
+.wish-title-edit {
+  position: relative;
+  z-index: 1;
+  justify-self: start;
+  padding-block: 0.375em;
+  margin-block: -0.375em;
+}
+.wish-title-edit .wish-chevron { cursor: pointer; }
 .wish-chevron { flex: none; }
 .wish-line {
   overflow: hidden;

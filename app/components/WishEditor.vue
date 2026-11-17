@@ -14,7 +14,7 @@ const { parse } = useApiError()
 // Several rows can be open at once; every id here is its own.
 const id = useId()
 
-const saveDescription = (text: string) => props.saving.save(textChange(props.wish, 'description', text))
+const saveDescription = (text: string, saved: string) => props.saving.save(fieldChange('description', text, saved))
 
 // Deleting asks first, in a native dialog with the safe button focused.
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')

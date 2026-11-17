@@ -52,6 +52,13 @@ async function onTickChanged(wish: WishView, reason?: 'gone') {
   }
 }
 
+// After an owner's edit saved: the row stays as it is, and so does the focus. The list follows
+// the fetched data through a watcher, which runs after the refresh resolves.
+async function refreshList() {
+  await refresh()
+  await nextTick()
+}
+
 // A change can take the focused control away with it: deleting a wish removes its row, delete
 // button and all. Then the focus goes to the list's heading rather than the start of the page.
 const wishesTitle = useTemplateRef<HTMLElement>('wishesTitle')
@@ -73,9 +80,9 @@ async function startRenaming() {
   renameField.value?.focus(true)
 }
 
-async function rename(text: string): Promise<string | null> {
-  const title = oneLine(text).trim()
-  if (title === list.value.title) return null
+async function rename(text: string, saved: string): Promise<string | null> {
+  const title = cleanText(text, 'line')
+  if (title === saved) return null
   try {
     await $fetch(`/api/lists/${token.value}`, { method: 'PATCH', body: { title } })
     await refresh()
@@ -199,6 +206,7 @@ async function addWish(title: string) {
               :owners="owners"
               :owner-count="list.owners.length"
               :open="open.has(wish.id)"
+              :refresh="refreshList"
               @toggle="toggle(wish.id)"
               @changed="onWishChanged"
             >

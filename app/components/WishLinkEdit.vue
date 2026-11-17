@@ -7,12 +7,22 @@ import type { WishSave } from '~/composables/useWishSave'
 const props = defineProps<{ wish: OwnerWish, saving: WishSave }>()
 
 const { t } = useI18n()
-const host = computed(() => hostOf(props.wish.url))
+// The saved link: the list's, or the one just saved until the list has it (also when the
+// refresh after the save fails).
+const savedUrl = ref(props.wish.url)
+watch(() => props.wish.url, (url) => {
+  savedUrl.value = url
+})
+const host = computed(() => hostOf(savedUrl.value))
 const changing = ref(false)
 const field = useTemplateRef<{ focus: (select?: boolean) => void }>('field')
 const button = useTemplateRef<HTMLButtonElement>('button')
 
-const save = (text: string) => props.saving.save(textChange(props.wish, 'url', text))
+async function save(text: string, saved: string): Promise<string | null> {
+  const reason = await props.saving.save(fieldChange('url', text, saved))
+  if (!reason) savedUrl.value = cleanText(text, 'url') || null
+  return reason
+}
 
 async function change() {
   changing.value = true
@@ -35,7 +45,7 @@ async function onDone(how: 'enter' | 'escape' | 'blur') {
       v-if="changing"
       ref="field"
       kind="url"
-      :value="savedText(wish, 'url')"
+      :value="savedUrl ?? ''"
       :label="t('edit.link')"
       placeholder="https://"
       :save="save"
@@ -43,12 +53,12 @@ async function onDone(how: 'enter' | 'escape' | 'blur') {
       @done="onDone"
     />
     <template v-else>
-      <art-button v-if="wish.url && host" variant="secondary" size="s">
-        <a :href="wish.url" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host }) }}</a>
+      <art-button v-if="savedUrl && host" variant="secondary" size="s">
+        <a :href="savedUrl" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host }) }}</a>
       </art-button>
       <art-button variant="quiet" size="s">
-        <button ref="button" type="button" :aria-label="wish.url ? t('edit.linkChangeLabel') : undefined" @click="change">
-          {{ wish.url ? t('edit.linkChange') : t('edit.linkAdd') }}
+        <button ref="button" type="button" :aria-label="savedUrl ? t('edit.linkChangeLabel') : undefined" @click="change">
+          {{ savedUrl ? t('edit.linkChange') : t('edit.linkAdd') }}
         </button>
       </art-button>
     </template>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountChange, followsSaved, oneLine, savedText, stepAmount, textChange } from '../shared/utils/wish-edit'
+import { amountChange, cleanText, commitAction, fieldChange, followsSaved, oneLine, savedText, stepAmount, type WishTextField } from '../shared/utils/wish-edit'
 
 const wish = {
   title: 'Slimme stekkers',
@@ -7,6 +7,8 @@ const wish = {
   url: 'https://example.com/stekker',
 }
 const bare = { title: 'Sokken', description: null, url: null }
+// The change a field of this wish sends, measured against the wish as the list has it.
+const change = (from: typeof wish | typeof bare, field: WishTextField, text: string) => fieldChange(field, text, savedText(from, field))
 
 describe('what a field shows of the saved wish, and what Escape puts back', () => {
   it('is the saved text', () => {
@@ -23,31 +25,31 @@ describe('what a field shows of the saved wish, and what Escape puts back', () =
 
 describe('the change a field sends', () => {
   it('sends only the field that was edited', () => {
-    expect(textChange(wish, 'title', 'Slimme stekkers (3)')).toEqual({ title: 'Slimme stekkers (3)' })
-    expect(textChange(wish, 'description', 'Drie')).toEqual({ description: 'Drie' })
-    expect(textChange(wish, 'url', 'https://example.com/ander')).toEqual({ url: 'https://example.com/ander' })
+    expect(change(wish, 'title', 'Slimme stekkers (3)')).toEqual({ title: 'Slimme stekkers (3)' })
+    expect(change(wish, 'description', 'Drie')).toEqual({ description: 'Drie' })
+    expect(change(wish, 'url', 'https://example.com/ander')).toEqual({ url: 'https://example.com/ander' })
   })
 
   it('sends nothing when the text says what is saved already', () => {
-    expect(textChange(wish, 'title', 'Slimme stekkers')).toBeNull()
-    expect(textChange(wish, 'title', '  Slimme stekkers ')).toBeNull()
-    expect(textChange(wish, 'description', 'Twee, voor de lampen\nin de woonkamer\n')).toBeNull()
-    expect(textChange(bare, 'description', '')).toBeNull()
-    expect(textChange(bare, 'url', '   ')).toBeNull()
+    expect(change(wish, 'title', 'Slimme stekkers')).toBeNull()
+    expect(change(wish, 'title', '  Slimme stekkers ')).toBeNull()
+    expect(change(wish, 'description', 'Twee, voor de lampen\nin de woonkamer\n')).toBeNull()
+    expect(change(bare, 'description', '')).toBeNull()
+    expect(change(bare, 'url', '   ')).toBeNull()
   })
 
   it('clears a text or a link that was emptied', () => {
-    expect(textChange(wish, 'description', '  ')).toEqual({ description: null })
-    expect(textChange(wish, 'url', '')).toEqual({ url: null })
+    expect(change(wish, 'description', '  ')).toEqual({ description: null })
+    expect(change(wish, 'url', '')).toEqual({ url: null })
   })
 
   it('sends an emptied title, so the server can say it is needed', () => {
-    expect(textChange(wish, 'title', ' ')).toEqual({ title: '' })
+    expect(change(wish, 'title', ' ')).toEqual({ title: '' })
   })
 
   it('keeps the lines of a text, but makes a title one line', () => {
-    expect(textChange(bare, 'description', 'Rood\n\nmaat 42')).toEqual({ description: 'Rood\n\nmaat 42' })
-    expect(textChange(bare, 'title', 'Wollen\n sokken')).toEqual({ title: 'Wollen sokken' })
+    expect(change(bare, 'description', 'Rood\n\nmaat 42')).toEqual({ description: 'Rood\n\nmaat 42' })
+    expect(change(bare, 'title', 'Wollen\n sokken')).toEqual({ title: 'Wollen sokken' })
   })
 })
 
@@ -96,5 +98,59 @@ describe('when a field takes the refreshed list', () => {
   it('not while its save is on the way, or after it failed, so the typed text stays', () => {
     expect(followsSaved({ focused: false, saving: true, failed: false })).toBe(false)
     expect(followsSaved({ focused: false, saving: false, failed: true })).toBe(false)
+  })
+})
+
+describe('the text a save leaves in a field', () => {
+  it('is what was sent, as the server keeps it: without spaces around it', () => {
+    expect(cleanText('  Rood, maat 42\n', 'text')).toBe('Rood, maat 42')
+    expect(cleanText('Rood\n\nmaat 42', 'text')).toBe('Rood\n\nmaat 42')
+    expect(cleanText(' https://example.com ', 'url')).toBe('https://example.com')
+  })
+
+  it('is one line for a title', () => {
+    expect(cleanText(' Wollen\n sokken ', 'line')).toBe('Wollen sokken')
+  })
+})
+
+describe('what leaving a field, or Enter, does with what it holds', () => {
+  const field = (draft: string, atFocus: string, failedText: string | null = null) => ({ draft, atFocus, failedText })
+
+  it('sends a text that was changed since the field got the focus', () => {
+    expect(commitAction(field('Rood', ''), 'blur')).toBe('send')
+    expect(commitAction(field('Rood', ''), 'enter')).toBe('send')
+  })
+
+  it("sends nothing for a text left as it was, and takes the list's value instead", () => {
+    // Someone else may have changed it meanwhile; the unchanged, older text must not overwrite that.
+    expect(commitAction(field('Rood', 'Rood'), 'blur')).toBe('adopt')
+    expect(commitAction(field('Rood', 'Rood'), 'enter')).toBe('adopt')
+  })
+
+  it('keeps a failed text when the field is left unchanged, and tries again on Enter', () => {
+    expect(commitAction(field('Rood', '', 'Rood'), 'blur')).toBe('keep')
+    expect(commitAction(field('Rood', 'Rood', 'Rood'), 'blur')).toBe('keep')
+    expect(commitAction(field('Rood', 'Rood', 'Rood'), 'enter')).toBe('send')
+  })
+
+  it('sends a failed text that was changed since it failed', () => {
+    expect(commitAction(field('Rood!', 'Rood', 'Rood'), 'blur')).toBe('send')
+  })
+})
+
+describe("the change a field sends, measured against the field's own saved text", () => {
+  // After a save whose refresh failed, the field knows what was saved and the list doesn't yet.
+  it('sends the text when it differs from what the field last saved', () => {
+    expect(fieldChange('description', 'Oud', 'Nieuw')).toEqual({ description: 'Oud' })
+    expect(fieldChange('title', 'Sokken', 'Wollen sokken')).toEqual({ title: 'Sokken' })
+  })
+
+  it('sends nothing when it is what the field last saved', () => {
+    expect(fieldChange('description', ' Nieuw ', 'Nieuw')).toBeNull()
+    expect(fieldChange('url', '', '')).toBeNull()
+  })
+
+  it('clears an emptied text or link', () => {
+    expect(fieldChange('url', ' ', 'https://example.com')).toEqual({ url: null })
   })
 })

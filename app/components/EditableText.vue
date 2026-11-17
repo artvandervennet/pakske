@@ -13,8 +13,11 @@ const props = withDefaults(defineProps<{
   value: string
   /** The field's name for screen readers; it has no visible label. */
   label: string
-  /** Sends the text; answers null when it was saved (or nothing changed), or the reason it wasn't. */
-  save: (text: string) => Promise<string | null>
+  /**
+   * Sends the text; `saved` is the field's last saved text, to compare with. Answers null
+   * when it was saved (or nothing changed), or the reason it wasn't.
+   */
+  save: (text: string, saved: string) => Promise<string | null>
   kind?: 'line' | 'text' | 'url'
   placeholder?: string
   maxlength?: number
@@ -28,13 +31,28 @@ const errorId = `${id}-error`
 const field = useTemplateRef<HTMLInputElement | HTMLTextAreaElement>('field')
 
 const draft = ref(props.value)
+// The last saved text: the list's value, or what a save just sent until the list has it (also
+// when the refresh after the save fails). Escape puts this back.
+const saved = ref(props.value)
+// What the field held when it got the focus (or was last saved): leaving it with this sends nothing.
+const atFocus = ref(props.value)
+// The text whose save failed, kept with its reason until it is changed or Escape is pressed.
+const failedText = ref<string | null>(null)
 const error = ref('')
 const focused = ref(false)
 const saving = ref(false)
 
 watch(() => props.value, (value) => {
-  if (followsSaved({ focused: focused.value, saving: saving.value, failed: !!error.value })) draft.value = value
+  saved.value = value
+  if (followsSaved({ focused: focused.value, saving: saving.value, failed: failedText.value !== null })) {
+    draft.value = atFocus.value = value
+  }
 })
+
+function onFocus() {
+  focused.value = true
+  atFocus.value = draft.value
+}
 
 // A title typed or pasted over several lines is one line.
 function onInput() {
@@ -47,9 +65,9 @@ function onKeydown(event: KeyboardEvent) {
   if (event.isComposing || event.keyCode === 229) return
   if (event.key === 'Escape') {
     event.preventDefault()
-    draft.value = props.value
-    error.value = ''
-    emit('done', 'escape')
+    // With a save on its way, the saved text is only known once it answers.
+    if (saving.value) escapeAfterSave = true
+    else restore()
   }
   else if (event.key === 'Enter') {
     const saves = props.kind !== 'text' || event.ctrlKey || event.metaKey
@@ -59,31 +77,59 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
+// Escape puts back the last saved text: after a save that worked, the text it saved.
+function restore() {
+  draft.value = atFocus.value = saved.value
+  failedText.value = null
+  error.value = ''
+  emit('done', 'escape')
+}
+
 // A second commit while the first is on its way (Enter, then leaving the field) waits for it,
-// then sends again only if the text changed meanwhile.
-let sent: string | null = null
+// then goes again if the text changed meanwhile. Escape meanwhile waits for it too.
 let again: 'enter' | 'blur' | null = null
+let escapeAfterSave = false
 
 async function commit(how: 'enter' | 'blur') {
   if (saving.value) {
     again = how
     return
   }
-  saving.value = true
-  sent = draft.value
-  const reason = await props.save(sent)
-  saving.value = false
-  error.value = reason ?? ''
-  if (again && draft.value !== sent) {
-    const next = again
-    again = null
-    return commit(next)
+  const action = commitAction({ draft: draft.value, atFocus: atFocus.value, failedText: failedText.value }, how)
+  if (action === 'keep') return
+  if (action === 'adopt') {
+    draft.value = atFocus.value = saved.value
+    emit('done', how)
+    return
   }
+  saving.value = true
+  const sent = draft.value
+  const reason = await props.save(sent, saved.value)
+  saving.value = false
+  // Typed while the save was on its way: that text stays, and goes out next.
+  const changedMeanwhile = draft.value !== sent
+  if (reason) {
+    failedText.value = sent
+    error.value = reason
+  }
+  else {
+    failedText.value = null
+    error.value = ''
+    saved.value = cleanText(sent, props.kind)
+    if (!changedMeanwhile) {
+      atFocus.value = sent
+      // Left: the field shows what was saved, as the server keeps it.
+      if (!focused.value) draft.value = atFocus.value = saved.value
+    }
+  }
+  const next = again
   again = null
-  if (reason) return
-  // Saved, and nobody is typing in it any more: show what the list holds now.
-  if (!focused.value) draft.value = props.value
-  emit('done', how)
+  if (escapeAfterSave) {
+    escapeAfterSave = false
+    return restore()
+  }
+  if (next && changedMeanwhile) return commit(next)
+  if (!reason) emit('done', how)
 }
 
 // A field that goes away while it has the focus (the link turning back into a link after
@@ -95,10 +141,13 @@ onBeforeUnmount(() => {
 
 function onBlur() {
   focused.value = false
-  if (leaving) return
-  // Leaving a field whose save just failed, unchanged, would only fail again.
-  if (error.value && draft.value === sent) return
-  commit('blur')
+  if (!leaving) commit('blur')
+}
+
+// A tap beside the field, within its own area (a title's is taller than its text), puts the
+// cursor in it.
+function onAreaClick(event: MouseEvent) {
+  if (event.target === event.currentTarget || (event.target as Element).classList.contains('inline-field-line')) field.value?.focus()
 }
 
 defineExpose({
@@ -110,7 +159,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="inline-field">
+  <div class="inline-field" @click="onAreaClick">
     <div class="inline-field-line">
       <label :for="id" class="visually-hidden">{{ label }}</label>
       <input
@@ -131,7 +180,7 @@ defineExpose({
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="error ? errorId : undefined"
         :aria-busy="saving || undefined"
-        @focus="focused = true"
+        @focus="onFocus"
         @blur="onBlur"
         @keydown="onKeydown"
       >
@@ -150,7 +199,7 @@ defineExpose({
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="error ? errorId : undefined"
         :aria-busy="saving || undefined"
-        @focus="focused = true"
+        @focus="onFocus"
         @blur="onBlur"
         @keydown="onKeydown"
         @input="onInput"

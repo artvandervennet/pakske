@@ -6,7 +6,16 @@ import type { WishView } from '#shared/schemas/list'
 // an owner the wish itself, editable where it stands (the title here, the rest in WishEditor),
 // and everyone else the details.
 // `owners` is the owners' names as one phrase; `ownerCount` picks the singular or plural around it.
-const props = defineProps<{ wish: WishView, token: string, open: boolean, owners: string, ownerCount: number }>()
+// `refresh` refreshes the list after an owner's edit saved; `changed` is for what can take the
+// focused control away with it, such as deleting.
+const props = defineProps<{
+  wish: WishView
+  token: string
+  open: boolean
+  owners: string
+  ownerCount: number
+  refresh: () => Promise<unknown>
+}>()
 const emit = defineEmits<{ toggle: [], changed: [] }>()
 
 const { t } = useI18n()
@@ -20,8 +29,10 @@ const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed
 // Only the owner's view of the wish reaches the editing, so nothing in it can depend on buyers.
 const ownWish = computed(() => (props.wish.role === 'owner' ? props.wish : null))
 const editing = computed(() => props.open && ownWish.value !== null)
-const saving = useWishSave(() => ownWish.value!, () => props.token, () => emit('changed'))
-const saveTitle = (text: string) => saving.save(textChange(props.wish, 'title', text))
+// Saving needs only the wish's id and the list, which every row has; nothing is sent until an
+// owner edits.
+const saving = useWishSave(() => props.wish.id, () => props.token, () => props.refresh())
+const saveTitle = (text: string, saved: string) => saving.save(fieldChange('title', text, saved))
 
 const row = useTemplateRef<HTMLElement>('row')
 
@@ -68,7 +79,8 @@ watch(() => props.open, (open) => {
       </button>
       <div v-if="editing" class="wish-heading">
         <EditableText class="wish-title-edit" :value="wish.title" :label="t('edit.title')" :save="saveTitle" :maxlength="120">
-          <span class="wish-chevron" aria-hidden="true" />
+          <!-- For the pointer only: the row's button above folds it for everyone. -->
+          <span class="wish-chevron" aria-hidden="true" @click="toggle" />
         </EditableText>
         <span v-if="line" class="wish-line">{{ line }}</span>
       </div>
