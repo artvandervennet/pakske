@@ -12,7 +12,10 @@ const STATUS: Record<DomainErrorCode, number> = {
   email_taken: 409,
   registration_closed: 403,
   list_limit: 409,
+  list_limit_ever: 409,
   wish_limit: 409,
+  wish_limit_ever: 409,
+  note_limit: 409,
   quantity_exceeded: 409,
   wish_removed: 409,
 }

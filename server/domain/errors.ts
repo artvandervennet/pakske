@@ -5,7 +5,10 @@ export type DomainErrorCode
     | 'email_taken'
     | 'registration_closed'
     | 'list_limit'
+    | 'list_limit_ever'
     | 'wish_limit'
+    | 'wish_limit_ever'
+    | 'note_limit'
     | 'quantity_exceeded'
     | 'wish_removed'
 

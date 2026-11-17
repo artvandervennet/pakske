@@ -5,7 +5,7 @@ import { listWishes, wishOwners, wishes } from '../server/db/schema'
 import { ownedListId } from '../server/domain/lists'
 import { livePublicWishes } from '../server/domain/public-wishes'
 import { addWish, deleteWish, setWishImage, updateWish } from '../server/domain/wishes'
-import { wishInput } from '../shared/schemas/input'
+import { wishInput, wishPatchInput } from '../shared/schemas/input'
 import { publicWishSchema } from '../shared/schemas/list'
 import { addList, addUser, addWishTo, codeOf, makeDb } from './helpers'
 
@@ -38,6 +38,26 @@ describe('wishes', () => {
     const { id } = addWish(db, art.id, token, input('Boek'))
     const changed = updateWish(db, art.id, token, id, input('Dik boek', { description: 'Hardcover', quantity: null }))
     expect(changed).toMatchObject({ id, title: 'Dik boek', description: 'Hardcover', quantity: null })
+  })
+
+  describe('a change that names only some fields', () => {
+    function withEverything() {
+      const { db, art, token } = setup()
+      const { id } = addWish(db, art.id, token, input('Boek', { description: 'Hardcover', url: 'https://example.test/boek', quantity: 3 }))
+      return { db, art, token, id }
+    }
+
+    it('keeps the amount, text and link when only the title changes', () => {
+      const { db, art, token, id } = withEverything()
+      const changed = updateWish(db, art.id, token, id, wishPatchInput.parse({ title: 'Dik boek' }))
+      expect(changed).toMatchObject({ title: 'Dik boek', description: 'Hardcover', url: 'https://example.test/boek', quantity: 3 })
+    })
+
+    it('takes the limit off and keeps the rest when only the amount is null', () => {
+      const { db, art, token, id } = withEverything()
+      const changed = updateWish(db, art.id, token, id, wishPatchInput.parse({ quantity: null }))
+      expect(changed).toMatchObject({ title: 'Boek', description: 'Hardcover', url: 'https://example.test/boek', quantity: null })
+    })
   })
 
   it('gives someone else not_found for update, delete and image', () => {
@@ -102,10 +122,11 @@ describe('wishes', () => {
       const id = db.insert(wishes).values({ title: `Weg ${i}`, deletedAt: new Date() }).returning().get().id
       db.insert(listWishes).values({ listId, wishId: id }).run()
     }
-    expect(codeOf(() => addWishTo(db, art.id, token, 'Nog een'))).toBe('wish_limit')
+    // Not wish_limit: deleting a wish wouldn't help here.
+    expect(codeOf(() => addWishTo(db, art.id, token, 'Nog een'))).toBe('wish_limit_ever')
   })
 
-  it.each(['server/domain/public-wishes.ts', 'server/domain/wishes.ts'])('%s never touches purchases or notes', (file) => {
+  it.each(['server/domain/public-wishes.ts', 'server/domain/wishes.ts', 'server/domain/lists.ts'])('%s never touches purchases or notes', (file) => {
     expect(readFileSync(file, 'utf8')).not.toMatch(/purchases|notes/i)
   })
 })

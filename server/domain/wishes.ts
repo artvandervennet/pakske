@@ -1,5 +1,5 @@
 import { and, count, eq, isNull } from 'drizzle-orm'
-import type { WishInput } from '../../shared/schemas/input'
+import type { WishInput, WishPatchInput } from '../../shared/schemas/input'
 import type { PublicWish } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
 import { listOwners, listWishes, wishOwners, wishes } from '../db/schema'
@@ -32,7 +32,9 @@ export function addWish(db: Db, userId: number, token: string, input: WishInput)
       .where(and(eq(listWishes.listId, listId), isNull(wishes.deletedAt)))
       .get()!
     const { ever } = tx.select({ ever: count() }).from(listWishes).where(eq(listWishes.listId, listId)).get()!
-    if (live >= MAX_LIVE_WISHES || ever >= MAX_WISHES_EVER) throw new DomainError('wish_limit')
+    // The lifetime ceiling first: once it is reached, deleting a wish no longer makes room.
+    if (ever >= MAX_WISHES_EVER) throw new DomainError('wish_limit_ever')
+    if (live >= MAX_LIVE_WISHES) throw new DomainError('wish_limit')
 
     const wish = tx.insert(wishes).values(input).returning().get()
     // In step one the owners of a wish are the owners of its list.
@@ -43,10 +45,12 @@ export function addWish(db: Db, userId: number, token: string, input: WishInput)
   }, { behavior: 'immediate' })
 }
 
-export function updateWish(db: Db, userId: number, token: string, wishId: number, input: WishInput): PublicWish {
+/** Changes the fields that are given and leaves the others as they are. */
+export function updateWish(db: Db, userId: number, token: string, wishId: number, change: WishPatchInput): PublicWish {
+  const given = Object.fromEntries(Object.entries(change).filter(([, value]) => value !== undefined))
   return db.transaction((tx) => {
     liveWishRow(tx, ownedListId(tx, userId, token), wishId)
-    return toPublicWish(tx.update(wishes).set({ ...input, updatedAt: new Date() }).where(eq(wishes.id, wishId)).returning().get())
+    return toPublicWish(tx.update(wishes).set({ ...given, updatedAt: new Date() }).where(eq(wishes.id, wishId)).returning().get())
   }, { behavior: 'immediate' })
 }
 

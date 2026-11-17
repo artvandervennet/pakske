@@ -5,15 +5,20 @@ import type { HomeList } from '../../shared/schemas/list'
 import { DomainError } from './errors'
 import { newListToken } from './tokens'
 
-export const MAX_LISTS_PER_USER = 50
+const MAX_LISTS_PER_USER = 50
+// Deleted lists are kept, so a second ceiling stops someone filling the disk by making and deleting.
+const MAX_LISTS_EVER = 200
 
 export function createList(db: Db, userId: number, title: string): { token: string, title: string } {
   return db.transaction((tx) => {
-    const { total } = tx.select({ total: count() }).from(listOwners)
+    const { ever } = tx.select({ ever: count() }).from(listOwners).where(eq(listOwners.userId, userId)).get()!
+    // The lifetime ceiling first: once it is reached, deleting a list no longer makes room.
+    if (ever >= MAX_LISTS_EVER) throw new DomainError('list_limit_ever')
+    const { live } = tx.select({ live: count() }).from(listOwners)
       .innerJoin(lists, eq(lists.id, listOwners.listId))
       .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
       .get()!
-    if (total >= MAX_LISTS_PER_USER) throw new DomainError('list_limit')
+    if (live >= MAX_LISTS_PER_USER) throw new DomainError('list_limit')
     const list = tx.insert(lists).values({ token: newListToken(), title }).returning().get()
     tx.insert(listOwners).values({ listId: list.id, userId }).run()
     return { token: list.token, title: list.title }

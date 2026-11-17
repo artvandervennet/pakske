@@ -71,4 +71,12 @@ describe('lists', () => {
     for (let i = 0; i < 50; i++) addList(db, art.id, `Lijst ${i}`)
     expect(codeOf(() => createList(db, art.id, 'Te veel'))).toBe('list_limit')
   })
+
+  it('refuses a list once the person has made 200, deleted or not', () => {
+    const { db, art, mom } = setup()
+    for (let i = 0; i < 200; i++) deleteList(db, art.id, addList(db, art.id, `Lijst ${i}`))
+    expect(codeOf(() => createList(db, art.id, 'Nog een'))).toBe('list_limit_ever')
+    // Someone else's lists don't count.
+    expect(codeOf(() => createList(db, mom.id, 'Moederdag'))).toBeUndefined()
+  })
 })

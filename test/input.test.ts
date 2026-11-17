@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fieldErrors, listInput, registerInput, wishInput } from '../shared/schemas/input'
+import { fieldErrors, listInput, registerInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
 const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', url: '', quantity: 1, ...over })
 
@@ -29,6 +29,27 @@ describe('a wish someone submits', () => {
   it('refuses zero and fractions as an amount', () => {
     expect(fieldErrors(wish({ quantity: 0 }).error!)).toEqual({ quantity: 'invalid_amount' })
     expect(fieldErrors(wish({ quantity: 1.5 }).error!)).toEqual({ quantity: 'invalid_amount' })
+  })
+})
+
+describe('a change to a wish someone submits', () => {
+  it('holds only the fields that were sent, with nothing filled in', () => {
+    expect(wishPatchInput.parse({ title: ' Dik boek ' })).toEqual({ title: 'Dik boek' })
+    expect(wishPatchInput.parse({ quantity: null })).toEqual({ quantity: null })
+  })
+
+  it('still turns empty text into null', () => {
+    expect(wishPatchInput.parse({ description: '', url: '' })).toEqual({ description: null, url: null })
+  })
+
+  it('checks the fields that were sent like a new wish', () => {
+    expect(fieldErrors(wishPatchInput.safeParse({ title: '  ' }).error!)).toEqual({ title: 'required' })
+    expect(fieldErrors(wishPatchInput.safeParse({ url: 'javascript:alert(1)' }).error!)).toEqual({ url: 'invalid_url' })
+    expect(fieldErrors(wishPatchInput.safeParse({ quantity: 0 }).error!)).toEqual({ quantity: 'invalid_amount' })
+  })
+
+  it('needs at least one field', () => {
+    expect(wishPatchInput.safeParse({}).success).toBe(false)
   })
 })
 

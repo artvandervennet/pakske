@@ -40,22 +40,40 @@ export const passwordInput = z.object({
 
 export const listInput = z.object({ title: requiredText(80) })
 
-export const wishInput = z.object({
+const wishFields = {
   title: requiredText(120),
-  description: optionalText(2000).default(null),
+  description: optionalText(2000),
   // http and https only: anything else (javascript:, data:) would run when someone clicks it.
-  url: optionalText(2000).refine(v => v === null || isHttpUrl(v), 'invalid_url').default(null),
-  // null means unlimited; an absent amount means one
-  quantity: amount.nullable().default(1),
+  url: optionalText(2000).refine(v => v === null || isHttpUrl(v), 'invalid_url'),
+  // null means unlimited
+  quantity: amount.nullable(),
+}
+
+/** A new wish. Only the title is needed; an absent amount means one. */
+export const wishInput = z.object({
+  title: wishFields.title,
+  description: wishFields.description.default(null),
+  url: wishFields.url.default(null),
+  quantity: wishFields.quantity.default(1),
 })
+
+/**
+ * A change to a wish: only the fields that are sent change. Nothing has a default, or a change
+ * to the title alone would reset the amount, the text and the link.
+ */
+export const wishPatchInput = z.object({
+  title: wishFields.title.optional(),
+  description: wishFields.description.optional(),
+  url: wishFields.url.optional(),
+  quantity: wishFields.quantity.optional(),
+}).refine(change => Object.values(change).some(value => value !== undefined), 'required')
 
 export const purchaseInput = z.object({ quantity: amount })
 
 export const noteInput = z.object({ body: requiredText(1000) })
 
-export type RegisterInput = z.infer<typeof registerInput>
-export type ProfileInput = z.infer<typeof profileInput>
 export type WishInput = z.infer<typeof wishInput>
+export type WishPatchInput = z.infer<typeof wishPatchInput>
 
 /** The first error code per field, e.g. `{ title: 'required' }`. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

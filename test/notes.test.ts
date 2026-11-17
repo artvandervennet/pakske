@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { notes } from '../server/db/schema'
 import { addNote, deleteNote } from '../server/domain/notes'
+import { setPurchase } from '../server/domain/purchases'
+import { deleteWish } from '../server/domain/wishes'
 import { addList, addUser, addWishTo, codeOf, makeDb } from './helpers'
 
 function setup() {
@@ -35,6 +37,27 @@ describe('notes between buyers', () => {
     expect(codeOf(() => addNote(db, other, wish.id, mom.id, 'x'))).toBe('not_found')
     expect(codeOf(() => addNote(db, 'no-such-token', wish.id, mom.id, 'x'))).toBe('not_found')
     expect(codeOf(() => addNote(db, token, 9999, mom.id, 'x'))).toBe('not_found')
+  })
+
+  it('lets a buyer still write a note on a wish the owner deleted after someone bought it', () => {
+    const { db, token, wish, art, mom, sis, noteRows } = setup()
+    setPurchase(db, token, wish.id, mom.id, 1)
+    deleteWish(db, art.id, token, wish.id)
+    addNote(db, token, wish.id, sis.id, 'Wie houdt hem?')
+    expect(noteRows()).toEqual([{ userId: sis.id, body: 'Wie houdt hem?' }])
+  })
+
+  it('refuses the 201st note on a wish', () => {
+    const { db, token, wish, mom, sis, noteRows } = setup()
+    for (let i = 0; i < 200; i++) addNote(db, token, wish.id, i % 2 ? mom.id : sis.id, `Notitie ${i}`)
+    expect(codeOf(() => addNote(db, token, wish.id, mom.id, 'Te veel'))).toBe('note_limit')
+    expect(noteRows()).toHaveLength(200)
+  })
+
+  it('gives an owner the same refusal whether or not the wish has room for notes', () => {
+    const { db, token, wish, art, mom } = setup()
+    for (let i = 0; i < 200; i++) addNote(db, token, wish.id, mom.id, `Notitie ${i}`)
+    expect(codeOf(() => addNote(db, token, wish.id, art.id, 'Hoeveel?'))).toBe('forbidden')
   })
 
   it('lets the author delete their note', () => {
