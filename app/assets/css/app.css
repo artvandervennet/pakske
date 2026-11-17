@@ -71,13 +71,30 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .page-head .lead { margin-block-start: var(--space-4); }
 .page-head .actions { margin-block-start: var(--space-6); }
 
-/* Candidate for Gesso: a page's title that becomes a field to rename it, in the title's own
-   type, with Save and Cancel under it. */
-.title-edit { display: grid; gap: var(--space-4); max-inline-size: 40rem; }
-.title-edit input {
-  inline-size: 100%;
+/* Candidate for Gesso: a page's title that is the control to rename it. At rest it reads as
+   the heading, with the cue of editable text (see .inline-edit); activated, it turns into
+   that field, in the heading's own type. */
+.title-edit {
+  all: unset;
+  cursor: text;
+  padding: 0 0.15em;
+  margin: 0 -0.15em;
+  border-radius: var(--radius-chip);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  box-shadow: inset 0 -2px 0 var(--rule);
+}
+.title-edit:hover { background: var(--accent-wash); color: var(--ink); }
+.title-edit:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.title-edit-field .inline-edit {
+  inline-size: calc(100% + 0.3em);
+  padding-inline: 0.15em;
+  margin-inline: -0.15em;
   font: var(--weight-regular) var(--step-4)/var(--leading-tight) var(--font-display);
   letter-spacing: -0.025em;
+  text-wrap: balance;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 /* Sections on app pages sit closer together than on a portfolio page. */
@@ -92,8 +109,6 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .form { display: grid; gap: var(--space-6); max-inline-size: 34rem; }
 .field { display: grid; gap: var(--space-2); }
 .field > .hint { font-size: var(--step--1); color: var(--ink-muted); }
-.field.inline { grid-template-columns: auto 1fr; align-items: center; column-gap: var(--space-3); }
-.field input[type="number"] { max-inline-size: 8rem; }
 .form > .actions { margin-block-start: var(--space-2); }
 
 /* Candidate for Gesso: a field that failed validation. The message under it says how to fix
@@ -129,9 +144,9 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .empty + .rows { margin-block-start: var(--space-2); }
 .section-body > .form-message { margin-block: var(--space-4); }
 
-/* Candidate for Gesso: a row to add something by typing its name, with a + where the next
-   row's content starts. The field only shows its edge on hover and focus, so at rest it
-   reads as the last row of the list. */
+/* Candidate for Gesso: the last row of a list, a + that turns into the new row. At rest a
+   button that looks like a row; activated, a field in the type of a row's title, without
+   the edge or the fill of a field, where the + row's words were. */
 .quick-add {
   /* The size of the +; a list of wishes makes it as wide as the pictures above it. */
   --quick-add-plus: 2rem;
@@ -142,6 +157,20 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   min-block-size: 3.5rem;
   padding-block: var(--space-2);
 }
+.quick-add-start {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 2.75rem;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.quick-add-start:hover { color: var(--accent); }
+.quick-add-start:hover .quick-add-label { text-decoration: underline; }
+.quick-add-start:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 .quick-add-plus {
   flex: none;
   display: inline-grid;
@@ -152,19 +181,22 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   background: var(--accent-wash);
   color: var(--accent);
   font: var(--weight-bold) var(--step-1)/1 var(--font-body);
-  cursor: pointer;
 }
+.quick-add-label { font-weight: var(--weight-medium); }
 .quick-add input {
   /* A basis of 0, so the field shares the line with the + instead of wrapping under it. */
   flex: 1 1 0;
   min-inline-size: 0;
+  /* The words of the + row were here; the title takes their place without a field's edge. */
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
-  border-color: transparent;
+  font-weight: var(--weight-medium);
 }
-.quick-add input:is(:hover, :focus) { border-color: var(--rule-strong); background: var(--surface-raised); }
-.quick-add input::placeholder { color: var(--ink-muted); opacity: 1; }
+.quick-add input::placeholder { color: var(--ink-muted); opacity: 1; font-weight: var(--weight-regular); }
 .quick-add input[readonly] { color: var(--ink-muted); }
-.quick-add input[aria-invalid="true"] { border-color: var(--danger); border-width: 2px; }
+.quick-add input[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--danger); }
 /* Under the field, lined up with it rather than with the +. */
 .quick-add-error {
   flex: 1 0 100%;
@@ -192,10 +224,10 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
    visitor, a box, or a stepper. Every row of a list gets the same, so the titles line up. */
 .wish-list { --wish-tick: 0px; --wish-tick-room: 0px; }
 .wish-list:has(.wish-tick) { --wish-tick: 2.75rem; --wish-tick-room: calc(var(--wish-tick) + var(--space-3)); }
-.wish-list:has(.stepper) { --wish-tick: 7rem; }
+.wish-list:has(.wish-tick .stepper) { --wish-tick: 7rem; }
 /* A count of two or three digits on both sides ("100 / 120") doesn't fit between the buttons
    in 7rem; the column grows for the whole list, so the titles still line up. */
-.wish-list:has(.stepper[data-long]) { --wish-tick: 9rem; }
+.wish-list:has(.wish-tick .stepper[data-long]) { --wish-tick: 9rem; }
 .wish-list > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
 .wish-head {
   position: relative;
@@ -216,7 +248,7 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   inline-size: var(--wish-tick);
 }
 /* The + sits under the pictures and the field under the titles, past the tick's room. */
-.wish-list .quick-add { --quick-add-plus: 3rem; padding-inline-start: var(--wish-tick-room); }
+.wish-list .quick-add { --quick-add-plus: 3rem; min-block-size: 4rem; padding-inline-start: var(--wish-tick-room); }
 .wish-toggle {
   all: unset;
   /* A basis of 0: with its text's width as basis, a long title would wrap the row. */
@@ -230,7 +262,7 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 .wish-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 .wish-title { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
 /* A chevron right after the title, where the eye already is; it turns when the row opens. */
-.wish-title::after {
+.wish-title::after, .wish-chevron {
   content: "";
   display: inline-block;
   inline-size: 0.45em;
@@ -242,10 +274,18 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   translate: 0 -0.2em;
   color: var(--ink-muted);
 }
-.wish-row.open .wish-title::after { rotate: 225deg; translate: 0 0.05em; }
+.wish-row.open .wish-title::after, .wish-row.open .wish-chevron { rotate: 225deg; translate: 0 0.05em; }
 @media (prefers-reduced-motion: no-preference) {
-  .wish-title::after { transition: rotate var(--dur-dab) var(--ease-brush), translate var(--dur-dab) var(--ease-brush); }
+  .wish-title::after, .wish-chevron { transition: rotate var(--dur-dab) var(--ease-brush), translate var(--dur-dab) var(--ease-brush); }
 }
+/* An owner's unfolded row: the title is a field where it stood (.inline-edit), above the row's
+   button, which stays to fold the row and spreads under everything else. */
+.wish-row.editing .wish-toggle { position: absolute; inset: 0; }
+.wish-row.editing .wish-toggle:focus-visible { outline-offset: -3px; }
+.wish-heading { flex: 1 1 0; min-inline-size: 0; display: grid; gap: var(--space-1); }
+.wish-heading .inline-edit { position: relative; z-index: 1; }
+.wish-title-edit .inline-edit { font-weight: var(--weight-medium); }
+.wish-chevron { flex: none; }
 .wish-line {
   overflow: hidden;
   white-space: nowrap;
@@ -374,15 +414,96 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
 .note > header art-button { margin-inline-start: auto; }
 .note > p { white-space: pre-line; overflow-wrap: anywhere; }
 
-/* The image picker: the chosen picture, then the buttons. */
-.image-picker { display: grid; gap: var(--space-3); justify-items: start; }
-.image-picker img { max-inline-size: 16rem; max-block-size: 12rem; object-fit: contain; border-radius: var(--radius-canvas); box-shadow: var(--shadow-card); }
+/* Candidate for Gesso: text edited where it is read. A real field without a field's edge or
+   fill, in the type of the text it holds. The cue that it is editable is quiet: a line under
+   it in the rule colour, the text cursor, and a wash on hover and focus. The padding for the
+   wash is taken back by the margin, so the text sits exactly where it was read. */
+.inline-field { display: grid; gap: var(--space-1); min-inline-size: 0; }
+.inline-field-line { display: flex; align-items: baseline; min-inline-size: 0; }
+.inline-edit {
+  flex: 0 1 auto;
+  min-inline-size: 4ch;
+  max-inline-size: calc(100% + 0.5em);
+  inline-size: auto;
+  padding: 0.125em 0.25em;
+  margin: -0.125em -0.25em;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  box-shadow: inset 0 -1px 0 var(--rule);
+  letter-spacing: inherit;
+  cursor: text;
+  resize: none;
+  field-sizing: content;
+}
+textarea.inline-edit { overflow: hidden; }
+.inline-edit:is(:hover, :focus) { background: var(--accent-wash); }
+.inline-edit::placeholder { color: var(--ink-muted); opacity: 1; }
+.inline-edit[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--danger); }
+/* A text keeps the width of the column and grows with its lines. */
+.inline-edit:is(.text, [type="url"]) { flex: 1 1 auto; inline-size: calc(100% + 0.5em); }
+.inline-edit.text { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Where fields can't size to their content, they are as wide as the column; a text gets room
+   for a few lines and scrolls past that. */
+@supports not (field-sizing: content) {
+  .inline-edit { flex: 1 1 auto; inline-size: calc(100% + 0.5em); }
+  textarea.inline-edit.text { min-block-size: 4lh; overflow: auto; }
+}
+.inline-field-error {
+  max-inline-size: none;
+  font-size: var(--step--1);
+  font-weight: var(--weight-medium);
+  color: var(--danger);
+}
+
+/* An owner's unfolded row, the wish's parts each editable in place. */
+.wish-edit > .wish-text-edit { justify-self: stretch; }
+.wish-link-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); justify-self: stretch; }
+.wish-link-edit > .inline-field { flex: 1 1 100%; }
+.wish-edit-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.wish-saved { font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
+
+/* Candidate for Gesso: an amount set with the stepper, named in words beside it so it can't be
+   taken for the tick's stepper, and a switch for no limit. */
+.amount-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.amount-edit-label { font: var(--weight-bold) var(--step--1)/1.3 var(--font-body); color: var(--ink-muted); }
+.amount-edit > .stepper { inline-size: 7rem; }
+.amount-edit > .inline-field-error { flex: 1 0 100%; }
+.switch { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 2.75rem; cursor: pointer; }
+.switch input { inline-size: 1.25rem; block-size: 1.25rem; margin: 0; cursor: inherit; }
+
+/* Candidate for Gesso: a picture that is its own control. Activated, it opens the file
+   chooser; "Remove" sits on its corner. Without one, the painted study and its words. */
+.picture-edit { display: grid; gap: var(--space-2); justify-items: start; }
+.picture-edit-frame { position: relative; max-inline-size: 100%; }
+.picture-edit-choose {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-inline-size: 100%;
+  min-block-size: 2.75rem;
+  border-radius: var(--radius-canvas);
+  cursor: pointer;
+}
+.picture-edit-choose:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.picture-edit-choose img {
+  display: block;
+  max-inline-size: min(16rem, 100%);
+  max-block-size: 12rem;
+  object-fit: contain;
+  border-radius: var(--radius-canvas);
+  box-shadow: var(--shadow-card);
+}
+.picture-edit-choose[aria-busy="true"] img { opacity: 0.6; }
+.picture-edit-label { font-weight: var(--weight-medium); color: var(--accent); }
+.picture-edit-choose:hover .picture-edit-label { text-decoration: underline; }
+.picture-edit-remove { position: absolute; inset-block-start: var(--space-2); inset-inline-end: var(--space-2); }
 
 /* A band that is one column at every width: a form, or the error page. */
 .band.wide > .inner { padding-block: var(--space-12) var(--space-16); }
 
-fieldset.field { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
-fieldset.field > legend { padding: 0; font-weight: var(--weight-medium); margin-block-end: var(--space-2); }
 
 /* A modal dialog keeps scroll gestures to itself, so the page behind it stays where it is. */
 dialog:modal { overscroll-behavior: contain; }

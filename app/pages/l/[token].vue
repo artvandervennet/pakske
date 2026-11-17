@@ -61,36 +61,36 @@ async function onWishChanged() {
   if (!document.activeElement || document.activeElement === document.body) wishesTitle.value?.focus()
 }
 
-// Renaming: the title turns into a field with Save and Cancel. The address stays the same.
+// Renaming: the title in the head band is the control. Activated, it turns into a field in
+// the title's own type; leaving it or Enter saves, Escape puts the name back. The address stays.
 const renaming = ref(false)
-const newTitle = ref('')
-const renameInput = useTemplateRef<HTMLInputElement>('renameInput')
+const renameField = useTemplateRef<{ focus: (select?: boolean) => void }>('renameField')
 const renameButton = useTemplateRef<HTMLButtonElement>('renameButton')
-const { form: renameForm, pending: renamePending, message: renameMessage, errors: renameErrors, run: rename } = useForm(async () => {
-  await $fetch(`/api/lists/${token.value}`, { method: 'PATCH', body: { title: newTitle.value } })
-  await refresh()
-  await stopRenaming()
-})
 
 async function startRenaming() {
-  newTitle.value = list.value.title
-  renameMessage.value = ''
-  renameErrors.value = {}
   renaming.value = true
   await nextTick()
-  renameInput.value?.select()
+  renameField.value?.focus(true)
 }
 
-function onRenameEscape(event: KeyboardEvent) {
-  // With an input method, Escape cancels the characters being composed, not the renaming.
-  if (event.isComposing) return
-  event.preventDefault()
-  stopRenaming()
+async function rename(text: string): Promise<string | null> {
+  const title = oneLine(text).trim()
+  if (title === list.value.title) return null
+  try {
+    await $fetch(`/api/lists/${token.value}`, { method: 'PATCH', body: { title } })
+    await refresh()
+    return null
+  }
+  catch (error) {
+    const parsed = parse(error)
+    return parsed.fields.title ?? parsed.message
+  }
 }
 
-async function stopRenaming() {
+async function onRenameDone(how: 'enter' | 'escape' | 'blur') {
   renaming.value = false
-  // The button that opened the field comes back; the focus goes with it.
+  // After leaving the field by clicking elsewhere, the focus is where that click put it.
+  if (how === 'blur') return
   await nextTick()
   renameButton.value?.focus()
 }
@@ -131,7 +131,7 @@ async function addWish(title: string) {
   addError.value = ''
   try {
     await $fetch(`/api/lists/${token.value}/wishes`, { method: 'POST', body: { title } })
-    // The field stays busy until the new row is there, so it doesn't empty before it shows.
+    // The new row stays busy until its wish is in the list, so it doesn't empty before that shows.
     await refresh()
   }
   catch (error) {
@@ -147,44 +147,29 @@ async function addWish(title: string) {
 <template>
   <div>
     <PageHead :title="list.title" :lead="list.viewerOwnsList ? null : t('list.owners', { names: owners })">
-      <template v-if="renaming" #title>
-        <!-- The page keeps its heading while the visible title is a field. -->
-        <h1 class="visually-hidden">{{ list.title }}</h1>
-        <form ref="renameForm" class="title-edit" novalidate @submit.prevent="rename">
-          <p v-if="renameMessage" class="form-message" role="alert">{{ renameMessage }}</p>
-          <FormField id="list-title" v-slot="field" :label="t('list.renameLabel')" :error="renameErrors.title">
-            <input
-              id="list-title"
-              ref="renameInput"
-              v-model="newTitle"
-              name="title"
-              type="text"
-              maxlength="80"
-              required
-              autocomplete="off"
-              enterkeyhint="done"
-              :aria-describedby="field.describedBy"
-              :aria-invalid="field.invalid"
-              @keydown.esc="onRenameEscape"
-            >
-          </FormField>
-          <div class="actions">
-            <art-button>
-              <button type="submit" :aria-disabled="renamePending || undefined">{{ t('list.renameSave') }}</button>
-            </art-button>
-            <art-button variant="secondary">
-              <button type="button" @click="stopRenaming">{{ t('list.renameCancel') }}</button>
-            </art-button>
-          </div>
-        </form>
+      <template v-if="canManage" #title>
+        <h1 v-if="!renaming">
+          <button ref="renameButton" type="button" class="title-edit" aria-describedby="list-rename-hint" @click="startRenaming">{{ list.title }}</button>
+        </h1>
+        <template v-else>
+          <!-- The page keeps its heading while the visible title is a field. -->
+          <h1 class="visually-hidden">{{ list.title }}</h1>
+          <EditableText
+            ref="renameField"
+            class="title-edit-field"
+            :value="list.title"
+            :label="t('list.renameLabel')"
+            :save="rename"
+            :maxlength="80"
+            @done="onRenameDone"
+          />
+        </template>
+        <span id="list-rename-hint" class="visually-hidden">{{ t('list.rename') }}</span>
       </template>
       <template #actions>
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
         <ShareButton v-if="!list.deleted" :path="localePath(`/l/${list.token}`)" />
-        <template v-if="canManage && !renaming">
-          <art-button variant="secondary">
-            <button ref="renameButton" type="button" @click="startRenaming">{{ t('list.rename') }}</button>
-          </art-button>
+        <template v-if="canManage">
           <art-button variant="quiet">
             <button type="button" :aria-disabled="deleting || undefined" @click="askToDelete">{{ t('list.delete') }}</button>
           </art-button>
@@ -216,14 +201,13 @@ async function addWish(title: string) {
               :open="open.has(wish.id)"
               @toggle="toggle(wish.id)"
               @changed="onWishChanged"
-              @closed="open.delete(wish.id)"
             >
               <template v-if="wish.role !== 'anon'" #tick>
                 <WishTick :wish="wish" :token="list.token" @changed="reason => onTickChanged(wish, reason)" />
               </template>
             </WishRow>
             <li v-if="canManage" class="wish-add">
-              <QuickAdd :label="t('list.add')" :pending="adding" :error="addError" @add="addWish" />
+              <QuickAdd :label="t('list.add')" :field-label="t('list.newWish')" :pending="adding" :error="addError" @add="addWish" />
             </li>
           </ul>
         </div>

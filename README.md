@@ -156,7 +156,7 @@ server/
   utils/        database handle, HTTP helpers, rate limiter, uploads, the cookie of opened lists
 shared/
   schemas/      zod schemas for what comes in and what goes out
-  utils/        the words on a row, the order of the rows and what a tick may do, shared by the page and the tests
+  utils/        the words on a row, the order of the rows, what a tick may do and what an edit sends, shared by the page and the tests
 test/           unit tests and the API check
 ```
 
@@ -181,7 +181,7 @@ Things to know when changing the UI:
 - `<art-signature>` writes its text into `innerHTML`. It only gets fixed text.
 - The words inside `<art-scheme>` (System, Light, Dark) and the header's "Menu" come from Gesso and are English in both languages.
 
-`app.css` marks the blocks that fill gaps in Gesso as candidates to move there: among them the rows of a list, the rows that unfold, the tick box and stepper, the quick-add row, the small picture with its painted study, and the title that turns into a field to rename it.
+`app.css` marks the blocks that fill gaps in Gesso as candidates to move there: among them the rows of a list, the rows that unfold, the tick box and stepper, the + row that turns into the new row, the small picture with its painted study, text edited where it is read (`.inline-edit`, used for an owner's wish and a list's title), the amount with its stepper and switch, and the picture that is its own control.
 
 ## Not included
 
