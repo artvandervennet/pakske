@@ -1,15 +1,17 @@
 import { and, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { items, notes } from '../db/schema'
+import { notes, wishOwners } from '../db/schema'
 import { DomainError } from './errors'
+import { wishOnList } from './purchases'
 
-/** A note on a wish, for the other buyers. The owner of the list can't write or read them. */
-export function addNote(db: Db, itemId: number, authorId: number, body: string): { id: string } {
+/** A note on a wish, for the other buyers. An owner of the wish can't write or read them. */
+export function addNote(db: Db, token: string, wishId: number, userId: number, body: string): { id: string } {
   return db.transaction((tx) => {
-    const item = tx.select({ userId: items.userId }).from(items).where(eq(items.id, itemId)).get()
-    if (!item) throw new DomainError('not_found')
-    if (item.userId === authorId) throw new DomainError('forbidden')
-    return tx.insert(notes).values({ itemId, userId: authorId, body }).returning({ id: notes.id }).get()
+    wishOnList(tx, token, wishId)
+    const owner = tx.select().from(wishOwners)
+      .where(and(eq(wishOwners.wishId, wishId), eq(wishOwners.userId, userId))).get()
+    if (owner) throw new DomainError('forbidden')
+    return tx.insert(notes).values({ wishId, userId, body }).returning({ id: notes.id }).get()
   }, { behavior: 'immediate' })
 }
 

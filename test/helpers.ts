@@ -1,4 +1,6 @@
+import { asc, eq } from 'drizzle-orm'
 import { openDb, type Db } from '../server/db/client'
+import { purchases } from '../server/db/schema'
 import { createList } from '../server/domain/lists'
 import { createUser } from '../server/domain/users'
 import { addWish } from '../server/domain/wishes'
@@ -33,4 +35,10 @@ export function addList(db: Db, userId: number, title = 'Kerst'): string {
 
 export function addWishTo(db: Db, userId: number, token: string, title: string, quantity: number | null = 1) {
   return addWish(db, userId, token, wishInput.parse({ title, quantity }))
+}
+
+/** What the purchases table holds for a wish, read straight from the table. */
+export function purchaseRows(db: Db, wishId: number): { userId: number, quantity: number }[] {
+  return db.select({ userId: purchases.userId, quantity: purchases.quantity }).from(purchases)
+    .where(eq(purchases.wishId, wishId)).orderBy(asc(purchases.userId)).all()
 }
