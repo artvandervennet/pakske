@@ -29,10 +29,17 @@ export type PublicWish = z.infer<typeof publicWishSchema>
 // What one viewer gets for a wish. The role is decided per wish, so one list can mix them. Each
 // shape is strict, so a field that belongs to another role fails to parse.
 
+/**
+ * Who else the wish belongs to, for every role: the owners who don't own this list (the list
+ * already names its own), never the viewer, the earliest first.
+ */
+const sharedWith = z.array(z.string())
+
 /** For a visitor who isn't logged in: the wish only. */
 export const anonWishSchema = z.strictObject({
   ...publicWishSchema.shape,
   role: z.literal('anon'),
+  sharedWith,
 })
 
 /** For an owner of the wish: the wish and their own purchase, nothing about anyone else. */
@@ -41,12 +48,23 @@ export const ownerWishSchema = z.strictObject({
   role: z.literal('owner'),
   /** What the viewer bought themselves, 0 when nothing. */
   mine: z.number().int(),
+  sharedWith,
+  /** Every other owner, the earliest first, by id so two people with one name stay apart. */
+  coOwners: z.array(z.strictObject({
+    id: z.number().int(),
+    name: z.string(),
+    /** Whether the viewer may unlink them: they came to the wish after the viewer did. */
+    canUnlink: z.boolean(),
+  })),
+  /** Another list shows the wish too, so taking it off this one doesn't delete it. */
+  alsoElsewhere: z.boolean(),
 })
 
 /** For a logged-in visitor who doesn't own the wish: every purchase and the notes. */
 export const buyerWishSchema = z.strictObject({
   ...publicWishSchema.shape,
   role: z.literal('buyer'),
+  sharedWith,
   /** No longer on this list (taken off, deleted, or the list deleted), and someone has bought it. */
   removed: z.boolean(),
   bought: z.number().int(),

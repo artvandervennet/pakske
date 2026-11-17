@@ -11,6 +11,7 @@ import { setPurchase } from '../server/domain/purchases'
 import { linkWish } from '../server/domain/sharing'
 import { LIST_TOKEN } from '../server/domain/tokens'
 import { deleteWish, setWishImage } from '../server/domain/wishes'
+import { ownerWishSchema } from '../shared/schemas/list'
 import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, titles, wishIn } from './helpers'
 
 // A clock that only moves when a test moves it, so "oldest" and "the order they joined" never
@@ -164,10 +165,14 @@ describe('a link that makes wishes joint', () => {
     expect(wishIn(getListView(db, A, lot.id), game.id)).toMatchObject({ role: 'buyer', bought: 1 })
     const { invite } = createInvite(db, art.id, A, { kind: 'wishes', wishIds: [game.id] })
     acceptInvite(db, lot.id, invite, { list: L })
-    for (const token of [A, L]) {
+    for (const [token, sharedWith] of [[A, []], [L, ['Art', 'Mom']]] as const) {
       const wish = wishIn(getListView(db, token, lot.id), game.id)
       expect(wish).toEqual(expect.objectContaining({ role: 'owner', mine: 1 }))
-      expect(JSON.stringify(wish)).not.toMatch(/Lot|Mom|Art/)
+      // The other owners are named as owners, and nowhere else: nothing about who bought it.
+      const { coOwners, sharedWith: named, ...rest } = ownerWishSchema.parse(wish)
+      expect(coOwners.map(owner => owner.name)).toEqual(['Art', 'Mom'])
+      expect(named).toEqual(sharedWith)
+      expect(JSON.stringify(rest)).not.toMatch(/Lot|Mom|Art/)
     }
     // Only the maker is told, not the list's other owner.
     expect(listNotices(db, art.id)).toHaveLength(1)
