@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { WishView } from '#shared/schemas/list'
 
-// One wish on a list: a row that unfolds in place. The page keeps which rows are open, so
+// One wish on a list: a row that unfolds in place into a card, with the picture at full width. The page keeps which rows are open, so
 // several can be open at once and they stay open when the list refreshes. Unfolded, it shows
 // an owner the wish itself, editable where it stands (the title here, the rest in WishEditor),
 // and everyone else the details.
@@ -101,6 +101,11 @@ watch(() => props.open, (open) => {
     </div>
     <div :id="detailsId" class="wish-details" :hidden="!open">
       <template v-if="open">
+        <!-- The picture as large as the card allows. An owner's is the control that changes it. -->
+        <div v-if="ownWish || wish.image" class="wish-card-picture">
+          <WishPictureEdit v-if="ownWish" :wish="ownWish" :saving="saving" />
+          <img v-else-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
+        </div>
         <slot name="message" />
         <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :can-remove="viewerOwnsList" @changed="emit('changed')" @joint="emit('joint')" />
         <WishBuyerDetails

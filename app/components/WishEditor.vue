@@ -3,7 +3,7 @@ import type { OwnerWish } from '#shared/schemas/list'
 import type { WishSave } from '~/composables/useWishSave'
 
 // An owner's unfolded row: the wish itself, each part editable where it is read, each saving
-// by itself (the title is in the row's head, in WishRow). There is nothing to submit or cancel.
+// by itself (the title is in the row's head and the picture at the top of the card, in WishRow). There is nothing to submit or cancel.
 // The editor only has the owner's view of the wish, so nothing in it can depend on buyers:
 // taking it off, deleting and unlinking go the same way whatever they did.
 // `canRemove`: the wish is on the viewer's own list, so they can take it off. On someone else's
@@ -93,7 +93,6 @@ function onUnlinkClose() {
     />
     <WishLinkEdit :wish="wish" :saving="saving" />
     <WishAmountEdit :wish="wish" :saving="saving" />
-    <WishPictureEdit :wish="wish" :saving="saving" />
 
     <div class="wish-edit-foot">
       <art-button v-if="canRemove" variant="secondary" size="s">

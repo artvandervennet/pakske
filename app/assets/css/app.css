@@ -234,6 +234,40 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
    in 7rem; the column grows for the whole list, so the titles still line up. */
 .wish-list:has(.wish-tick .stepper[data-long]) { --wish-tick: 9rem; }
 .wish-list > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
+/* The room the small picture takes before the title, the gap after it included. */
+.wish-list > li { --wish-thumb-room: calc(3rem + var(--space-3)); }
+
+/* An open wish is a card: raised from the list, its contents still in line with the rows
+   around it. With a big picture the small one goes, and the text moves up to the tick. */
+.wish-row.open {
+  margin-block: var(--space-2);
+  margin-inline: calc(-1 * var(--space-3));
+  padding-inline: var(--space-3);
+  padding-block-end: var(--space-2);
+  background: var(--surface-raised);
+  border-block-end: 0;
+  border-radius: var(--radius-canvas);
+  box-shadow: var(--shadow-card);
+}
+.wish-row.open:has(.wish-card-picture img) { --wish-thumb-room: 0px; }
+.wish-row.open:has(.wish-card-picture img) .wish-head > .wish-thumb { display: none; }
+.wish-card-picture { padding-block: var(--space-2); }
+/* Without a picture, an owner's "add a picture" sits where the text starts. */
+.wish-card-picture:not(:has(img)) { padding-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room)); }
+.wish-picture,
+.wish-card-picture .picture-edit-choose img {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: none;
+  block-size: auto;
+  max-block-size: min(70vh, 32rem);
+  object-fit: contain;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-chip);
+  box-shadow: none;
+}
+.wish-card-picture .picture-edit:has(img),
+.wish-card-picture .picture-edit:has(img) :is(.picture-edit-frame, .picture-edit-choose) { display: block; inline-size: 100%; }
 .wish-head {
   position: relative;
   display: flex;
@@ -365,7 +399,7 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
   order: 2;
   flex: 1 0 100%;
   max-inline-size: none;
-  padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+  padding-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room));
   font-size: var(--step--1);
   font-weight: var(--weight-medium);
   color: var(--danger);
@@ -392,7 +426,7 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
   justify-items: start;
   padding-block: var(--space-2) var(--space-6);
   /* In line with the title: past the tick, the picture and the gaps after them. */
-  padding-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+  padding-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room));
 }
 .wish-details-body > * { max-inline-size: min(100%, var(--measure)); }
 .wish-details-body > .people, .wish-notes { inline-size: 100%; }
@@ -406,7 +440,7 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
 .wish-notes-list > li { max-inline-size: none; }
 @media (width < 40rem) {
   /* A phone has no room to spare beside the details. */
-  .wish-details-body, .wish-tick-message { padding-inline-start: 0; }
+  .wish-details-body, .wish-tick-message, .wish-card-picture:not(:has(img)) { padding-inline-start: 0; }
   /* With a tick at the start, the tags at the end leave the title too little room: they go
      on a line of their own, under the title. */
   .wish-list:has(.wish-tick) .wish-tags {
@@ -417,7 +451,7 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
     align-items: center;
     /* Under the title, unless a wide stepper on a narrow phone leaves less than a tag's
        width there ("120 gevraagd"); then the tags move left instead of past the edge. */
-    padding-inline-start: min(calc(var(--wish-tick-room) + 3rem + var(--space-3)), 100% - 7rem);
+    padding-inline-start: min(calc(var(--wish-tick-room) + var(--wish-thumb-room)), 100% - 7rem);
   }
 }
 .wish-text { white-space: pre-line; overflow-wrap: anywhere; }
@@ -531,7 +565,7 @@ textarea.inline-edit { overflow: hidden; }
 /* What the page says about one row, at the top of its details, in line with the title. */
 .wish-message {
   max-inline-size: none;
-  margin-inline-start: calc(var(--wish-tick-room) + 3rem + var(--space-3));
+  margin-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room));
   margin-block-start: var(--space-2);
   padding-inline-start: var(--space-3);
   border-inline-start: 4px solid var(--success);
