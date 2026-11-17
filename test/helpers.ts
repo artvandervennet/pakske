@@ -1,6 +1,8 @@
 import { openDb, type Db } from '../server/db/client'
 import { createList } from '../server/domain/lists'
 import { createUser } from '../server/domain/users'
+import { addWish } from '../server/domain/wishes'
+import { wishInput } from '../shared/schemas/input'
 
 export function makeDb(): Db {
   return openDb(':memory:')
@@ -27,4 +29,8 @@ export function codeOf(fn: () => unknown): string | undefined {
 
 export function addList(db: Db, userId: number, title = 'Kerst'): string {
   return createList(db, userId, title).token
+}
+
+export function addWishTo(db: Db, userId: number, token: string, title: string, quantity: number | null = 1) {
+  return addWish(db, userId, token, wishInput.parse({ title, quantity }))
 }
