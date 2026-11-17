@@ -2,7 +2,7 @@ import { and, count, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { notes, wishOwners } from '../db/schema'
 import { DomainError } from './errors'
-import { wishOnList } from './purchases'
+import { wishOnList } from './placement'
 
 const MAX_NOTES_PER_WISH = 200
 

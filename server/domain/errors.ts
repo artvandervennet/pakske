@@ -11,6 +11,9 @@ export type DomainErrorCode
     | 'note_limit'
     | 'quantity_exceeded'
     | 'wish_removed'
+    | 'list_shared'
+    | 'last_owner'
+    | 'invite_closed'
 
 /** A rule of the wishlist said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {

@@ -1,18 +1,15 @@
-import { and, count, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { WishInput, WishPatchInput } from '../../shared/schemas/input'
 import type { PublicWish } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { listOwners, listWishes, wishOwners, wishes } from '../db/schema'
+import { listWishes, wishes } from '../db/schema'
 import { DomainError } from './errors'
 import { ownedListId } from './lists'
+import { assertRoom, putOnList } from './placement'
 import { toPublicWish } from './public-wishes'
 
 // What an owner does with the wishes on their list. Nothing here reads what buyers did, so no
 // answer can depend on it: a delete or a lower amount goes through the same way in every case.
-
-const MAX_LIVE_WISHES = 200
-// Deleted wishes are kept, so a second ceiling stops someone filling the disk by adding and deleting.
-const MAX_WISHES_EVER = 500
 
 /** The wish, if it is live and shown on this list; otherwise "not found". */
 function liveWishRow(db: Db, listId: number, wishId: number) {
@@ -27,20 +24,9 @@ function liveWishRow(db: Db, listId: number, wishId: number) {
 export function addWish(db: Db, userId: number, token: string, input: WishInput): PublicWish {
   return db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
-    const { live } = tx.select({ live: count() }).from(listWishes)
-      .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
-      .where(and(eq(listWishes.listId, listId), isNull(wishes.deletedAt)))
-      .get()!
-    const { ever } = tx.select({ ever: count() }).from(listWishes).where(eq(listWishes.listId, listId)).get()!
-    // The lifetime ceiling first: once it is reached, deleting a wish no longer makes room.
-    if (ever >= MAX_WISHES_EVER) throw new DomainError('wish_limit_ever')
-    if (live >= MAX_LIVE_WISHES) throw new DomainError('wish_limit')
-
+    assertRoom(tx, listId)
     const wish = tx.insert(wishes).values(input).returning().get()
-    // In step one the owners of a wish are the owners of its list.
-    const owners = tx.select({ userId: listOwners.userId }).from(listOwners).where(eq(listOwners.listId, listId)).all()
-    for (const owner of owners) tx.insert(wishOwners).values({ wishId: wish.id, userId: owner.userId }).run()
-    tx.insert(listWishes).values({ listId, wishId: wish.id }).run()
+    putOnList(tx, listId, wish.id)
     return toPublicWish(wish)
   }, { behavior: 'immediate' })
 }

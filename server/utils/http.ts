@@ -18,6 +18,9 @@ const STATUS: Record<DomainErrorCode, number> = {
   note_limit: 409,
   quantity_exceeded: 409,
   wish_removed: 409,
+  list_shared: 409,
+  last_owner: 409,
+  invite_closed: 409,
 }
 
 /** Ends the request with a status and an error code the client can translate. */

@@ -1,22 +1,8 @@
 import { and, eq, ne, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { lists, listWishes, purchases, wishes } from '../db/schema'
+import { purchases } from '../db/schema'
 import { DomainError } from './errors'
-
-/**
- * The list behind a token and the wish on it, deleted or not. A deleted list or wish still
- * resolves, because buyers may still lower or remove what they bought. "Not found" is only a
- * token that matches no list, or a wish that is not shown on that list.
- */
-export function wishOnList(db: Db, token: string, wishId: number) {
-  const row = db.select({ wish: wishes, list: lists }).from(lists)
-    .innerJoin(listWishes, eq(listWishes.listId, lists.id))
-    .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
-    .where(and(eq(lists.token, token), eq(wishes.id, wishId)))
-    .get()
-  if (!row) throw new DomainError('not_found')
-  return row
-}
+import { wishOnList } from './placement'
 
 /**
  * Sets how many of a wish this person is buying. An owner of the wish is treated like any buyer.
