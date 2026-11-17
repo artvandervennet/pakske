@@ -652,6 +652,14 @@ textarea.inline-edit { overflow: hidden; }
 .joint-bar-count { flex: 1 1 12rem; font-weight: var(--weight-medium); }
 .joint-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .joint-bar > .form-message { flex: 1 0 100%; }
+/* The bar's count takes the focus after a delete; it is text, so no ring around it. */
+.joint-bar-count:focus { outline: none; }
+
+/* Edit mode: a row is the label of its box, without the chevron that says it opens. A chosen
+   row is marked across its whole width. */
+.wish-row.edit-mode .wish-title::after { display: none; }
+.wish-row.edit-mode:has(.joint-pick input:checked) { background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.section-head > .actions:has(art-button[size="s"]) { margin-block-start: var(--space-4); }
 
 /* Candidate for Gesso: a link that works once, just made. What it does, its address to read or
    select, and the button that copies it. */

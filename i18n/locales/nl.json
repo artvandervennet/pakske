@@ -89,12 +89,23 @@
   "joint": {
     "sharedWith": "Samen met",
     "make": "Gezamenlijk maken",
-    "select": "Kies {title}",
-    "selected": "Kies de wensen die je wilt delen | {n} wens gekozen | {n} wensen gekozen",
-    "createLink": "Link maken",
-    "cancel": "Annuleren",
     "tooMany": "Kies er hoogstens 50.",
     "linkText": "Deze link werkt één keer. Wie hem opent, wordt mede-eigenaar van de gekozen wensen en ziet daarna niet meer wie ze koopt."
+  },
+  "listEdit": {
+    "start": "Bewerken",
+    "label": "De lijst bewerken",
+    "done": "Klaar",
+    "selected": "Kies wensen om te verwijderen of te delen | {n} wens gekozen | {n} wensen gekozen",
+    "delete": "Verwijderen",
+    "deleteTitle": "Deze wens verwijderen? | Deze {n} wensen verwijderen?",
+    "deleteBody": "Ze verdwijnen van je lijst. Dat kun je niet ongedaan maken.",
+    "deleteBodyElsewhere": "Wensen die ook op een andere lijst staan, verdwijnen alleen van deze.",
+    "deleteConfirm": "Verwijderen",
+    "deleteCancel": "Annuleren",
+    "move": "{title} verplaatsen",
+    "position": "{title}, {n} van {total}",
+    "orderFailed": "De nieuwe volgorde is niet bewaard. De lijst toont de laatst bewaarde volgorde."
   },
   "unlink": {
     "action": "Ontkoppelen",

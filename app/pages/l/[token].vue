@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WishView } from '#shared/schemas/list'
+import type { RowControl } from '~/composables/useListEdit'
 import type { AskTickWarning } from '~/composables/useTickWarning'
 
 const route = useRoute()
@@ -215,73 +216,70 @@ async function inviteCoOwner() {
   }
 }
 
-// Making wishes joint. "Gezamenlijk maken" on one of them starts it with that wish chosen;
-// the ticks of the owner's rows turn into boxes to choose more, and the bar above the list
-// makes the link. Cancel puts the ticks back and the focus where it was.
-const selecting = ref(false)
-const selected = reactive(new Set<number>())
-const selectError = ref('')
-const makingLink = ref(false)
+// Edit mode, for an owner: choose wishes to delete or make joint. The Edit button starts it with
+// nothing chosen; "Gezamenlijk maken" in an open wish starts it with that wish chosen. The ticks
+// turn into boxes and the bar above the list acts on what is chosen. Done or Escape ends it.
+const rows = new Map<number, RowControl>()
+function rowRef(id: number, row: unknown) {
+  if (row) rows.set(id, row as RowControl)
+  else rows.delete(id)
+}
+const edit = useListEdit({ token: () => token.value, wishes: () => wishes.value, refresh, open, rows })
+const { editing, selected } = edit
+const editButton = useTemplateRef<HTMLButtonElement>('editButton')
+const editCount = useTemplateRef<HTMLElement>('editCount')
 const wishLink = ref<string | null>(null)
 const wishLinkBox = useTemplateRef<{ focus: () => void }>('wishLinkBox')
-let selectionStart: HTMLElement | null = null
 
-/** A box instead of the tick: the viewer owns this wish, here on a list of theirs. */
-const pickable = (wish: WishView) => selecting.value && canManage.value && wish.role === 'owner'
-
-async function startSelecting(wish: WishView) {
-  if (!selecting.value) {
-    selectionStart = document.activeElement as HTMLElement | null
-    selected.clear()
-  }
-  selecting.value = true
-  selected.add(wish.id)
-  selectError.value = ''
+/** Starts edit mode; the focus goes to the chosen wish's box, else to the bar. */
+async function startEditing(wishId?: number) {
+  if (!(await edit.enter(wishId))) return false
   wishLink.value = null
   await nextTick()
-  document.querySelector<HTMLElement>(`#wish-${wish.id} .joint-pick input`)?.focus()
+  const box = wishId === undefined ? null : document.getElementById(`pick-${wishId}`)
+  ;(box ?? editCount.value)?.focus()
+  return true
 }
 
-function choose(id: number, event: Event) {
-  if ((event.target as HTMLInputElement).checked) selected.add(id)
-  else selected.delete(id)
-  selectError.value = ''
-}
-
-async function stopSelecting() {
-  selecting.value = false
-  selected.clear()
-  selectError.value = ''
+/** Ends edit mode; the focus goes back to the Edit button, or the heading when the list is empty. */
+async function stopEditing() {
+  edit.leave()
   await nextTick()
-  // Back to "Gezamenlijk maken" while its row is open, else to the list's heading.
-  if (selectionStart?.isConnected) selectionStart.focus()
-  else wishesTitle.value?.focus()
-  selectionStart = null
+  ;(editButton.value ?? wishesTitle.value)?.focus()
 }
 
-async function makeWishLink() {
-  // Only wishes still on the list: one may have gone since it was chosen.
-  const wishIds = list.value.wishes.filter(wish => selected.has(wish.id)).map(wish => wish.id)
-  if (makingLink.value || !wishIds.length) return
-  makingLink.value = true
-  selectError.value = ''
-  try {
-    const made = await $fetch<{ invite: string }>(`/api/lists/${token.value}/invites`, { method: 'POST', body: { kind: 'wishes', wishIds } })
-    wishLink.value = localePath(`/j/${made.invite}`)
-    selecting.value = false
-    selected.clear()
-    selectionStart = null
-    await nextTick()
-    wishLinkBox.value?.focus()
-  }
-  catch (error) {
-    const parsed = parse(error)
-    selectError.value = parsed.fields.wishIds ? t('joint.tooMany') : parsed.message
-    if (parsed.code === 'not_found') await refresh()
-  }
-  finally {
-    makingLink.value = false
-  }
+function onEscape(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || !editing.value || document.querySelector('dialog[open]')) return
+  stopEditing()
+}
+onMounted(() => document.addEventListener('keydown', onEscape))
+onBeforeUnmount(() => document.removeEventListener('keydown', onEscape))
+
+// The list emptied while editing ends edit mode (useListEdit); the focus then goes to the heading.
+watch(editing, (on) => {
+  if (!on && !wishes.value.length) nextTick(() => wishesTitle.value?.focus())
+})
+
+const editDeleteDialog = useTemplateRef<HTMLDialogElement>('editDeleteDialog')
+const chosenElsewhere = computed(() => edit.chosen().some(wish => wish.role === 'owner' && wish.alsoElsewhere))
+
+function askToDeleteChosen() {
+  if (selected.size && !edit.busy.value) editDeleteDialog.value?.showModal()
+}
+
+async function onEditDeleteClose() {
+  if (answer(editDeleteDialog.value) !== 'delete') return
+  await edit.deleteSelected()
+  await nextTick()
+  editCount.value?.focus()
+}
+
+async function makeJoint() {
+  const path = await edit.makeLink()
+  if (!path) return
+  wishLink.value = path
+  await nextTick()
+  wishLinkBox.value?.focus()
 }
 
 const adding = ref(false)
@@ -347,6 +345,11 @@ async function addWish(title: string) {
       <div class="inner">
         <div class="section-head">
           <h2 id="wishes-title" ref="wishesTitle" class="section-title" tabindex="-1">{{ t('list.wishes') }}</h2>
+          <div v-if="canManage && wishes.length && !editing" class="actions">
+            <art-button variant="secondary" size="s">
+              <button ref="editButton" type="button" @click="startEditing()">{{ t('listEdit.start') }}</button>
+            </art-button>
+          </div>
         </div>
         <div class="section-body">
           <p v-if="gone" class="form-message" role="alert">
@@ -355,34 +358,39 @@ async function addWish(title: string) {
           <p v-if="list.deleted" class="form-message">{{ t('list.deleted', { names: owners }, list.owners.length) }}</p>
           <p v-else-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>
-          <div v-if="selecting" class="joint-bar" role="group" :aria-label="t('joint.make')">
-            <p class="joint-bar-count" role="status">{{ t('joint.selected', { n: selected.size }, selected.size) }}</p>
+          <div v-if="editing" class="joint-bar" role="group" :aria-label="t('listEdit.label')">
+            <p ref="editCount" class="joint-bar-count" role="status" tabindex="-1">{{ t('listEdit.selected', { n: selected.size }, selected.size) }}</p>
             <div class="joint-bar-actions">
-              <art-button size="s">
-                <button type="button" :aria-disabled="!selected.size || makingLink || undefined" @click="makeWishLink">{{ t('joint.createLink') }}</button>
+              <art-button variant="secondary" size="s">
+                <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="askToDeleteChosen">{{ t('listEdit.delete') }}</button>
               </art-button>
-              <art-button variant="quiet" size="s">
-                <button type="button" @click="stopSelecting">{{ t('joint.cancel') }}</button>
+              <art-button variant="secondary" size="s">
+                <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="makeJoint">{{ t('joint.make') }}</button>
+              </art-button>
+              <art-button size="s">
+                <button type="button" @click="stopEditing">{{ t('listEdit.done') }}</button>
               </art-button>
             </div>
-            <p v-if="selectError" class="form-message" role="alert">{{ selectError }}</p>
+            <p v-if="edit.error.value" class="form-message" role="alert">{{ edit.error.value }}</p>
           </div>
           <OneTimeLink v-else-if="wishLink" ref="wishLinkBox" class="joint-link" :path="wishLink" :text="t('joint.linkText')" />
-          <ul v-if="wishes.length || canManage" class="wish-list">
+          <ul v-if="wishes.length || canManage" class="wish-list" :class="{ editing }">
             <WishRow
               v-for="wish in wishes"
               :key="wish.id"
+              :ref="row => rowRef(wish.id, row)"
               :wish="wish"
               :token="list.token"
               :owners="list.owners"
               :viewer-owns-list="list.viewerOwnsList"
               :open="open.has(wish.id)"
               :refresh="refreshList"
+              :edit-mode="editing"
               @toggle="toggle(wish.id)"
               @changed="onWishChanged(wish)"
               @added="landed => onAdded(wish, landed)"
               @removed="onAddRemoved(wish)"
-              @joint="startSelecting(wish)"
+              @joint="startEditing(wish.id)"
             >
               <template #message>
                 <!-- Always there in an open row, so the words are announced when they appear. -->
@@ -399,16 +407,21 @@ async function addWish(title: string) {
                 </p>
               </template>
               <template v-if="wish.role !== 'anon'" #tick>
-                <div v-if="pickable(wish)" class="wish-tick joint-pick">
-                  <label class="tick-box">
-                    <input type="checkbox" :checked="selected.has(wish.id)" @change="event => choose(wish.id, event)">
-                    <span class="visually-hidden">{{ t('joint.select', { title: wish.title }) }}</span>
-                  </label>
+                <!-- Named by the row itself, a <label> for it in edit mode (WishRow). -->
+                <div v-if="editing" class="wish-tick joint-pick">
+                  <span class="tick-box">
+                    <input
+                      :id="`pick-${wish.id}`"
+                      type="checkbox"
+                      :checked="selected.has(wish.id)"
+                      @change="event => edit.toggle(wish.id, (event.target as HTMLInputElement).checked)"
+                    >
+                  </span>
                 </div>
                 <WishTick v-else :wish="wish" :token="list.token" @changed="reason => onTickChanged(wish, reason)" />
               </template>
             </WishRow>
-            <li v-if="canManage" class="wish-add">
+            <li v-if="canManage && !editing" class="wish-add">
               <QuickAdd :label="t('list.add')" :field-label="t('list.newWish')" :pending="adding" :error="addError" @add="addWish" />
             </li>
           </ul>
@@ -427,6 +440,22 @@ async function addWish(title: string) {
         </art-button>
         <art-button>
           <button value="leave">{{ t('list.leaveConfirm') }}</button>
+        </art-button>
+      </form>
+    </dialog>
+
+    <dialog v-if="canManage" ref="editDeleteDialog" class="dialog" aria-labelledby="edit-delete-title" aria-describedby="edit-delete-text" @close="onEditDeleteClose">
+      <h2 id="edit-delete-title">{{ t('listEdit.deleteTitle', { n: selected.size }, selected.size) }}</h2>
+      <p id="edit-delete-text">
+        {{ t('listEdit.deleteBody') }}
+        <template v-if="chosenElsewhere">{{ t('listEdit.deleteBodyElsewhere') }}</template>
+      </p>
+      <form method="dialog" class="actions">
+        <art-button variant="secondary">
+          <button value="cancel" autofocus>{{ t('listEdit.deleteCancel') }}</button>
+        </art-button>
+        <art-button>
+          <button value="delete">{{ t('listEdit.deleteConfirm') }}</button>
         </art-button>
       </form>
     </dialog>

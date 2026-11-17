@@ -10,7 +10,10 @@ import type { WishView } from '#shared/schemas/list'
 // focused control away with it, such as deleting. `added` and `removed` come from "Op mijn lijst
 // zetten": where the wish went, or that it left this list meanwhile. `joint` comes from the
 // owner's "Gezamenlijk maken".
-// The `message` slot is for what the page says about this row, at the top of its details.
+// The `message` slot is for what the page says about this row, at the top of its details, and
+// `end` for what comes after the tags (the handle in edit mode).
+// `editMode`: the page's edit mode. The row doesn't open then; tapping it ticks the box the page
+// puts in the `tick` slot (with the id `pick-<wish id>`).
 const props = defineProps<{
   wish: WishView
   token: string
@@ -18,6 +21,7 @@ const props = defineProps<{
   owners: string[]
   viewerOwnsList: boolean
   refresh: () => Promise<unknown>
+  editMode?: boolean
 }>()
 const emit = defineEmits<{ toggle: [], changed: [], added: [list: { token: string, title: string }], removed: [], joint: [] }>()
 
@@ -60,10 +64,33 @@ const toggleButton = useTemplateRef<HTMLButtonElement>('toggleButton')
 watch(() => props.open, (open) => {
   if (!open && row.value?.contains(document.activeElement)) toggleButton.value?.focus()
 })
+
+/**
+ * For the page, before it folds this row from outside (edit mode): waits for the saves on their
+ * way, and answers false, with the focus on the field, when one failed, as `toggle` does.
+ */
+async function settle(): Promise<boolean> {
+  if (saving.busy.value) {
+    await new Promise<void>((resolve) => {
+      const stop = watch(saving.busy, (busy) => {
+        if (busy) return
+        stop()
+        resolve()
+      })
+    })
+  }
+  await nextTick()
+  const unsaved = row.value?.querySelector<HTMLElement>('[aria-invalid="true"]')
+  if (!unsaved) return true
+  ;(unsaved.querySelector<HTMLElement>('button, input') ?? unsaved).focus()
+  return false
+}
+
+defineExpose({ settle })
 </script>
 
 <template>
-  <li :id="`wish-${wish.id}`" ref="row" class="wish-row" :class="{ open, removed, editing }">
+  <li :id="`wish-${wish.id}`" ref="row" class="wish-row" :class="{ open, removed, editing, 'edit-mode': editMode }">
     <div class="wish-head">
       <!-- The tick and its message (WishTick). The message wraps onto a line of its own. -->
       <slot name="tick" />
@@ -72,7 +99,13 @@ watch(() => props.open, (open) => {
            the tag unfolds it too; the tick and an owner's title, above it, are their own
            controls. It stays the same element while the title turns editable, so the focus
            stays on it. -->
+      <!-- In edit mode the whole row is the label of its box, so tapping it ticks the box. -->
+      <label v-if="editMode" class="wish-toggle" :for="`pick-${wish.id}`">
+        <span class="wish-title">{{ wish.title }}</span>
+        <span v-if="line" class="wish-line">{{ line }}</span>
+      </label>
       <button
+        v-else
         ref="toggleButton"
         type="button"
         class="wish-toggle"
@@ -98,6 +131,7 @@ watch(() => props.open, (open) => {
         <art-tape v-if="ownerTag" class="wish-owner-tag" :seed="`owners-${wish.id}`">{{ ownerTag }}</art-tape>
         <art-tape v-if="amount" :seed="`wish-${wish.id}`">{{ amount }}</art-tape>
       </div>
+      <slot name="end" />
     </div>
     <div :id="detailsId" class="wish-details" :hidden="!open">
       <template v-if="open">

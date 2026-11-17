@@ -89,12 +89,23 @@
   "joint": {
     "sharedWith": "Shared with",
     "make": "Make joint",
-    "select": "Choose {title}",
-    "selected": "Choose the wishes you want to share | {n} wish chosen | {n} wishes chosen",
-    "createLink": "Make link",
-    "cancel": "Cancel",
     "tooMany": "Choose 50 at most.",
     "linkText": "This link works once. Whoever opens it becomes a co-owner of the chosen wishes and from then on no longer sees who buys them."
+  },
+  "listEdit": {
+    "start": "Edit",
+    "label": "Edit the list",
+    "done": "Done",
+    "selected": "Choose wishes to delete or share | {n} wish chosen | {n} wishes chosen",
+    "delete": "Delete",
+    "deleteTitle": "Delete this wish? | Delete these {n} wishes?",
+    "deleteBody": "They disappear from your list. You can't undo this.",
+    "deleteBodyElsewhere": "Wishes that are also on another list only leave this one.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Cancel",
+    "move": "Move {title}",
+    "position": "{title}, {n} of {total}",
+    "orderFailed": "The new order wasn't saved. The list shows the last saved order."
   },
   "unlink": {
     "action": "Unlink",
