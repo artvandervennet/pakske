@@ -9,11 +9,11 @@ const STATUS: Record<DomainErrorCode, number> = {
   forbidden: 403,
   validation: 422,
   email_taken: 409,
-  username_taken: 409,
   registration_closed: 403,
-  item_limit: 409,
+  list_limit: 409,
+  wish_limit: 409,
   quantity_exceeded: 409,
-  item_removed: 409,
+  wish_removed: 409,
 }
 
 /** Ends the request with a status and an error code the client can translate. */

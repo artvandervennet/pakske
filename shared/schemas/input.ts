@@ -2,8 +2,6 @@ import { z } from 'zod'
 
 // What people submit. Every message is a code; the client translates `fields.<code>`.
 
-export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/
-
 const requiredText = (max: number) => z.string('required').trim().min(1, 'required').max(max, 'too_long')
 const optionalText = (max: number) => z.string('invalid').trim().max(max, 'too_long').nullish().transform(v => v || null)
 
@@ -22,7 +20,6 @@ const amount = z.number('invalid_amount').int('invalid_amount').min(1, 'invalid_
 
 export const registerInput = z.object({
   email,
-  username: z.string('required').trim().toLowerCase().regex(USERNAME_PATTERN, 'invalid_username'),
   displayName: requiredText(60),
   password: newPassword,
 })
@@ -34,7 +31,6 @@ export const loginInput = z.object({
 
 export const profileInput = z.object({
   displayName: requiredText(60),
-  listIntro: optionalText(500),
 })
 
 export const passwordInput = z.object({
@@ -42,13 +38,15 @@ export const passwordInput = z.object({
   newPassword,
 })
 
-export const itemInput = z.object({
+export const listInput = z.object({ title: requiredText(80) })
+
+export const wishInput = z.object({
   title: requiredText(120),
-  description: optionalText(2000),
+  description: optionalText(2000).default(null),
   // http and https only: anything else (javascript:, data:) would run when someone clicks it.
-  url: optionalText(2000).refine(v => v === null || isHttpUrl(v), 'invalid_url'),
-  // null means unlimited
-  quantity: amount.nullable(),
+  url: optionalText(2000).refine(v => v === null || isHttpUrl(v), 'invalid_url').default(null),
+  // null means unlimited; an absent amount means one
+  quantity: amount.nullable().default(1),
 })
 
 export const purchaseInput = z.object({ quantity: amount })
@@ -57,7 +55,7 @@ export const noteInput = z.object({ body: requiredText(1000) })
 
 export type RegisterInput = z.infer<typeof registerInput>
 export type ProfileInput = z.infer<typeof profileInput>
-export type ItemInput = z.infer<typeof itemInput>
+export type WishInput = z.infer<typeof wishInput>
 
 /** The first error code per field, e.g. `{ title: 'required' }`. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

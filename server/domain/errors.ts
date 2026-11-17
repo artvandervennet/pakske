@@ -3,11 +3,11 @@ export type DomainErrorCode
     | 'forbidden'
     | 'validation'
     | 'email_taken'
-    | 'username_taken'
     | 'registration_closed'
-    | 'item_limit'
+    | 'list_limit'
+    | 'wish_limit'
     | 'quantity_exceeded'
-    | 'item_removed'
+    | 'wish_removed'
 
 /** A rule of the wishlist said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {
