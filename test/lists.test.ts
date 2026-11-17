@@ -1,9 +1,12 @@
 import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { listWishes, wishes } from '../server/db/schema'
+import { getListView } from '../server/domain/list-view'
 import { createList, deleteList, listOwnedLists, ownedListId, renameList } from '../server/domain/lists'
+import { putOnList } from '../server/domain/placement'
 import { LIST_TOKEN } from '../server/domain/tokens'
-import { addList, addUser, codeOf, makeDb } from './helpers'
+import { deleteWish } from '../server/domain/wishes'
+import { addList, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, titles } from './helpers'
 
 function setup() {
   const db = makeDb()
@@ -64,6 +67,37 @@ describe('lists', () => {
     db.insert(listWishes).values({ listId: ownedListId(db, art.id, token), wishId: wish.id }).run()
     deleteList(db, art.id, token)
     expect(db.select().from(wishes).where(eq(wishes.id, wish.id)).get()?.deletedAt).toBeInstanceOf(Date)
+  })
+
+  it('leaves a joint wish on the other list, owned by that list\'s owners', () => {
+    const { db, art } = setup()
+    const lot = addUser(db, 'lotte')
+    const mine = addList(db, art.id, 'Kerst')
+    const theirs = addList(db, lot.id, 'Verjaardag')
+    const joint = addWishTo(db, art.id, mine, 'Bordspel')
+    const own = addWishTo(db, art.id, mine, 'Sokken')
+    putOnList(db, ownedListId(db, lot.id, theirs), joint.id)
+
+    deleteList(db, art.id, mine)
+    expect(ownerIds(db, joint.id)).toEqual([lot.id])
+    expect(db.select().from(wishes).where(eq(wishes.id, joint.id)).get()?.deletedAt).toBeNull()
+    expect(db.select().from(wishes).where(eq(wishes.id, own.id)).get()?.deletedAt).toBeInstanceOf(Date)
+    expect(titles(getListView(db, theirs, lot.id))).toEqual(['Bordspel'])
+    expect(listOwnedLists(db, lot.id)).toEqual([{ token: theirs, title: 'Verjaardag', wishes: 1 }])
+    expectOwnersSettled(db)
+  })
+
+  it('counts only the wishes that are on the list now', () => {
+    const { db, art } = setup()
+    const lot = addUser(db, 'lotte')
+    const mine = addList(db, art.id, 'Kerst')
+    const theirs = addList(db, lot.id, 'Verjaardag')
+    const joint = addWishTo(db, art.id, mine, 'Bordspel')
+    putOnList(db, ownedListId(db, lot.id, theirs), joint.id)
+    deleteWish(db, art.id, mine, joint.id)
+    // The wish lives on, on Lotte's list; Art's list no longer shows it.
+    expect(listOwnedLists(db, art.id)).toEqual([{ token: mine, title: 'Kerst', wishes: 0 }])
+    expect(listOwnedLists(db, lot.id)).toEqual([{ token: theirs, title: 'Verjaardag', wishes: 1 }])
   })
 
   it('refuses a 51st list', () => {

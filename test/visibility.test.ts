@@ -1,17 +1,22 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
-import { deleteList } from '../server/domain/lists'
+import { deleteList, ownedListId } from '../server/domain/lists'
 import { addNote } from '../server/domain/notes'
+import { putOnList } from '../server/domain/placement'
 import { setPurchase } from '../server/domain/purchases'
 import { deleteWish, updateWish } from '../server/domain/wishes'
 import { wishInput } from '../shared/schemas/input'
-import { anonWishSchema, buyerWishSchema, ownerWishSchema, type ListView } from '../shared/schemas/list'
-import { addList, addUser, addWishTo, codeOf, makeDb } from './helpers'
+import { anonWishSchema, buyerWishSchema, ownerWishSchema } from '../shared/schemas/list'
+import { addList, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, titles, wishIn } from './helpers'
 
-// Both worlds get the same address, so their views can be compared whole.
+// Addresses are counted from the start of each world, so one world can hold several lists and two
+// worlds built the same way still get the same addresses, and their views can be compared whole.
+const tokens = vi.hoisted(() => ({ made: 0 }))
 vi.mock('../server/domain/tokens', async importOriginal => ({
   ...await importOriginal<typeof import('../server/domain/tokens')>(),
-  newListToken: () => 'kerst-kerst-kerst-kers',
+  newListToken: () => 'list-' + String(++tokens.made).padStart(17, '0'),
 }))
 
 // One clock for every database, so two of them built the same way are equal to the millisecond.
@@ -29,6 +34,7 @@ afterEach(() => vi.useRealTimers())
  * Nobody ever buys the puzzles.
  */
 function world(buyersActive: boolean) {
+  tokens.made = 0
   const db = makeDb()
   const art = addUser(db, 'art')
   const mom = addUser(db, 'mom')
@@ -57,9 +63,6 @@ function world(buyersActive: boolean) {
 
   return { db, token, art, mom, sis, plugs, puzzles, book, socks }
 }
-
-const titles = (view: ListView | undefined) => view!.wishes.map(wish => wish.title)
-const wishIn = (view: ListView | undefined, id: number) => view!.wishes.find(wish => wish.id === id)
 
 describe('the owner and visitors who are not logged in', () => {
   it('gives the owner and a logged-out visitor exactly the same list whether or not anyone bought or wrote', () => {
@@ -174,5 +177,136 @@ describe('a deleted list', () => {
     const quiet = world(false)
     deleteList(quiet.db, quiet.art.id, quiet.token)
     expect(getListView(quiet.db, quiet.token, quiet.mom.id)).toMatchObject({ deleted: true, wishes: [] })
+  })
+})
+
+describe('a joint wish taken off one of its lists', () => {
+  /**
+   * Art's list A and Lotte's list L both show the board game and the lamp; the vase is on L only.
+   * With `buyersActive`, mom and sis buy all three, through either list, and write notes; that is
+   * the only difference between the two worlds. Afterwards, in both, Art takes the board game off
+   * A, Lotte deletes the vase, and Lotte lowers the lamp through A.
+   */
+  function jointWorld(buyersActive: boolean) {
+    tokens.made = 0
+    const db = makeDb()
+    const art = addUser(db, 'art')
+    const lot = addUser(db, 'lotte')
+    const mom = addUser(db, 'mom')
+    const sis = addUser(db, 'sis')
+    const A = addList(db, art.id, 'Kerst')
+    const L = addList(db, lot.id, 'Verjaardag')
+    const game = addWishTo(db, art.id, A, 'Bordspel', 1)
+    const lamp = addWishTo(db, art.id, A, 'Lamp', 2)
+    const vase = addWishTo(db, lot.id, L, 'Vaas', 1)
+    for (const wish of [game, lamp]) putOnList(db, ownedListId(db, lot.id, L), wish.id)
+
+    if (buyersActive) {
+      vi.advanceTimersByTime(60_000)
+      setPurchase(db, A, game.id, mom.id, 1)
+      setPurchase(db, A, lamp.id, mom.id, 1)
+      setPurchase(db, L, lamp.id, sis.id, 1)
+      setPurchase(db, L, vase.id, sis.id, 1)
+      addNote(db, A, game.id, mom.id, 'Heb ik al.')
+      addNote(db, L, lamp.id, sis.id, 'De groene.')
+      vi.setSystemTime(START)
+    }
+
+    vi.advanceTimersByTime(3_600_000)
+    deleteWish(db, art.id, A, game.id)
+    deleteWish(db, lot.id, L, vase.id)
+    updateWish(db, lot.id, A, lamp.id, wishInput.parse({ title: 'Lamp', quantity: 1 }))
+    vi.setSystemTime(START)
+
+    return { db, A, L, art, lot, mom, sis, game, lamp, vase }
+  }
+
+  it('gives its owners and logged-out visitors the same lists whether or not anyone bought or wrote', () => {
+    const quiet = jointWorld(false)
+    const busy = jointWorld(true)
+    for (const [list, viewer] of [['A', 'art'], ['A', 'lot'], ['L', 'lot'], ['A', null], ['L', null]] as const) {
+      const view = (w: typeof busy) => getListView(w.db, w[list], viewer && w[viewer].id)
+      expect(view(busy), `${viewer} on ${list}`).toEqual(view(quiet))
+    }
+    for (const w of [quiet, busy]) {
+      expect(titles(getListView(w.db, w.A, w.art.id))).toEqual(['Lamp'])
+      expect(titles(getListView(w.db, w.A, w.lot.id))).toEqual(['Lamp'])
+      expect(titles(getListView(w.db, w.L, w.lot.id))).toEqual(['Bordspel', 'Lamp'])
+      expect(titles(getListView(w.db, w.A, null))).toEqual(['Lamp'])
+      for (const wish of getListView(w.db, w.A, w.art.id)!.wishes) expect(() => ownerWishSchema.parse(wish)).not.toThrow()
+      for (const wish of getListView(w.db, w.L, w.lot.id)!.wishes) expect(() => ownerWishSchema.parse(wish)).not.toThrow()
+      expectOwnersSettled(w.db)
+    }
+  })
+
+  it('takes a joint wish off one list and leaves it on the other, for buyers too', () => {
+    const db = makeDb()
+    const art = addUser(db, 'art')
+    const lot = addUser(db, 'lotte')
+    const mom = addUser(db, 'mom')
+    const A = addList(db, art.id, 'Kerst')
+    const L = addList(db, lot.id, 'Verjaardag')
+    const game = addWishTo(db, art.id, A, 'Bordspel', 1)
+    putOnList(db, ownedListId(db, lot.id, L), game.id)
+    setPurchase(db, A, game.id, mom.id, 1)
+
+    deleteWish(db, art.id, A, game.id)
+    expect(titles(getListView(db, A, art.id))).not.toContain('Bordspel')
+    expect(titles(getListView(db, A, lot.id))).not.toContain('Bordspel')
+    expect(titles(getListView(db, A, null))).not.toContain('Bordspel')
+    expect(wishIn(getListView(db, A, mom.id), game.id)).toMatchObject({ role: 'buyer', removed: true, mine: 1 })
+    expect(wishIn(getListView(db, L, mom.id), game.id)).toMatchObject({ role: 'buyer', removed: false, bought: 1 })
+    expect(wishIn(getListView(db, L, lot.id), game.id)).toMatchObject({ role: 'owner' })
+    expectOwnersSettled(db)
+  })
+
+  it('shows a taken-off wish to nobody when nobody bought it', () => {
+    const db = makeDb()
+    const art = addUser(db, 'art')
+    const lot = addUser(db, 'lotte')
+    const mom = addUser(db, 'mom')
+    const A = addList(db, art.id, 'Kerst')
+    const L = addList(db, lot.id, 'Verjaardag')
+    const game = addWishTo(db, art.id, A, 'Bordspel', 1)
+    putOnList(db, ownedListId(db, lot.id, L), game.id)
+    addNote(db, A, game.id, mom.id, 'Wie neemt hem?')
+
+    deleteWish(db, art.id, A, game.id)
+    for (const viewer of [art.id, lot.id, mom.id, null]) {
+      expect(wishIn(getListView(db, A, viewer), game.id)).toBeUndefined()
+    }
+    expect(wishIn(getListView(db, L, mom.id), game.id)).toMatchObject({ role: 'buyer', removed: false, bought: 0 })
+  })
+})
+
+describe('a wish deleted in step one, which kept its owners and its place on the list', () => {
+  function stepOne() {
+    const db = makeDb()
+    const art = addUser(db, 'art')
+    const mom = addUser(db, 'mom')
+    const sis = addUser(db, 'sis')
+    const token = addList(db, art.id)
+    const socks = addWishTo(db, art.id, token, 'Sokken')
+    setPurchase(db, token, socks.id, mom.id, 1)
+    // What step one's delete did: mark the wish, nothing else.
+    db.update(wishes).set({ deletedAt: new Date() }).where(eq(wishes.id, socks.id)).run()
+    return { db, art, mom, sis, token, socks }
+  }
+
+  it('is the same removed wish as one deleted now, without any data step', () => {
+    const { db, art, mom, sis, token, socks } = stepOne()
+    expect(titles(getListView(db, token, art.id))).toEqual([])
+    expect(titles(getListView(db, token, null))).toEqual([])
+    expect(wishIn(getListView(db, token, mom.id), socks.id)).toMatchObject({ role: 'buyer', removed: true, mine: 1 })
+    expect(codeOf(() => deleteWish(db, art.id, token, socks.id))).toBe('not_found')
+    expect(codeOf(() => setPurchase(db, token, socks.id, sis.id, 1))).toBe('wish_removed')
+  })
+
+  it('is settled when its list is deleted, and stays a removed wish for its buyer', () => {
+    const { db, art, mom, token, socks } = stepOne()
+    deleteList(db, art.id, token)
+    expectOwnersSettled(db)
+    expect(getListView(db, token, art.id)).toBeUndefined()
+    expect(wishIn(getListView(db, token, mom.id), socks.id)).toMatchObject({ role: 'buyer', removed: true, mine: 1 })
   })
 })

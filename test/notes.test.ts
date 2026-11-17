@@ -60,6 +60,18 @@ describe('notes between buyers', () => {
     expect(codeOf(() => addNote(db, token, wish.id, art.id, 'Hoeveel?'))).toBe('forbidden')
   })
 
+  it('refuses a note from the list\'s owner on a wish they deleted, with room for notes or not', () => {
+    for (const full of [false, true]) {
+      const { db, token, wish, art, mom, noteRows } = setup()
+      setPurchase(db, token, wish.id, mom.id, 1)
+      if (full) for (let i = 0; i < 200; i++) addNote(db, token, wish.id, mom.id, `Notitie ${i}`)
+      deleteWish(db, art.id, token, wish.id)
+      // Art no longer owns the wish, but it was his list's: he must not learn whether notes exist.
+      expect(codeOf(() => addNote(db, token, wish.id, art.id, 'Hoeveel?'))).toBe('forbidden')
+      expect(noteRows()).toHaveLength(full ? 200 : 0)
+    }
+  })
+
   it('lets the author delete their note', () => {
     const { db, token, wish, mom, noteRows } = setup()
     const note = addNote(db, token, wish.id, mom.id, 'Oeps')

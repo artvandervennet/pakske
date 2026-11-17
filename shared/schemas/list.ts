@@ -45,7 +45,7 @@ export const ownerWishSchema = z.strictObject({
 export const buyerWishSchema = z.strictObject({
   ...publicWishSchema.shape,
   role: z.literal('buyer'),
-  /** The owner deleted it, or the list, after someone bought it. */
+  /** No longer on this list (taken off, deleted, or the list deleted), and someone has bought it. */
   removed: z.boolean(),
   bought: z.number().int(),
   mine: z.number().int(),

@@ -7,6 +7,7 @@ import { settleOwners } from '../server/domain/placement'
 import { createUser } from '../server/domain/users'
 import { addWish } from '../server/domain/wishes'
 import { wishInput } from '../shared/schemas/input'
+import type { ListView } from '../shared/schemas/list'
 
 export function makeDb(): Db {
   return openDb(':memory:')
@@ -38,6 +39,12 @@ export function addList(db: Db, userId: number, title = 'Kerst'): string {
 export function addWishTo(db: Db, userId: number, token: string, title: string, quantity: number | null = 1) {
   return addWish(db, userId, token, wishInput.parse({ title, quantity }))
 }
+
+/** The titles of the wishes a view shows, in its order. */
+export const titles = (view: ListView | undefined) => view!.wishes.map(wish => wish.title)
+
+/** One wish from a view, or undefined when the viewer doesn't get it. */
+export const wishIn = (view: ListView | undefined, id: number) => view!.wishes.find(wish => wish.id === id)
 
 /** What the purchases table holds for a wish, read straight from the table. */
 export function purchaseRows(db: Db, wishId: number): { userId: number, quantity: number }[] {

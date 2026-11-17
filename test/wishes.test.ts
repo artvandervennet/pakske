@@ -3,11 +3,12 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { listWishes, wishOwners, wishes } from '../server/db/schema'
 import { ownedListId } from '../server/domain/lists'
+import { putOnList } from '../server/domain/placement'
 import { livePublicWishes } from '../server/domain/public-wishes'
-import { addWish, deleteWish, setWishImage, updateWish } from '../server/domain/wishes'
+import { addWish, deleteWish, ownedWishOnList, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput, wishPatchInput } from '../shared/schemas/input'
 import { publicWishSchema } from '../shared/schemas/list'
-import { addList, addUser, addWishTo, codeOf, makeDb } from './helpers'
+import { addList, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds } from './helpers'
 
 function setup() {
   const db = makeDb()
@@ -88,6 +89,8 @@ describe('wishes', () => {
     expect(codeOf(() => updateWish(db, art.id, token, id, input('X')))).toBe('not_found')
     // The row stays.
     expect(db.select().from(wishes).where(eq(wishes.id, id)).get()?.deletedAt).toBeInstanceOf(Date)
+    expect(ownerIds(db, id)).toEqual([])
+    expectOwnersSettled(db)
   })
 
   it('lists live wishes oldest first', () => {
@@ -124,6 +127,62 @@ describe('wishes', () => {
     }
     // Not wish_limit: deleting a wish wouldn't help here.
     expect(codeOf(() => addWishTo(db, art.id, token, 'Nog een'))).toBe('wish_limit_ever')
+  })
+
+  describe('a joint wish, on Art\'s list and on Lotte\'s', () => {
+    function joint() {
+      const { db, art, mom, token } = setup()
+      const lot = addUser(db, 'lotte')
+      const theirs = addList(db, lot.id, 'Verjaardag')
+      const wish = addWishTo(db, art.id, token, 'Bordspel')
+      putOnList(db, ownedListId(db, lot.id, theirs), wish.id)
+      return { db, art, lot, mom, token, theirs, wish }
+    }
+
+    it('lets Lotte change it and set its picture through Art\'s list', () => {
+      const { db, art, lot, token, theirs, wish } = joint()
+      expect(updateWish(db, lot.id, token, wish.id, wishPatchInput.parse({ title: 'Groot bordspel' }))).toMatchObject({ title: 'Groot bordspel' })
+      expect(setWishImage(db, lot.id, token, wish.id, 'a.png')).toEqual({ previous: null })
+      for (const list of [token, theirs]) {
+        expect(livePublicWishes(db, ownedListId(db, list === token ? art.id : lot.id, list))[0]).toMatchObject({ title: 'Groot bordspel', image: '/uploads/a.png' })
+      }
+    })
+
+    it('does not let Lotte take it off Art\'s list', () => {
+      const { db, art, lot, token, wish } = joint()
+      expect(codeOf(() => deleteWish(db, lot.id, token, wish.id))).toBe('not_found')
+      expect(ownerIds(db, wish.id)).toEqual([art.id, lot.id].sort((a, b) => a - b))
+    })
+
+    it('takes it off Art\'s list only, so it stays Lotte\'s and is not deleted', () => {
+      const { db, art, lot, token, theirs, wish } = joint()
+      deleteWish(db, art.id, token, wish.id)
+      expect(db.select().from(wishes).where(eq(wishes.id, wish.id)).get()?.deletedAt).toBeNull()
+      expect(ownerIds(db, wish.id)).toEqual([lot.id])
+      expect(livePublicWishes(db, ownedListId(db, art.id, token))).toEqual([])
+      expect(livePublicWishes(db, ownedListId(db, lot.id, theirs)).map(w => w.id)).toEqual([wish.id])
+      expectOwnersSettled(db)
+    })
+
+    it('no longer lets Art change it, through either list, once it is off his', () => {
+      const { db, art, lot, token, theirs, wish } = joint()
+      deleteWish(db, art.id, token, wish.id)
+      for (const list of [token, theirs]) {
+        expect(codeOf(() => updateWish(db, art.id, list, wish.id, input('X')))).toBe('not_found')
+        expect(codeOf(() => setWishImage(db, art.id, list, wish.id, null))).toBe('not_found')
+      }
+      // Lotte still owns it, but not through the list it left.
+      expect(codeOf(() => ownedWishOnList(db, lot.id, token, wish.id))).toBe('not_found')
+      expect(ownedWishOnList(db, lot.id, theirs, wish.id).id).toBe(wish.id)
+    })
+
+    it('gives someone who owns neither the wish nor a list not_found', () => {
+      const { db, mom, token, theirs, wish } = joint()
+      for (const list of [token, theirs]) {
+        expect(codeOf(() => ownedWishOnList(db, mom.id, list, wish.id))).toBe('not_found')
+        expect(codeOf(() => updateWish(db, mom.id, list, wish.id, input('X')))).toBe('not_found')
+      }
+    })
   })
 
   it.each(['server/domain/public-wishes.ts', 'server/domain/wishes.ts', 'server/domain/lists.ts'])('%s never touches purchases or notes', (file) => {

@@ -1,7 +1,8 @@
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { PublicWish } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { listWishes, wishes } from '../db/schema'
+import { lists, listWishes, wishes } from '../db/schema'
+import { onListNow } from './placement'
 
 // What every viewer of a list gets for a wish. This file only knows about wishes and the list
 // they are on; what buyers did lives elsewhere and is not imported here. A test checks that.
@@ -19,11 +20,12 @@ export function toPublicWish(row: typeof wishes.$inferSelect): PublicWish {
   }
 }
 
-/** The live wishes on a list, oldest first. The order never depends on anything but the wishes. */
+/** The wishes on a list now, oldest first. The order never depends on anything but the wishes. */
 export function livePublicWishes(db: Db, listId: number): PublicWish[] {
   return db.select({ wish: wishes }).from(listWishes)
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
-    .where(and(eq(listWishes.listId, listId), isNull(wishes.deletedAt)))
+    .innerJoin(lists, eq(lists.id, listWishes.listId))
+    .where(and(eq(listWishes.listId, listId), onListNow))
     .orderBy(asc(wishes.createdAt), asc(wishes.id))
     .all()
     .map(({ wish }) => toPublicWish(wish))

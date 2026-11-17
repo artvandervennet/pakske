@@ -3,6 +3,7 @@ import type { Db } from '../db/client'
 import { listOwners, lists, listWishes, wishes } from '../db/schema'
 import type { HomeList } from '../../shared/schemas/list'
 import { DomainError } from './errors'
+import { onListNow, takeOffList } from './placement'
 import { newListToken } from './tokens'
 
 const MAX_LISTS_PER_USER = 50
@@ -39,16 +40,19 @@ export function renameList(db: Db, userId: number, token: string, title: string)
   db.update(lists).set({ title }).where(eq(lists.id, ownedListId(db, userId, token))).run()
 }
 
+/**
+ * Takes every wish off the list, then deletes the list. A wish that is on no other list is deleted
+ * with it; a joint wish stays on the other lists, with their owners.
+ */
 export function deleteList(db: Db, userId: number, token: string): void {
   db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
-    const now = new Date()
-    // Wishes go with the list, so they stop showing up for buyers as well.
-    const onList = tx.select({ wishId: listWishes.wishId }).from(listWishes).where(eq(listWishes.listId, listId)).all()
-    for (const { wishId } of onList) {
-      tx.update(wishes).set({ deletedAt: now }).where(and(eq(wishes.id, wishId), isNull(wishes.deletedAt))).run()
-    }
-    tx.update(lists).set({ deletedAt: now }).where(eq(lists.id, listId)).run()
+    // Every placement still marked as on the list, also those of wishes deleted before placements
+    // could be taken off, so their owners are settled now too.
+    const onList = tx.select({ wishId: listWishes.wishId }).from(listWishes)
+      .where(and(eq(listWishes.listId, listId), isNull(listWishes.removedAt))).all()
+    for (const { wishId } of onList) takeOffList(tx, listId, wishId)
+    tx.update(lists).set({ deletedAt: new Date() }).where(eq(lists.id, listId)).run()
   }, { behavior: 'immediate' })
 }
 
@@ -61,7 +65,8 @@ export function listOwnedLists(db: Db, userId: number): HomeList[] {
     .map(({ id, token, title }) => {
       const { total } = db.select({ total: count() }).from(listWishes)
         .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
-        .where(and(eq(listWishes.listId, id), isNull(wishes.deletedAt)))
+        .innerJoin(lists, eq(lists.id, listWishes.listId))
+        .where(and(eq(listWishes.listId, id), onListNow))
         .get()!
       return { token, title, wishes: total }
     })

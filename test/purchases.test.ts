@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { deleteList } from '../server/domain/lists'
+import { deleteList, ownedListId } from '../server/domain/lists'
+import { putOnList } from '../server/domain/placement'
 import { removePurchase, setPurchase } from '../server/domain/purchases'
 import { deleteWish, updateWish } from '../server/domain/wishes'
 import { wishInput } from '../shared/schemas/input'
@@ -156,6 +157,45 @@ describe('buying', () => {
       // Without the early check the first would say quantity_exceeded and the second would succeed.
       expect(codeOf(() => setPurchase(bought.db, bought.token, bought.wish.id, bought.art.id, 1))).toBe('wish_removed')
       expect(codeOf(() => setPurchase(unbought.db, unbought.token, unbought.wish.id, unbought.art.id, 1))).toBe('wish_removed')
+    })
+  })
+
+  describe('on a joint wish taken off one of its lists', () => {
+    /** The wish is on Art's list and Lotte's; Art takes it off his. With `bought`, mom had one through his. */
+    function takenOff(bought: boolean) {
+      const s = setup(3)
+      const lot = addUser(s.db, 'lotte')
+      const theirs = addList(s.db, lot.id, 'Verjaardag')
+      putOnList(s.db, ownedListId(s.db, lot.id, theirs), s.wish.id)
+      if (bought) setPurchase(s.db, s.token, s.wish.id, s.mom.id, 2)
+      deleteWish(s.db, s.art.id, s.token, s.wish.id)
+      return { ...s, lot, theirs }
+    }
+
+    it('answers an increase through the list it left with wish_removed, whether or not anyone bought it', () => {
+      for (const bought of [false, true]) {
+        const { db, token, wish, art, lot, sis } = takenOff(bought)
+        for (const who of [sis, art, lot]) {
+          expect(codeOf(() => setPurchase(db, token, wish.id, who.id, 1)), `${who.displayName}, bought ${bought}`).toBe('wish_removed')
+        }
+      }
+    })
+
+    it('lets a buyer lower and remove their purchase through the list it left', () => {
+      const { db, token, wish, mom } = takenOff(true)
+      expect(codeOf(() => setPurchase(db, token, wish.id, mom.id, 3))).toBe('wish_removed')
+      expect(codeOf(() => setPurchase(db, token, wish.id, mom.id, 1))).toBeUndefined()
+      expect(purchaseRows(db, wish.id)).toEqual([{ userId: mom.id, quantity: 1 }])
+      expect(codeOf(() => removePurchase(db, token, wish.id, mom.id))).toBeUndefined()
+      expect(purchaseRows(db, wish.id)).toEqual([])
+    })
+
+    it('still sells it through the list that shows it, counting what was bought through the other', () => {
+      const { db, theirs, wish, mom, sis } = takenOff(true)
+      setPurchase(db, theirs, wish.id, sis.id, 1)
+      expect(codeOf(() => setPurchase(db, theirs, wish.id, sis.id, 2))).toBe('quantity_exceeded')
+      setPurchase(db, theirs, wish.id, mom.id, 1)
+      expect(purchaseRows(db, wish.id)).toEqual([{ userId: mom.id, quantity: 1 }, { userId: sis.id, quantity: 1 }])
     })
   })
 

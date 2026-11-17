@@ -11,20 +11,20 @@ import { wishOnList } from './placement'
  * click at the same moment are handled one after the other and can't both take the last one.
  *
  * Only an increase is checked. Lowering always works, also when the owner has since lowered
- * the amount or deleted the wish or the list.
+ * the amount, taken the wish off this list, or deleted the wish or the list.
  */
 export function setPurchase(db: Db, token: string, wishId: number, userId: number, quantity: number): void {
   if (!Number.isInteger(quantity) || quantity < 1) throw new DomainError('validation')
 
   db.transaction((tx) => {
-    const { wish, list } = wishOnList(tx, token, wishId)
+    const { wish, live } = wishOnList(tx, token, wishId)
     const mine = tx.select().from(purchases)
       .where(and(eq(purchases.wishId, wishId), eq(purchases.userId, userId))).get()
 
     if (quantity > (mine?.quantity ?? 0)) {
       // Before anything about other purchases is read, so the answer is the same whether or
       // not anyone bought the wish: an owner can't use it to find out.
-      if (wish.deletedAt || list.deletedAt) throw new DomainError('wish_removed')
+      if (!live) throw new DomainError('wish_removed')
       if (wish.quantity !== null) {
         const { others } = tx
           .select({ others: sql<number>`coalesce(sum(${purchases.quantity}), 0)` })
