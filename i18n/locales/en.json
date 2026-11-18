@@ -16,15 +16,27 @@
     "title": "Wishlists",
     "lead": "Make a list and share the link. Buyers sort it out here, and you don’t get to see it.",
     "yourLists": "Your lists",
+    "visited": "Visited",
+    "allLists": "All lists ({n})",
+    "notices": "Notices"
+  },
+  "lists": {
+    "title": "Lists",
+    "search": "Search by the name of the list or of its owner",
+    "found": "No lists found | {n} list found | {n} lists found",
+    "mine": "My lists",
+    "visited": "Visited",
+    "wishes": "no wishes yet | {n} wish | {n} wishes",
     "newList": "New list",
     "newListName": "Name of the new list",
-    "wishes": "no wishes yet | {n} wish | {n} wishes",
-    "opened": "Lists you opened",
-    "openedIntro": "When someone sends you the link to a list, you find it here again. Removing a list only takes it off this page; the link keeps working.",
-    "openedEmpty": "No lists yet. Open the link someone sent you.",
+    "mineEmpty": "You have no list yet.",
+    "mineNone": "None of your lists matches “{query}”.",
+    "visitedIntro": "When someone sends you the link to a list, you find it here again. Removing a list only takes it away here; the link keeps working.",
+    "visitedEmpty": "No lists yet. Open the link someone sent you.",
+    "visitedNone": "No visited list matches “{query}”.",
     "deleted": "Deleted",
     "remove": "Remove",
-    "notices": "Notices"
+    "login": "Log in to make lists of your own"
   },
   "notice": {
     "wish_linked": "{actor} added “{title}” to a list of their own. You now share that wish.",

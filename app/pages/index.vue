@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HomeView, NoticeView, OpenedList } from '#shared/schemas/list'
+import type { HomeView, NoticeView } from '#shared/schemas/list'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -8,63 +8,24 @@ const { parse } = useApiError()
 
 useHead({ title: () => t('home.title') })
 
+// The few lists of each kind the person had to do with last, and how many there are in all.
+// The lists page has every one of them.
 const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api/home')
 const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
 const notices = computed(() => home.value?.notices ?? [])
+const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
+const openedTotal = computed(() => home.value?.openedTotal ?? 0)
 // Without it a failed load would look like having no lists at all.
 const loadError = computed(() => (homeError.value ? parse(homeError.value).message : ''))
 
-const creating = ref(false)
-const createError = ref('')
+const { creating, createError, createList } = useNewList()
 
-async function createList(title: string) {
-  creating.value = true
-  createError.value = ''
-  try {
-    const list = await $fetch<{ token: string }>('/api/lists', { method: 'POST', body: { title } })
-    await navigateTo(localePath(`/l/${list.token}`))
-  }
-  catch (error) {
-    const parsed = parse(error)
-    createError.value = parsed.fields.title ?? parsed.message
-  }
-  finally {
-    creating.value = false
-  }
-}
-
-const removing = ref<string | null>(null)
-const removeError = ref('')
 const openedTitle = ref<HTMLElement>()
 const pageTitle = ref<HTMLElement>()
-
-async function forget(token: string) {
-  if (removing.value) return
-  removing.value = token
-  removeError.value = ''
-  try {
-    await $fetch(`/api/home/opened/${token}`, { method: 'DELETE' })
-    await refresh()
-    // The button that had the focus is gone with its row. Logged out, the last one takes the
-    // whole section along; then the focus goes to the page's heading.
-    await nextTick()
-    const heading = openedTitle.value ?? pageTitle.value
-    heading?.focus()
-  }
-  catch (error) {
-    removeError.value = parse(error).message
-  }
-  finally {
-    removing.value = null
-  }
-}
-
-// A deleted list still opens for someone logged in, who may have bought something on it.
-// For a visitor who isn't, the link would only lead to "not found".
-const canOpen = (list: OpenedList) => !list.deleted || loggedIn.value
-
-const ownerNames = useNames()
+// After "Weghalen" the focus goes to the section's heading. Logged out, the last list takes the
+// whole section along; then it goes to the page's heading.
+const { removeError, forget } = useForgetList(refresh, () => openedTitle.value ?? pageTitle.value)
 
 // Notices. Opening this page counts as having seen them, which takes the header's mark away.
 const { markSeen } = useNotices()
@@ -152,14 +113,16 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
         <div class="section-body">
           <p v-if="loadError" class="form-message">{{ loadError }}</p>
           <ul class="rows">
-            <li v-for="list in owned" :key="list.token" class="row">
-              <NuxtLink class="row-title" :to="localePath(`/l/${list.token}`)">{{ list.title }}</NuxtLink>
-              <span class="row-meta">{{ t('home.wishes', list.wishes) }}<template v-if="list.sharedWith.length"> · {{ t('wish.with', { names: ownerNames(list.sharedWith) }) }}</template></span>
-            </li>
+            <OwnedListRow v-for="list in owned" :key="list.token" :list="list" />
             <li>
-              <QuickAdd :label="t('home.newList')" :field-label="t('home.newListName')" :pending="creating" :error="createError" @add="createList" />
+              <QuickAdd :label="t('lists.newList')" :field-label="t('lists.newListName')" :pending="creating" :error="createError" @add="createList" />
             </li>
           </ul>
+          <!-- Both sections end in a link with these words; each one's heading is its
+               description, so a screen reader says which lists it leads to. -->
+          <p v-if="ownedTotal > owned.length" class="lists-all">
+            <NuxtLink :to="localePath('/lists')" aria-describedby="yours-title">{{ t('home.allLists', { n: ownedTotal }) }}</NuxtLink>
+          </p>
         </div>
       </div>
     </section>
@@ -167,35 +130,30 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
     <section v-if="showOpened" class="band section" :data-paint="loggedIn ? 2 : 1" aria-labelledby="opened-title">
       <div class="inner">
         <div class="section-head">
-          <h2 id="opened-title" ref="openedTitle" class="section-title" tabindex="-1">{{ t('home.opened') }}</h2>
-          <p class="intro">{{ t('home.openedIntro') }}</p>
+          <h2 id="opened-title" ref="openedTitle" class="section-title" tabindex="-1">{{ t('home.visited') }}</h2>
+          <p class="intro">{{ t('lists.visitedIntro') }}</p>
         </div>
         <div class="section-body">
           <p v-if="removeError" class="form-message" role="alert">{{ removeError }}</p>
-          <ul v-if="opened.length" class="rows">
-            <li v-for="list in opened" :key="list.token" class="row">
-              <div class="row-text">
-                <NuxtLink v-if="canOpen(list)" :id="`opened-${list.token}`" class="row-title" :to="localePath(`/l/${list.token}`)">{{ list.title }}</NuxtLink>
-                <span v-else :id="`opened-${list.token}`" class="row-title">{{ list.title }}</span>
-                <span v-if="list.owners.length" class="row-meta">{{ t('list.owners', { names: ownerNames(list.owners) }) }}</span>
-              </div>
-              <art-tape v-if="list.deleted" :seed="list.token">{{ t('home.deleted') }}</art-tape>
-              <art-button variant="quiet" size="s">
-                <button type="button" :aria-describedby="`opened-${list.token}`" @click="forget(list.token)">{{ t('home.remove') }}</button>
-              </art-button>
-            </li>
-          </ul>
+          <template v-if="opened.length">
+            <ul class="rows">
+              <VisitedListRow v-for="list in opened" :key="list.token" :list="list" @forget="forget" />
+            </ul>
+            <p v-if="openedTotal > opened.length" class="lists-all">
+              <NuxtLink :to="{ path: localePath('/lists'), query: { tab: 'visited' } }" aria-describedby="opened-title">{{ t('home.allLists', { n: openedTotal }) }}</NuxtLink>
+            </p>
+          </template>
           <p v-else-if="loadError" class="form-message">{{ loadError }}</p>
           <div v-else class="empty">
             <art-splatter pigment="complement" seed="none-opened" />
-            <p>{{ t('home.openedEmpty') }}</p>
+            <p>{{ t('lists.visitedEmpty') }}</p>
           </div>
         </div>
       </div>
     </section>
     <div v-else class="band section" data-paint="1">
       <div class="inner">
-        <p class="muted">{{ t('home.openedEmpty') }}</p>
+        <p class="muted">{{ t('lists.visitedEmpty') }}</p>
       </div>
     </div>
 
