@@ -20,6 +20,8 @@ interface Session {
 
 /** Firebase's answers of a person's credentials: these mean "no", not "something broke". */
 const WRONG = ['EMAIL_NOT_FOUND', 'INVALID_PASSWORD', 'INVALID_LOGIN_CREDENTIALS', 'USER_DISABLED', 'MISSING_PASSWORD']
+// Firebase's own floor of six characters, or the project's password policy (see the README).
+const WEAK = ['WEAK_PASSWORD', 'PASSWORD_DOES_NOT_MEET_REQUIREMENTS']
 const ENDED = ['TOKEN_EXPIRED', 'USER_DISABLED', 'USER_NOT_FOUND', 'INVALID_REFRESH_TOKEN', 'INVALID_GRANT_TYPE', 'MISSING_REFRESH_TOKEN']
 
 export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identity {
@@ -57,6 +59,21 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
     }
   }
 
+  /**
+   * A new password Firebase finds too weak is the person's to fix, so it is answered like the
+   * form's own check on `field`. The forms ask for eight characters before Firebase is asked, so
+   * this only happens when the project's policy asks for more than they do.
+   */
+  async function strongEnough<T>(field: string, work: () => Promise<T>): Promise<T> {
+    try {
+      return await work()
+    }
+    catch (error) {
+      if (error instanceof FirebaseError && WEAK.includes(error.reason)) fail(422, 'validation', { [field]: 'password_short' })
+      throw error
+    }
+  }
+
   return {
     async signIn(email, password) {
       try {
@@ -70,7 +87,7 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
 
     async signUp(email, password) {
       try {
-        return loginOf(await tooMany(() => accounts<Session>('accounts:signUp', { email, password, returnSecureToken: true })))
+        return loginOf(await strongEnough('password', () => tooMany(() => accounts<Session>('accounts:signUp', { email, password, returnSecureToken: true }))))
       }
       catch (error) {
         if (error instanceof FirebaseError && error.reason === 'EMAIL_EXISTS') return 'email_exists'
@@ -144,7 +161,7 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
     },
 
     async changePassword(idToken, password) {
-      return loginOf(await accounts<Session>('accounts:update', { idToken, password, returnSecureToken: true }))
+      return loginOf(await strongEnough('newPassword', () => accounts<Session>('accounts:update', { idToken, password, returnSecureToken: true })))
     },
 
     async providers(idToken) {

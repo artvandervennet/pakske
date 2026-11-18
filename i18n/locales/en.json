@@ -199,7 +199,7 @@
     "registerLead": "An account lets you make your own lists and see who is buying what on other people’s lists.",
     "email": "Email address",
     "password": "Password",
-    "passwordHint": "At least 10 characters.",
+    "passwordHint": "At least 8 characters.",
     "displayName": "Name",
     "displayNameHint": "This is how others see you.",
     "login": "Log in",
@@ -283,7 +283,7 @@
     "required": "Fill this in.",
     "too_long": "That is too long.",
     "invalid_email": "That isn’t a valid email address.",
-    "password_short": "Choose a password of at least 10 characters.",
+    "password_short": "Choose a password of at least 8 characters.",
     "invalid_url": "Start the link with http:// or https://.",
     "invalid_amount": "Choose a whole number of 1 or more.",
     "invalid": "That isn’t right."

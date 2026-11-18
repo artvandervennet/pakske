@@ -106,9 +106,10 @@ Firebase Authentication (Google's) holds the passwords and the Google logins, an
 
 1. At https://console.firebase.google.com, make a project (Analytics isn't needed).
 2. Under Build → Authentication → Sign-in method, turn on Email/Password. Under Settings → User account linking, keep "Link accounts that use the same email".
-3. Under Settings → Authorised domains, add the site's address, so the mail's button leads back to the login page.
-4. Under Templates, set the template language to Dutch and, if you like, the sender's name.
-5. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`.
+3. Under Authentication → Settings → Password policy, set the minimum length to 8 and require enforcement. The site asks for 8 characters itself; the page Firebase's mail opens for a new password is Firebase's own, and without this it takes 6.
+4. Under Settings → Authorised domains, add the site's address, so the mail's button leads back to the login page.
+5. Under Templates, set the template language to Dutch and, if you like, the sender's name.
+6. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`.
 
 The free plan sends 150 password mails a day.
 

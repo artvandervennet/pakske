@@ -141,7 +141,7 @@ async function unlinkGoogle() {
             <!-- Lets a password manager tie the new password to the right account. -->
             <input type="email" name="email" autocomplete="username" :value="me?.email" hidden readonly>
             <PasswordField id="current-password" v-model="currentPassword" :label="t('settings.currentPassword')" autocomplete="current-password" :error="password.errors.value.currentPassword" />
-            <PasswordField id="new-password" v-model="newPassword" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="10" :error="password.errors.value.newPassword" />
+            <PasswordField id="new-password" v-model="newPassword" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="8" :error="password.errors.value.newPassword" />
             <div class="actions">
               <art-button>
                 <button type="submit" :disabled="password.pending.value">{{ t('settings.changePassword') }}</button>

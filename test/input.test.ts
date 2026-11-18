@@ -110,6 +110,11 @@ describe('a registration someone submits', () => {
     expect(registerInput.parse(valid)).toMatchObject({ email: 'art@example.test', displayName: 'Art' })
   })
 
+  it('takes a password from 8 characters', () => {
+    expect(registerInput.safeParse({ ...valid, password: '12345678' }).success).toBe(true)
+    expect(fieldErrors(registerInput.safeParse({ ...valid, password: '1234567' }).error!)).toEqual({ password: 'password_short' })
+  })
+
   it('carries the language of the page, Dutch when it says nothing', () => {
     expect(registerInput.parse(valid).locale).toBe('nl')
     expect(registerInput.parse({ ...valid, locale: 'en' }).locale).toBe('en')

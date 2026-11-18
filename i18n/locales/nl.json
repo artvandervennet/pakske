@@ -199,7 +199,7 @@
     "registerLead": "Met een account maak je je eigen lijsten en zie je wie wat koopt op de lijsten van anderen.",
     "email": "E-mailadres",
     "password": "Wachtwoord",
-    "passwordHint": "Minstens 10 tekens.",
+    "passwordHint": "Minstens 8 tekens.",
     "displayName": "Naam",
     "displayNameHint": "Zo zien anderen je.",
     "login": "Inloggen",
@@ -283,7 +283,7 @@
     "required": "Vul dit in.",
     "too_long": "Dat is te lang.",
     "invalid_email": "Dat is geen geldig e-mailadres.",
-    "password_short": "Kies een wachtwoord van minstens 10 tekens.",
+    "password_short": "Kies een wachtwoord van minstens 8 tekens.",
     "invalid_url": "Begin de link met http:// of https://.",
     "invalid_amount": "Kies een heel getal van 1 of meer.",
     "invalid": "Dat klopt niet."

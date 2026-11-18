@@ -63,6 +63,10 @@ req anon POST /api/auth/register '{"email":"art@example.test","displayName":"X",
 check "a second account with the same email is refused" 409; has "… with the code email_taken" email_taken
 req anon POST /api/auth/register '{"email":"nope","displayName":"","password":"short"}'
 check "a bad registration is refused" 422; has "… naming the fields" '"email":"invalid_email"'
+req anon POST /api/auth/register '{"email":"short@example.test","displayName":"Kort","password":"1234567"}'
+check "a password of 7 characters is refused" 422; has "… as too short" '"password":"password_short"'
+req short POST /api/auth/register '{"email":"short@example.test","displayName":"Kort","password":"12345678"}'
+check "… and one of 8 is enough" 201
 req anon POST /api/auth/login '{"email":"art@example.test","password":"wrong wrong wrong"}'
 check "a wrong password is refused" 401; has "… without saying which part was wrong" invalid_credentials
 req anon GET /api/me; check "the account endpoint needs a login" 401

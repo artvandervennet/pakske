@@ -15,7 +15,7 @@ function isHttpUrl(value: string) {
 }
 
 const email = z.string('required').trim().toLowerCase().min(1, 'required').max(254, 'too_long').pipe(z.email('invalid_email'))
-const newPassword = z.string('required').min(10, 'password_short').max(128, 'too_long')
+const newPassword = z.string('required').min(8, 'password_short').max(128, 'too_long')
 const amount = z.number('invalid_amount').int('invalid_amount').min(1, 'invalid_amount').max(999, 'invalid_amount')
 
 /** The page's language: for what Firebase mails, and for the name of a new account's first list. */
