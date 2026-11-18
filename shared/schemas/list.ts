@@ -137,6 +137,8 @@ export interface InviteView {
   state: 'open' | 'closed' | 'expired' | 'own' | 'used'
   /** The display name of the person who made it. */
   from: string
+  /** The opener made it themselves: a closed link then says to make a new one, not to ask for one. */
+  yours: boolean
   listTitle: string
   /**
    * The wishes it shares that are still on the list, in the list's order; empty unless it is

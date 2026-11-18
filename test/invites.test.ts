@@ -52,9 +52,9 @@ describe('a link that makes wishes joint', () => {
     expect(titles(getListView(db, L, lot.id))).toEqual(['Bordspel', 'Boek'])
     expect(codeOf(() => acceptInvite(db, mom.id, invite, { newList: 'Van mama' }))).toBe('invite_closed')
     expect(listOwnedLists(db, mom.id)).toEqual([])
-    expect(getInviteView(db, invite, mom.id)).toMatchObject({ state: 'closed', wishes: [] })
+    expect(getInviteView(db, invite, mom.id)).toMatchObject({ state: 'closed', yours: false, wishes: [] })
     // Spent for its maker too, so they aren't told to send it on.
-    expect(getInviteView(db, invite, art.id)).toMatchObject({ state: 'closed' })
+    expect(getInviteView(db, invite, art.id)).toMatchObject({ state: 'closed', yours: true })
     expect(listNotices(db, art.id)).toMatchObject([{ kind: 'joint_link_used', actor: 'Lot', title: 'Bordspel', more: 1, wishId: game.id, token: A }])
     expect(listNotices(db, lot.id)).toEqual([])
     expectOwnersSettled(db)
@@ -72,6 +72,7 @@ describe('a link that makes wishes joint', () => {
       state: 'open',
       from: 'Art',
       listTitle: 'Kerst',
+      yours: false,
       wishes: [
         { id: game.id, title: 'Bordspel', image: '/uploads/bordspel.png', owned: false },
         { id: book.id, title: 'Boek', image: null, owned: false },
@@ -314,8 +315,8 @@ describe('a link that gives copies', () => {
     vi.setSystemTime(new Date(Date.now() + 1))
     expect(getInviteView(db, copy, mom.id)).toMatchObject({ state: 'expired', wishes: [] })
     // Also for its maker, and for someone who used it in time: nobody is told to send it on.
-    expect(getInviteView(db, copy, art.id)).toMatchObject({ state: 'expired' })
-    expect(getInviteView(db, copy, lot.id)).toMatchObject({ state: 'expired' })
+    expect(getInviteView(db, copy, art.id)).toMatchObject({ state: 'expired', yours: true })
+    expect(getInviteView(db, copy, lot.id)).toMatchObject({ state: 'expired', yours: false })
     expect(codeOf(() => acceptInvite(db, mom.id, copy, { newList: 'Van mama' }))).toBe('invite_closed')
     expect(listOwnedLists(db, mom.id)).toEqual([])
     expect(getInviteView(db, linked, mom.id)).toMatchObject({ state: 'open' })

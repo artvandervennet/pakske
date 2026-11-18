@@ -125,6 +125,7 @@ export function getInviteView(db: Db, invite: string, viewerId: number): InviteV
     // A spent or expired link is closed for its maker too: sending it on would only lead to a refusal.
     state: found.state,
     from: from.name,
+    yours: found.invite.createdBy === viewerId,
     listTitle: found.list.title,
     wishes: found.state === 'open'
       ? found.onList.map(wish => ({
