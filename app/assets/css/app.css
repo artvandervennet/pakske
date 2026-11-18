@@ -59,7 +59,7 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 @media (width < 24rem) {
   art-header art-scheme { display: none; }
 }
-/* A long word in a big title ("Verlanglijstjes" in the hero, or a list's own name) is wider
+/* A long word in a big title (a list's own name, say) is wider
    than a phone. Hyphenate where the language allows, and break it anyway where it doesn't. */
 :is(.hero, .page-head) h1 { hyphens: auto; overflow-wrap: break-word; }
 
@@ -760,12 +760,19 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 @media (max-width: 48rem) { .nav-mark-wide { display: none; } }
 @media (width > 48rem) { .nav-mark-narrow { display: none; } }
 
-/* "Doorgaan met Google" above the email form, and the line that leads on to the form. */
-.google-login { display: grid; gap: var(--space-4); justify-items: start; }
-.google-login a { display: inline-flex; align-items: center; gap: var(--space-3); }
+/* "Doorgaan met Google" above the email form, as wide as its fields, and a rule with "of" in it
+   that leads on to the form. */
+.google-login { display: grid; gap: var(--space-6); }
+.google-login art-button { display: block; }
+.google-login art-button > a { inline-size: 100%; justify-content: center; gap: var(--space-3); }
 .google-mark { inline-size: 1.15em; block-size: 1.15em; flex: none; }
-.google-or { margin: 0; font-size: var(--step--1); color: var(--ink-muted); }
+.google-or { display: flex; align-items: center; gap: var(--space-4); margin: 0; font-size: var(--step--1); color: var(--ink-muted); }
+.google-or::before, .google-or::after { content: ""; flex: 1; border-block-start: 1px solid var(--rule); }
+/* Settings: the button on its own, as wide as its words. */
+.google-settings .google-login { justify-items: start; }
+.google-settings .google-login art-button { display: inline-block; }
 .google-settings { display: grid; gap: var(--space-4); justify-items: start; }
 .google-settings > p:not(.form-message) { margin: 0; }
-/* A small link under a field, such as "Wachtwoord vergeten?". */
-.form-hint { margin: calc(var(--space-4) * -1) 0 0; font-size: var(--step--1); }
+/* A link beside a form's button, such as "Wachtwoord vergeten?". */
+.form .actions:has(> .actions-link) { align-items: center; gap: var(--space-4) var(--space-6); }
+.actions-link { font-size: var(--step--1); }

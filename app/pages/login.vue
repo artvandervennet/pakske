@@ -56,11 +56,11 @@ const { form, pending, message, errors, run } = useForm(async () => {
             >
           </FormField>
           <PasswordField id="password" v-model="password" :label="t('auth.password')" autocomplete="current-password" :error="errors.password" />
-          <p class="form-hint"><NuxtLink :to="{ path: localePath('/forgot'), query: email ? { email } : {} }">{{ t('auth.forgotLink') }}</NuxtLink></p>
           <div class="actions">
             <art-button>
               <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.login') }}</button>
             </art-button>
+            <NuxtLink class="actions-link" :to="{ path: localePath('/forgot'), query: email ? { email } : {} }">{{ t('auth.forgotLink') }}</NuxtLink>
           </div>
           <p>
             {{ t('auth.noAccount') }}

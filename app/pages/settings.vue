@@ -146,9 +146,9 @@ async function unlinkGoogle() {
               <art-button>
                 <button type="submit" :disabled="password.pending.value">{{ t('settings.changePassword') }}</button>
               </art-button>
+              <NuxtLink class="actions-link" :to="localePath('/forgot')">{{ t('auth.forgotLink') }}</NuxtLink>
             </div>
             <p class="form-message" role="status">{{ passwordSaved }}</p>
-            <p class="form-hint"><NuxtLink :to="localePath('/forgot')">{{ t('auth.forgotLink') }}</NuxtLink></p>
           </form>
           <form v-else :ref="passwordMail.form" class="form" method="post" novalidate aria-labelledby="password-title" @submit.prevent="passwordMail.run">
             <p v-if="passwordMail.message.value" class="form-message" role="alert">{{ passwordMail.message.value }}</p>
