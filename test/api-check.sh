@@ -84,11 +84,11 @@ req mom DELETE "/api/lists/$TOKEN"; check "mom cannot delete art's list" 404
 req art GET /api/home; check "art opens the home page" 200; has "… and the list is there" "\"token\":\"$TOKEN\""
 
 echo "── the owner builds a list"
-req art POST "/api/lists/$TOKEN/wishes" '{"title":"Slimme stekkers","description":"Zigbee","url":"https://example.test/plug","quantity":3}'; check "art adds a wish with amount 3" 201; PLUGS=$(json .id)
+req art POST "/api/lists/$TOKEN/wishes" '{"title":"Slimme stekkers","description":"Zigbee","urls":["https://example.test/plug"],"quantity":3}'; check "art adds a wish with amount 3" 201; PLUGS=$(json .id)
 req art POST "/api/lists/$TOKEN/wishes" '{"title":"Puzzels","quantity":null}'; check "art adds an unlimited wish" 201; PUZZLES=$(json .id)
 req art POST "/api/lists/$TOKEN/wishes" '{"title":"Sokken"}'; check "art adds a wish with only a title" 201; SOCKS=$(json .id); has "… and the amount is one" '"quantity":1'
 req art POST "/api/lists/$TOKEN/wishes" '{"title":"Boek"}'; check "art adds a wish nobody will buy" 201; BOOK=$(json .id)
-req art POST "/api/lists/$TOKEN/wishes" '{"title":"Kwaad","url":"javascript:alert(1)"}'; check "a javascript: link is refused" 422
+req art POST "/api/lists/$TOKEN/wishes" '{"title":"Kwaad","urls":["javascript:alert(1)"]}'; check "a javascript: link is refused" 422
 req anon POST "/api/lists/$TOKEN/wishes" '{"title":"x"}'; check "adding a wish needs a login" 401
 req mom POST "/api/lists/$TOKEN/wishes" '{"title":"Ondergeschoven"}'; check "mom cannot add to art's list" 404
 req mom PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{"title":"Gekaapt"}'; check "mom cannot change art's wish" 404
@@ -189,7 +189,7 @@ if printf %s "$REFUSAL" | grep -q '[0-9]'; then bad "the refusal holds a number:
 
 echo "── the owner changes things buyers already acted on"
 req art PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{"quantity":2}'; check "art lowers the amount below what is bought, sending only the amount" 200; has "… and gets the wish back" '"quantity":2'
-has "… with its text kept" '"description":"Zigbee"'; has "… and its link" '"url":"https://example.test/plug"'
+has "… with its text kept" '"description":"Zigbee"'; has "… and its link" '"urls":["https://example.test/plug"]'
 req art PATCH "/api/lists/$TOKEN/wishes/$PLUGS" '{}'; check "a change that names no field is refused" 422
 req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "art deletes the bought wish" 204
 req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "a second delete finds nothing" 404
@@ -214,6 +214,30 @@ STATUS=$(curl -s -o "$BODY" -w '%{http_code}' --path-as-is "$BASE/uploads/..%2f.
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "mom cannot remove the image of art's wish" 404
 req art DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "art removes the image" 204
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' "$BASE$IMAGE"); check "the removed image is gone" 404
+
+echo "── several links, and the first link's cover"
+# On a list of its own, deleted afterwards, so art's lists stay as the checks below expect.
+req art POST /api/lists '{"title":"Links"}'; LINKS=$(json .token)
+req art POST "/api/lists/$LINKS/wishes" '{"title":"Lamp","urls":["https://example.test/lamp","https://example.org/lamp"]}'; check "art adds a wish with two links" 201; LAMPLINKS=$(json .id)
+has "… and gets them back in order" '"urls":["https://example.test/lamp","https://example.org/lamp"]'; has "… without a cover, as that shop doesn't exist" '"image":null'
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":["https://example.org/lamp"]}'; check "art replaces the links with one" 200; has "… and gets that one back" '"urls":["https://example.org/lamp"]'; has "… with the title kept" '"title":"Lamp"'
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":["https://a.test/1","https://a.test/2","https://a.test/3","https://a.test/4","https://a.test/5","https://a.test/6"]}'; check "a sixth link is refused" 422; has "… with the code too_many_links" '"urls":"too_many_links"'
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":["https://a.test/1","https://a.test/1"]}'; check "the same link twice is refused" 422; has "… with the code duplicate_link" '"urls":"duplicate_link"'
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":["https://a.test/1","javascript:alert(1)"]}'; check "a javascript: link among them is refused" 422; has "… with the code invalid_url" '"urls":"invalid_url"'
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":"https://a.test/1"}'; check "links that are not a list are refused" 422
+# The server never fetches from itself or the network it stands in. The link is saved all the same,
+# and the answer says nothing about why there is no picture.
+for inside in "$BASE/" "http://127.0.0.1/" "http://localhost/" "http://192.168.1.1/" "http://169.254.169.254/latest/meta-data/" "http://[::1]/" "http://2130706433/"; do
+  req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" "{\"urls\":[\"$inside\"]}"; check "art links to $inside" 200
+  has "… and it is saved" '"urls":["'; has "… without a picture" '"image":null'; has "… and nothing marked as a cover" '"imageFromLink":false'
+  lacks "… and without a reason" private; lacks "… or an error" rror
+done
+req art GET "/api/lists/$LINKS"; has "the list shows the wish with its links" '"urls":["'
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":[]}'; check "art clears the links" 200; has "… and none are left" '"urls":[]'
+upload art "/api/lists/$LINKS/wishes/$LAMPLINKS/image" "$TMP/pic.png"; check "art puts up a photo of his own" 200
+req art PATCH "/api/lists/$LINKS/wishes/$LAMPLINKS" '{"urls":["https://example.test/lamp"]}'; check "a link added afterwards" 200; lacks "… leaves the photo alone" '"image":null'; has "… and it stays his own" '"imageFromLink":false'
+req art DELETE "/api/lists/$LINKS/wishes/$LAMPLINKS/image"; check "art removes his photo from a wish with a link" 204
+req art DELETE "/api/lists/$LINKS"; check "art deletes the list again" 204
 
 echo "── remembering opened lists"
 req mom GET /api/home; has "mom's home page has art's list among the opened ones" "\"opened\":[{\"token\":\"$TOKEN\""
