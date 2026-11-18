@@ -18,6 +18,8 @@ export const users = sqliteTable('users', {
   // Google's id for the person ("sub") once Google is linked, so Settings can say so. Firebase
   // holds the link itself.
   googleSub: text('google_sub').unique(),
+  // "Standaard anoniem" in Settings: a new purchase of theirs is without their name unless they say otherwise.
+  anonymousDefault: integer('anonymous_default', { mode: 'boolean' }).notNull().default(false),
   createdAt: createdAt(),
 })
 
@@ -44,7 +46,12 @@ export const wishes = sqliteTable('wishes', {
   title: text('title').notNull(),
   description: text('description'),
   url: text('url'),
+  // The wish's links, in the order the owner put them; the first one may give the wish its picture.
+  urls: text('urls', { mode: 'json' }).$type<string[]>(),
   imageFile: text('image_file'),
+  // The picture is the cover of the first link, fetched by the server, not a photo the owner
+  // uploaded. An uploaded photo replaces it; a new first link replaces only a cover.
+  imageFromLink: integer('image_from_link', { mode: 'boolean' }).notNull().default(false),
   // NULL means unlimited.
   quantity: integer('quantity').default(1),
   createdAt: createdAt(),
@@ -117,16 +124,31 @@ export const listVisits = sqliteTable('list_visits', {
   primaryKey({ columns: [t.userId, t.listId] }),
 ])
 
-// A link that works once: it makes whoever opens it an owner of some wishes, or of the whole list.
+// A link that shares some wishes, or the whole list. "linked" makes whoever opens it an owner
+// and works once. "copy" (wishes only) gives them copies of their own, and works for every
+// account once until it expires.
 export const invites = sqliteTable('invites', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   token: text('token').notNull().unique(),
   kind: text('kind', { enum: ['wishes', 'list'] }).notNull(),
   listId: integer('list_id').notNull().references(() => lists.id, { onDelete: 'cascade' }),
   createdBy: integer('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  mode: text('mode', { enum: ['linked', 'copy'] }).notNull().default('linked'),
   createdAt: createdAt(),
+  // Linked: when it was used, after which it is spent.
   usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+  // Copy: until when it can be used. Null for a linked link, which doesn't expire.
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
 })
+
+// Who used a copy link, so one account takes the copies once.
+export const inviteUses = sqliteTable('invite_uses', {
+  inviteId: integer('invite_id').notNull().references(() => invites.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  usedAt: integer('used_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+}, t => [
+  primaryKey({ columns: [t.inviteId, t.userId] }),
+])
 
 export const inviteWishes = sqliteTable('invite_wishes', {
   inviteId: integer('invite_id').notNull().references(() => invites.id, { onDelete: 'cascade' }),
