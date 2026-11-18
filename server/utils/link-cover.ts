@@ -236,9 +236,30 @@ export interface FetchPolicy {
   allowsPort: (port: string) => boolean
 }
 
+/**
+ * `resolve`, with at most `max` lookups out at once: one more is refused without being started.
+ * A lookup runs on one of Node's four threads, which file reads and the lookups for Firebase
+ * share, and it can't be called off: a name whose nameserver never answers holds its thread long
+ * after the fetch gave up waiting. Without a ceiling, a handful of such names stop the site
+ * from serving pictures and logging people in.
+ */
+export function atMost(max: number, resolve: FetchPolicy['resolve']): FetchPolicy['resolve'] {
+  let out = 0
+  return async (host) => {
+    if (out >= max) throw new Error('too many lookups out')
+    out++
+    try {
+      return await resolve(host)
+    }
+    finally {
+      out--
+    }
+  }
+}
+
 /** Public addresses only, on the ports the web uses. */
 export const strictPolicy: FetchPolicy = {
-  resolve: async host => (await lookup(host, { all: true, verbatim: true })).map(entry => entry.address),
+  resolve: atMost(2, async host => (await lookup(host, { all: true, verbatim: true })).map(entry => entry.address)),
   allowsAddress: isPublicAddress,
   allowsPort: port => port === '',
 }
