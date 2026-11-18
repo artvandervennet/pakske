@@ -42,10 +42,15 @@ export const profileInput = z.object({
   displayName: requiredText(60),
 })
 
-export const passwordInput = z.object({
-  currentPassword: z.string('required').min(1, 'required').max(128, 'too_long'),
-  newPassword,
-})
+const currentPassword = z.string('required').min(1, 'required').max(128, 'too_long')
+
+export const passwordInput = z.object({ currentPassword, newPassword })
+
+/**
+ * Another address for the account, and the page's language for the mail that confirms it. The
+ * current password comes along for an account that has one.
+ */
+export const emailChangeInput = z.object({ email, currentPassword: currentPassword.optional(), locale: mailLocale })
 
 export const listInput = z.object({ title: requiredText(80) })
 

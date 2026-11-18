@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changePassword, linkGoogle, logIn, logInWithGoogle, register, signInMethods, unlinkGoogle } from '../server/domain/accounts'
+import { changePassword, linkGoogle, logIn, logInWithGoogle, register, requestEmailChange, signInMethods, unlinkGoogle } from '../server/domain/accounts'
 import { listMyLists } from '../server/domain/lists'
 import { createUser, findUserByEmail, findUserById } from '../server/domain/users'
 import { fakeIdentity, googleCredential } from './fake-identity'
@@ -167,7 +167,7 @@ describe('Google in Settings', () => {
     await linkGoogle(db, identity, user.id, login.refreshToken, googleCredential('g-art', 'art.private@gmail.test'))
     expect(findUserById(db, user.id)?.googleSub).toBe('g-art')
     expect((await logInWithGoogle(db, identity, googleCredential('g-art', 'art.private@gmail.test'))).user.id).toBe(user.id)
-    expect(await signInMethods(db, identity, findUserById(db, user.id)!, login.refreshToken)).toEqual({ hasPassword: true, google: true })
+    expect(await signInMethods(db, identity, findUserById(db, user.id)!, login.refreshToken)).toEqual({ email: 'art@example.test', hasPassword: true, google: true })
   })
 
   it('refuses a Google account that belongs to another account', async () => {
@@ -189,7 +189,7 @@ describe('Google in Settings', () => {
 
     const lotte = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
     expect(await rejection(unlinkGoogle(db, identity, lotte.user.id, lotte.login.refreshToken))).toBe('password_needed')
-    expect(await signInMethods(db, identity, lotte.user, lotte.login.refreshToken)).toEqual({ hasPassword: false, google: true })
+    expect(await signInMethods(db, identity, lotte.user, lotte.login.refreshToken)).toEqual({ email: 'lotte@gmail.test', hasPassword: false, google: true })
   })
 })
 
@@ -210,5 +210,126 @@ describe('changing the password', () => {
     await changePassword(db, identity, art, 'correct horse', 'battery staple', legacyCheck)
     expect(findUserByEmail(db, 'art@example.test')?.passwordHash).toBeNull()
     expect(await logIn(db, identity, 'art@example.test', 'battery staple', legacyCheck)).not.toBeNull()
+  })
+})
+
+describe('changing the address', () => {
+  async function art() {
+    const db = makeDb()
+    const fake = fakeIdentity()
+    const { user, login } = await register(db, fake.identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
+    const change = (email: string, currentPassword?: string, refreshToken: string | undefined = login.refreshToken) =>
+      requestEmailChange(db, fake.identity, findUserById(db, user.id)!, refreshToken, { email, currentPassword, locale: 'nl', continueUrl: 'http://localhost/login' }, legacyCheck)
+    return { db, ...fake, user, login, change }
+  }
+
+  it('has Firebase mail the new address, and changes nothing until the link in it is clicked', async () => {
+    const { db, changes, user, change } = await art()
+    await change('art@new.test', 'correct horse')
+    expect(changes).toEqual([{ uid: user.firebaseUid, email: 'art@new.test', locale: 'nl', continueUrl: 'http://localhost/login' }])
+    expect(findUserById(db, user.id)?.email).toBe('art@example.test')
+  })
+
+  it('takes the new address over at the first login with it', async () => {
+    const { db, identity, confirm, user, change } = await art()
+    await change('art@new.test', 'correct horse')
+    confirm('art@new.test')
+    expect(await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)).toBeNull()
+    const result = await logIn(db, identity, 'art@new.test', 'correct horse', legacyCheck)
+    expect(result?.user).toMatchObject({ id: user.id, email: 'art@new.test' })
+    expect(findUserById(db, user.id)?.email).toBe('art@new.test')
+    expect(findUserByEmail(db, 'art@example.test')).toBeUndefined()
+  })
+
+  it('refuses the address of another account here, before Firebase hears of it', async () => {
+    const { db, changes, change } = await art()
+    addUser(db, 'mom')
+    expect(await rejection(change('mom@example.test', 'correct horse'))).toBe('email_taken')
+    // Wrong password or not: the answer is about the address.
+    expect(await rejection(change('mom@example.test', 'wrong'))).toBe('email_taken')
+    expect(changes).toEqual([])
+  })
+
+  it('refuses an address that has an account at Firebase only', async () => {
+    const { identity, change } = await art()
+    await identity.signUp('half@example.test', 'x')
+    expect(await rejection(change('half@example.test', 'correct horse'))).toBe('email_taken')
+  })
+
+  it('refuses the address the account already has', async () => {
+    const { changes, change } = await art()
+    expect(await rejection(change('art@example.test', 'correct horse'))).toBe('email_same')
+    expect(changes).toEqual([])
+  })
+
+  it('needs the current password of an account that has one', async () => {
+    const { changes, change } = await art()
+    expect(await rejection(change('art@new.test', 'wrong'))).toBe('wrong_password')
+    expect(await rejection(change('art@new.test'))).toBe('wrong_password')
+    expect(changes).toEqual([])
+  })
+
+  it('goes by the login itself for an account that only logs in with Google', async () => {
+    const db = makeDb()
+    const { identity, changes, tooOld } = fakeIdentity()
+    const lotte = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    const change = (refreshToken?: string) =>
+      requestEmailChange(db, identity, lotte.user, refreshToken, { email: 'lotte@new.test' }, legacyCheck)
+    // A login cookie from before Firebase, or a login Firebase finds too long ago.
+    expect(await rejection(change(undefined))).toBe('reauth_needed')
+    tooOld.add(lotte.login.uid)
+    expect(await rejection(change(lotte.login.refreshToken))).toBe('reauth_needed')
+    tooOld.clear()
+    await change(lotte.login.refreshToken)
+    expect(changes).toMatchObject([{ uid: lotte.login.uid, email: 'lotte@new.test' }])
+  })
+
+  it('takes the new address over when the person logs in with Google again', async () => {
+    const db = makeDb()
+    const { identity, confirm } = fakeIdentity()
+    const lotte = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    await requestEmailChange(db, identity, lotte.user, lotte.login.refreshToken, { email: 'lotte@new.test' }, legacyCheck)
+    confirm('lotte@new.test')
+    const again = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    expect(again.user).toMatchObject({ id: lotte.user.id, email: 'lotte@new.test', googleSub: 'g-1' })
+    expect(findUserById(db, lotte.user.id)?.email).toBe('lotte@new.test')
+  })
+
+  it('takes the new address over when Settings asks Firebase and the login still stands', async () => {
+    const { db, identity, accounts, user, login } = await art()
+    accounts[0]!.email = 'art@new.test'
+    expect(await signInMethods(db, identity, user, login.refreshToken)).toMatchObject({ email: 'art@new.test' })
+    expect(findUserById(db, user.id)?.email).toBe('art@new.test')
+  })
+
+  it('keeps its address when another account here has the new one by then', async () => {
+    const { db, identity, confirm, user, change } = await art()
+    await change('art@new.test', 'correct horse')
+    confirm('art@new.test')
+    createUser(db, { email: 'art@new.test', displayName: 'Other', passwordHash: 'hash:x' })
+    const result = await logIn(db, identity, 'art@new.test', 'correct horse', legacyCheck)
+    expect(result?.user).toMatchObject({ id: user.id, email: 'art@example.test' })
+    expect(findUserById(db, user.id)?.email).toBe('art@example.test')
+  })
+
+  it('moves an account from before Firebase over on the way', async () => {
+    const db = makeDb()
+    const { identity, changes } = fakeIdentity()
+    const old = createUser(db, { email: 'art@example.test', displayName: 'Art', passwordHash: 'hash:correct horse' })
+    await requestEmailChange(db, identity, old, undefined, { email: 'art@new.test', currentPassword: 'correct horse' }, legacyCheck)
+    expect(findUserById(db, old.id)).toMatchObject({ passwordHash: null, email: 'art@example.test' })
+    expect(changes).toMatchObject([{ email: 'art@new.test' }])
+  })
+
+  it('asks to log in again, not for another password, once Firebase ended the login', async () => {
+    const { db, identity, confirm, user, login, change } = await art()
+    await change('art@new.test', 'correct horse')
+    confirm('art@new.test')
+    // The address here is still the old one, so the right password no longer checks out.
+    expect(await rejection(change('art@other.test', 'correct horse'))).toBe('reauth_needed')
+    expect(await rejection(changePassword(db, identity, findUserById(db, user.id)!, 'correct horse', 'battery staple', legacyCheck, login.refreshToken))).toBe('reauth_needed')
+    // Logged in again, a wrong password is a wrong password.
+    const again = await logIn(db, identity, 'art@new.test', 'correct horse', legacyCheck)
+    expect(await rejection(changePassword(db, identity, again!.user, 'wrong', 'battery staple', legacyCheck, again!.login.refreshToken))).toBe('wrong_password')
   })
 })

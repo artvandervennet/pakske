@@ -254,6 +254,7 @@
     "validation": "Check the fields below and try again.",
     "invalid_credentials": "That email address or password is wrong.",
     "email_taken": "An account with this email address already exists. Log in, or use another address.",
+    "email_same": "This is already your email address.",
     "registration_closed": "No more accounts can be added. Ask whoever runs the site.",
     "rate_limited": "Too many attempts. Wait fifteen minutes and try again.",
     "unauthorized": "Log in to continue.",

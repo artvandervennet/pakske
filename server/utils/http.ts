@@ -11,6 +11,7 @@ const STATUS: Record<DomainErrorCode, number> = {
   forbidden: 403,
   validation: 422,
   email_taken: 409,
+  email_same: 409,
   registration_closed: 403,
   list_limit: 409,
   list_limit_ever: 409,

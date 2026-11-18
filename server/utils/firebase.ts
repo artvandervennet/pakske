@@ -22,6 +22,9 @@ interface Session {
 const WRONG = ['EMAIL_NOT_FOUND', 'INVALID_PASSWORD', 'INVALID_LOGIN_CREDENTIALS', 'USER_DISABLED', 'MISSING_PASSWORD']
 // Firebase's own floor of six characters, or the project's password policy (see the README).
 const WEAK = ['WEAK_PASSWORD', 'PASSWORD_DOES_NOT_MEET_REQUIREMENTS']
+// Firebase wants a login from the last few minutes before it changes an address or deletes an
+// account, and these are its ways of saying this one won't do.
+const REAUTH = ['CREDENTIAL_TOO_OLD_LOGIN_AGAIN', 'TOKEN_EXPIRED', 'INVALID_ID_TOKEN', 'USER_NOT_FOUND', 'USER_DISABLED']
 const ENDED = ['TOKEN_EXPIRED', 'USER_DISABLED', 'USER_NOT_FOUND', 'INVALID_REFRESH_TOKEN', 'INVALID_GRANT_TYPE', 'MISSING_REFRESH_TOKEN']
 
 export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identity {
@@ -164,14 +167,39 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
       return loginOf(await strongEnough('newPassword', () => accounts<Session>('accounts:update', { idToken, password, returnSecureToken: true })))
     },
 
-    async providers(idToken) {
-      const answer = await accounts<{ users?: { providerUserInfo?: { providerId: string }[], passwordHash?: string }[] }>('accounts:lookup', { idToken })
+    async account(idToken) {
+      const answer = await accounts<{ users?: { email?: string, providerUserInfo?: { providerId: string }[], passwordHash?: string }[] }>('accounts:lookup', { idToken })
       const user = answer.users?.[0]
-      return [...new Set([...(user?.providerUserInfo ?? []).map(info => info.providerId), ...(user?.passwordHash ? ['password'] : [])])]
+      return {
+        email: (user?.email ?? '').toLowerCase(),
+        providers: [...new Set([...(user?.providerUserInfo ?? []).map(info => info.providerId), ...(user?.passwordHash ? ['password'] : [])])],
+      }
     },
 
     async unlinkGoogle(idToken) {
       await accounts('accounts:update', { idToken, deleteProvider: ['google.com'] })
+    },
+
+    async requestEmailChange(idToken, newEmail, options = {}) {
+      const headers = options.locale ? { 'X-Firebase-Locale': options.locale } : undefined
+      const send = async (continueUrl?: string): Promise<'sent' | 'email_exists' | 'reauth_needed'> => {
+        try {
+          await tooMany(() => accounts('accounts:sendOobCode', { requestType: 'VERIFY_AND_CHANGE_EMAIL', idToken, newEmail, ...(continueUrl ? { continueUrl } : {}) }, headers))
+          return 'sent'
+        }
+        catch (error) {
+          if (!(error instanceof FirebaseError)) throw error
+          if (error.reason === 'EMAIL_EXISTS') return 'email_exists'
+          if (REAUTH.includes(error.reason)) return 'reauth_needed'
+          // An address the form let through and Firebase doesn't: the person's to fix.
+          if (['INVALID_EMAIL', 'INVALID_NEW_EMAIL', 'MISSING_NEW_EMAIL'].includes(error.reason)) fail(422, 'validation', { email: 'invalid_email' })
+          // The site's address isn't among Firebase's authorised domains: the mail goes without
+          // the button back to the site.
+          if (continueUrl && ['UNAUTHORIZED_DOMAIN', 'INVALID_CONTINUE_URI'].includes(error.reason)) return send()
+          throw error
+        }
+      }
+      return send(options.continueUrl)
     },
   }
 }

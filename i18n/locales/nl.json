@@ -254,6 +254,7 @@
     "validation": "Kijk de velden hieronder na en probeer het opnieuw.",
     "invalid_credentials": "Dat e-mailadres of wachtwoord klopt niet.",
     "email_taken": "Er bestaat al een account met dit e-mailadres. Log in, of gebruik een ander adres.",
+    "email_same": "Dit is al je e-mailadres.",
     "registration_closed": "Er kunnen geen accounts meer bij. Vraag het aan wie de site beheert.",
     "rate_limited": "Te veel pogingen. Wacht een kwartier en probeer het opnieuw.",
     "unauthorized": "Log in om verder te gaan.",
