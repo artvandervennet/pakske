@@ -1,15 +1,30 @@
 /* The lists page, and the list sections of the home page. Written against Gesso's role tokens, like app.css. */
 
 /* ── Search ───────────────────────────────────────────────────────────────
-   The field stands where a section has its title: above the tabs on a phone, and from 60rem in
-   the column beside them, where it stays in view while the lists scroll. */
-.lists-search { display: grid; gap: var(--space-2); }
-@media (width < 60rem) {
-  .lists-search { max-inline-size: 34rem; margin-block-end: var(--space-6); }
+   A search bar above the tabs: round ends, a magnifying glass at its start and a word in it,
+   so it reads as search at a glance and needs no label beside it. Its name for a screen reader
+   is on the field. */
+.lists-search { position: relative; max-inline-size: 30rem; margin-block-end: var(--space-8); }
+.lists-search > input {
+  min-block-size: 3rem;
+  padding-inline: calc(var(--space-4) + 1.25rem + var(--space-3)) var(--space-4);
+  border-radius: 999px;
 }
-/* How many lists fit the search. The line keeps its height while it is empty, so the tabs
-   under it don't move at the first letter. */
-.lists-found { min-block-size: 1lh; font-size: var(--step--1); color: var(--ink-muted); }
+.lists-search > input::placeholder { color: var(--ink-muted); opacity: 1; }
+.lists-search-icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--space-4);
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  translate: 0 -50%;
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.lists-search:focus-within > .lists-search-icon { stroke: var(--accent); }
 
 /* ── Tabs and their panels ────────────────────────────────────────────────
    A hidden panel is hidden "until found" and keeps its box, so the spacing is on what is

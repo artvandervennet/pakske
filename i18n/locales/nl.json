@@ -23,6 +23,7 @@
   "lists": {
     "title": "Lijsten",
     "search": "Zoek op naam van de lijst of van wie ze is",
+    "searchPlaceholder": "Zoek een lijst",
     "found": "Geen lijsten gevonden | {n} lijst gevonden | {n} lijsten gevonden",
     "mine": "Mijn lijsten",
     "visited": "Bezocht",

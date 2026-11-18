@@ -23,6 +23,7 @@
   "lists": {
     "title": "Lists",
     "search": "Search by the name of the list or of its owner",
+    "searchPlaceholder": "Search for a list",
     "found": "No lists found | {n} list found | {n} lists found",
     "mine": "My lists",
     "visited": "Visited",

@@ -83,17 +83,30 @@ const { removeError, forget } = useForgetList(refresh, () => (loggedIn.value ? t
   <div>
     <PageHead :title="t('lists.title')" />
 
-    <div class="band section" data-paint="1">
+    <div class="band wide" data-paint="1">
       <div class="inner">
-        <!-- One field for both tabs. Each tab's label says how many of its lists fit, and the
-             line under the field says it to a screen reader as the words are typed. -->
-        <div class="section-head lists-search" role="search">
-          <label for="lists-search">{{ t('lists.search') }}</label>
-          <input id="lists-search" v-model="query" type="search" autocomplete="off" enterkeyhint="search" spellcheck="false">
-          <p class="lists-found" role="status">{{ searching ? t('lists.found', found) : '' }}</p>
+        <!-- One search bar for both tabs: a magnifying glass and one word say what it is, and
+             its full name is there for a screen reader. Each tab's label shows how many of its
+             lists fit; the line under the bar says the total aloud as the words are typed. -->
+        <div class="lists-search" role="search">
+          <svg class="lists-search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m15.5 15.5 5 5" />
+          </svg>
+          <input
+            id="lists-search"
+            v-model="query"
+            type="search"
+            :aria-label="t('lists.search')"
+            :placeholder="t('lists.searchPlaceholder')"
+            autocomplete="off"
+            enterkeyhint="search"
+            spellcheck="false"
+          >
+          <p class="visually-hidden" role="status">{{ searching ? t('lists.found', found) : '' }}</p>
         </div>
 
-        <div class="section-body">
+        <div class="lists-body">
           <!-- Left and Right move between the tabs, so only the chosen one is a Tab stop. -->
           <div v-if="loggedIn" class="tabs" role="tablist" :aria-label="t('lists.title')" @keydown="onTabKey">
             <button
