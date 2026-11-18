@@ -63,7 +63,15 @@ export function sessionBelongsTo(
 }
 
 export function updateDisplayName(db: Db, userId: number, displayName: string): void {
-  db.update(users).set({ displayName }).where(eq(users.id, userId)).run()
+  updateProfile(db, userId, { displayName })
+}
+
+/** Changes what is given of the profile, leaves the rest, and answers the account as it is now. */
+export function updateProfile(db: Db, userId: number, change: { displayName?: string, anonymousDefault?: boolean }) {
+  const given = Object.fromEntries(Object.entries(change).filter(([, value]) => value !== undefined))
+  const user = db.update(users).set(given).where(eq(users.id, userId)).returning().get()
+  if (!user) throw new DomainError('not_found')
+  return user
 }
 
 export function setPasswordHash(db: Db, userId: number, passwordHash: string) {

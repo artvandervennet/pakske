@@ -7,7 +7,13 @@ import { findUserById, sessionBelongsTo } from '../domain/users'
 export default defineNitroPlugin(() => {
   sessionHooks.hook('fetch', async (session, event) => {
     if (!session.user) return
-    if (sessionBelongsTo(session.user, findUserById(useDb(), session.user.id))) return
+    const account = findUserById(useDb(), session.user.id)
+    if (account && sessionBelongsTo(session.user, account)) {
+      // The cookie holds the account as it was on this device's last change. Settings may have
+      // changed on another one since: the page gets the name and "anoniem geven" of today.
+      Object.assign(session.user, sessionUserOf(account))
+      return
+    }
     await clearUserSession(event)
     // The answer is built from this object after the hook, so without a user in it the page,
     // and the session watcher in another tab, see someone logged out.

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { lists } from '../server/db/schema'
 import { listMyLists } from '../server/domain/lists'
-import { createUser, findUserByEmail, localeOfPath, sessionBelongsTo, updateDisplayName } from '../server/domain/users'
+import { createUser, findUserByEmail, localeOfPath, sessionBelongsTo, updateProfile } from '../server/domain/users'
+import { sessionUserOf } from '../server/utils/http'
 import { addUser, codeOf, makeDb } from './helpers'
 
 const listTitles = (db: ReturnType<typeof makeDb>, userId: number) => listMyLists(db, userId).lists.map(list => list.title)
@@ -71,7 +72,22 @@ describe('accounts', () => {
   it('changes the display name', () => {
     const db = makeDb()
     const user = addUser(db, 'art')
-    updateDisplayName(db, user.id, 'Art V.')
+    expect(updateProfile(db, user.id, { displayName: 'Art V.' })).toMatchObject({ id: user.id, displayName: 'Art V.' })
     expect(findUserByEmail(db, 'art@example.test')?.displayName).toBe('Art V.')
+  })
+
+  it('gives with the name unless the person says otherwise, and changes only what is sent', () => {
+    const db = makeDb()
+    const user = addUser(db, 'art')
+    expect(user.anonymousDefault).toBe(false)
+    expect(updateProfile(db, user.id, { anonymousDefault: true })).toMatchObject({ displayName: 'Art', anonymousDefault: true })
+    expect(updateProfile(db, user.id, { displayName: 'Art V.' })).toMatchObject({ displayName: 'Art V.', anonymousDefault: true })
+    expect(findUserByEmail(db, 'art@example.test')).toMatchObject({ displayName: 'Art V.', anonymousDefault: true })
+  })
+
+  it('puts the account in the login cookie with what the pages need of it', () => {
+    const db = makeDb()
+    const user = updateProfile(db, addUser(db, 'art').id, { anonymousDefault: true })
+    expect(sessionUserOf(user)).toEqual({ id: user.id, displayName: 'Art', anonymousDefault: true, createdAt: user.createdAt.getTime() })
   })
 })

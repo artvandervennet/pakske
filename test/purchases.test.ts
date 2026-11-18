@@ -3,6 +3,7 @@ import { getListView } from '../server/domain/list-view'
 import { deleteList, ownedListId } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
 import { removePurchase, setPurchase } from '../server/domain/purchases'
+import { updateProfile } from '../server/domain/users'
 import { deleteWish, updateWish } from '../server/domain/wishes'
 import { purchaseInput, wishInput } from '../shared/schemas/input'
 import { addList, addUser, addWishTo, codeOf, makeDb, purchaseRows } from './helpers'
@@ -256,6 +257,35 @@ describe('buying without your name', () => {
     const { db, token, wish, mom, sis } = setup(3)
     setPurchase(db, token, wish.id, mom.id, 1)
     expect(purchasesSeenBy(db, token, wish.id, sis.id)).toEqual([{ name: 'Mom', quantity: 1, mine: false, anonymous: false }])
+  })
+
+  it('leaves the name off a new purchase for someone who set that in Settings', () => {
+    const { db, token, wish, mom, sis } = setup(3)
+    updateProfile(db, mom.id, { anonymousDefault: true })
+    setPurchase(db, token, wish.id, mom.id, 1)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toEqual([{ name: null, quantity: 1, mine: false, anonymous: true }])
+    // Someone else's setting is their own.
+    setPurchase(db, token, wish.id, sis.id, 1)
+    expect(purchasesSeenBy(db, token, wish.id, mom.id)).toContainEqual({ name: 'Sis', quantity: 1, mine: false, anonymous: false })
+  })
+
+  it('lets the request say otherwise, whatever Settings says', () => {
+    const { db, token, wish, mom, sis } = setup(3)
+    updateProfile(db, mom.id, { anonymousDefault: true })
+    setPurchase(db, token, wish.id, mom.id, 1, false)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toMatchObject([{ name: 'Mom', anonymous: false }])
+  })
+
+  it('leaves a purchase that is there as it is when Settings changes', () => {
+    const { db, token, wish, mom, sis } = setup(3)
+    setPurchase(db, token, wish.id, mom.id, 1)
+    updateProfile(db, mom.id, { anonymousDefault: true })
+    setPurchase(db, token, wish.id, mom.id, 2)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toMatchObject([{ name: 'Mom', quantity: 2, anonymous: false }])
+    // Taken back and bought again, it is a new purchase.
+    removePurchase(db, token, wish.id, mom.id)
+    setPurchase(db, token, wish.id, mom.id, 1)
+    expect(purchasesSeenBy(db, token, wish.id, sis.id)).toMatchObject([{ name: null, quantity: 1, anonymous: true }])
   })
 
   it('takes the choice from the request', () => {

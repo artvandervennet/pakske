@@ -9,5 +9,5 @@ export default defineEventHandler(async (event) => {
   const account = user.firebaseUid && refreshToken
     ? await signInMethods(useDb(), useIdentity(), user, refreshToken)
     : { email: user.email, ...knownSignInMethods(user) }
-  return { displayName: user.displayName, ...account }
+  return { displayName: user.displayName, anonymousDefault: user.anonymousDefault, ...account }
 })

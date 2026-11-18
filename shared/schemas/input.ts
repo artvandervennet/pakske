@@ -38,9 +38,12 @@ export const forgotInput = z.object({ email, locale: mailLocale })
 
 export const passwordMailInput = z.object({ locale: mailLocale })
 
+/** A change to the profile: only what is sent changes. */
 export const profileInput = z.object({
-  displayName: requiredText(60),
-})
+  displayName: requiredText(60).optional(),
+  // "Standaard anoniem geven": a new purchase of theirs is without their name.
+  anonymousDefault: z.boolean('invalid').optional(),
+}).refine(change => Object.values(change).some(value => value !== undefined), 'required')
 
 const currentPassword = z.string('required').min(1, 'required').max(128, 'too_long')
 

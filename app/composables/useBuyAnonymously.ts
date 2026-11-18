@@ -3,17 +3,19 @@ import type { WishView } from '#shared/schemas/list'
 /**
  * Whether this person gives a wish without their name: the other buyers then see "Iemand".
  * Once they have a purchase, the server keeps the choice. Before that, and after taking a
- * purchase back, the page remembers it per wish, so the tick that follows sends it along.
+ * purchase back, the page remembers it per wish, so the tick that follows sends it along. A
+ * wish they chose nothing for starts from "Standaard anoniem geven" in Settings.
  */
 export function useBuyAnonymously() {
   const chosen = useState<Record<number, boolean>>('buy-anonymously', () => ({}))
+  const { user } = useUserSession()
 
   function isAnonymous(wish: WishView): boolean {
     if (wish.role === 'buyer') {
       const mine = wish.purchases.find(purchase => purchase.mine)
       if (mine) return mine.anonymous
     }
-    return chosen.value[wish.id] ?? false
+    return chosen.value[wish.id] ?? user.value?.anonymousDefault ?? false
   }
 
   function choose(wishId: number, anonymous: boolean) {
