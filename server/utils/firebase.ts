@@ -29,6 +29,20 @@ const WEAK = ['WEAK_PASSWORD', 'PASSWORD_DOES_NOT_MEET_REQUIREMENTS']
 const REAUTH = ['CREDENTIAL_TOO_OLD_LOGIN_AGAIN', 'TOKEN_EXPIRED', 'INVALID_ID_TOKEN', 'USER_NOT_FOUND', 'USER_DISABLED']
 const ENDED = ['TOKEN_EXPIRED', 'USER_DISABLED', 'USER_NOT_FOUND', 'INVALID_REFRESH_TOKEN', 'INVALID_GRANT_TYPE', 'MISSING_REFRESH_TOKEN']
 
+/**
+ * When the person behind an id token logged in, in ms: its `auth_time`, which renewing the token
+ * doesn't move. The token came straight from Firebase, so it is read, not checked.
+ */
+function signedInAt(idToken: string): number | undefined {
+  try {
+    const claims = JSON.parse(Buffer.from(idToken.split('.')[1] ?? '', 'base64url').toString('utf8')) as { auth_time?: unknown }
+    return typeof claims.auth_time === 'number' ? claims.auth_time * 1000 : undefined
+  }
+  catch {
+    return undefined
+  }
+}
+
 export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identity {
   const root = emulatorHost ? `http://${emulatorHost}/` : 'https://'
   const accountsUrl = `${root}identitytoolkit.googleapis.com/v1`
@@ -157,10 +171,24 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
           body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
           type: 'application/x-www-form-urlencoded',
         })
-        return { uid: answer.user_id, email: '', idToken: answer.id_token, refreshToken: answer.refresh_token }
+        return { uid: answer.user_id, email: '', idToken: answer.id_token, refreshToken: answer.refresh_token, signedInAt: signedInAt(answer.id_token) }
       }
       catch (error) {
         if (error instanceof FirebaseError && ENDED.includes(error.reason)) return null
+        throw error
+      }
+    },
+
+    async gone(refreshToken) {
+      try {
+        await call(tokenUrl, {
+          body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
+          type: 'application/x-www-form-urlencoded',
+        })
+        return false
+      }
+      catch (error) {
+        if (error instanceof FirebaseError && ENDED.includes(error.reason)) return error.reason === 'USER_NOT_FOUND'
         throw error
       }
     },

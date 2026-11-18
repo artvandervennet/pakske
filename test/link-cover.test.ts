@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getListView } from '../server/domain/list-view'
 import { addWish, setWishImage, updateWish } from '../server/domain/wishes'
-import { COVER_FETCHES, coverAddress, fetchCover, isPublicAddress, loadCover, refreshCover, strictPolicy, type FetchPolicy } from '../server/utils/link-cover'
+import { atMost, COVER_FETCHES, coverAddress, fetchCover, isPublicAddress, loadCover, refreshCover, strictPolicy, type FetchPolicy } from '../server/utils/link-cover'
 import { clearHits } from '../server/utils/rate-limit'
 import { wishInput, wishPatchInput } from '../shared/schemas/input'
 import { addList, addUser, makeDb, wishIn } from './helpers'
@@ -241,6 +241,24 @@ describe('the cover a page names', () => {
     expect(coverAddress(page(`<!-- a --><script>x</script>${tag}<!-- b -->`), base)).toBe('https://cdn.example/lamp.jpg')
   })
 
+  it('reads what is outside a comment, script or style that never closes, as a browser does', () => {
+    const tag = '<meta property="og:image" content="https://cdn.example/lamp.jpg">'
+    for (const opener of ['<!--', '<script>', '<style>']) {
+      expect(coverAddress(page(`${tag}${opener} the rest`), base), opener).toBe('https://cdn.example/lamp.jpg')
+      expect(coverAddress(page(`${opener}${tag}`), base), opener).toBeNull()
+    }
+  })
+
+  // The page is read in one go, on the one thread that also answers everyone else.
+  it('reads a page made of openers that never close without slowing down', () => {
+    for (const opener of ['<!--', '<script', '<style ', '</script ', '<meta ']) {
+      const hostile = opener.repeat(Math.floor(512 * 1024 / opener.length))
+      const start = performance.now()
+      expect(coverAddress(hostile, base), opener).toBeNull()
+      expect(performance.now() - start, opener).toBeLessThan(250)
+    }
+  })
+
   it('copes with a page that was cut off or is broken', () => {
     expect(coverAddress('<html><head><meta property="og:image" content="https://cdn.example/lamp.jpg"><meta property="og:ti', base)).toBe('https://cdn.example/lamp.jpg')
     expect(coverAddress('<meta property="og:image" content="https://cdn.example/lamp.jpg', base)).toBeNull()
@@ -248,6 +266,39 @@ describe('the cover a page names', () => {
     expect(coverAddress('<meta', base)).toBeNull()
     expect(coverAddress('<meta property="og:image" content="/lamp.jpg">', 'not an address')).toBeNull()
     expect(coverAddress(`${'<meta '.repeat(20000)}>`, base)).toBeNull()
+  })
+})
+
+describe('looking up names for covers', () => {
+  // A lookup can't be called off, and Node has four threads for lookups and file reads together.
+  it('has at most two lookups out at once, and refuses a third without starting it', async () => {
+    const waiting: ((addresses: string[]) => void)[] = []
+    const asked: string[] = []
+    const resolve = atMost(2, (host: string) => {
+      asked.push(host)
+      return new Promise<string[]>(done => waiting.push(done))
+    })
+    const first = resolve('a.example')
+    const second = resolve('b.example')
+    await expect(resolve('c.example')).rejects.toThrow()
+    expect(asked).toEqual(['a.example', 'b.example'])
+    // When one is back, even with an error, there is room again.
+    waiting[0]!(['93.184.216.34'])
+    expect(await first).toEqual(['93.184.216.34'])
+    const third = resolve('c.example')
+    expect(asked).toEqual(['a.example', 'b.example', 'c.example'])
+    waiting[1]!([])
+    waiting[2]!([])
+    await Promise.all([second, third])
+  })
+
+  it('makes room again after a lookup that failed', async () => {
+    const resolve = atMost(1, async (host: string): Promise<string[]> => {
+      if (host === 'gone.example') throw new Error('ENOTFOUND')
+      return ['93.184.216.34']
+    })
+    await expect(resolve('gone.example')).rejects.toThrow('ENOTFOUND')
+    expect(await resolve('shop.example')).toEqual(['93.184.216.34'])
   })
 })
 

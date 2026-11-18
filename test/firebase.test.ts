@@ -11,7 +11,9 @@ interface Refusal { statusCode: number, code: string, fields?: Record<string, st
 function firebase(...answers: ({ error: string } | Record<string, unknown>)[]) {
   const calls: Call[] = []
   vi.stubGlobal('fetch', async (url: string, init: { body: string, headers: Record<string, string> }) => {
-    calls.push({ url, body: JSON.parse(init.body), headers: init.headers })
+    // The token endpoint takes a form; everything else takes JSON.
+    const body = init.body.startsWith('{') ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body))
+    calls.push({ url, body, headers: init.headers })
     const answer = answers.shift() ?? {}
     return 'error' in answer
       ? new Response(JSON.stringify({ error: { message: answer.error } }), { status: 400 })
@@ -134,5 +136,28 @@ describe("the name in Firebase's mails", () => {
     await identity.setName('id', 'Art VdV')
     expect(calls[0]!.url).toContain('/v1/accounts:update?key=key')
     expect(calls[0]!.body).toEqual({ idToken: 'id', displayName: 'Art VdV' })
+  })
+})
+
+describe('a login kept in the cookie', () => {
+  // A token as Firebase makes it: three parts, the middle one the claims.
+  const idToken = (claims: Record<string, unknown>) => `h.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.s`
+
+  it('comes back renewed, with when the person logged in', async () => {
+    const { identity, calls } = firebase({ id_token: idToken({ auth_time: 1_700_000_000 }), refresh_token: 'rt-2', user_id: 'uid-1' })
+    expect(await identity.refresh('rt-1')).toMatchObject({ uid: 'uid-1', refreshToken: 'rt-2', signedInAt: 1_700_000_000_000 })
+    expect(calls[0]!.body).toEqual({ grant_type: 'refresh_token', refresh_token: 'rt-1' })
+  })
+
+  it('doesn\'t know when the person logged in from a token it can\'t read', async () => {
+    const { identity } = firebase({ id_token: 'not a token', refresh_token: 'rt-2', user_id: 'uid-1' })
+    expect((await identity.refresh('rt-1'))!.signedInAt).toBeUndefined()
+  })
+
+  it('tells an account that is gone at Firebase from a login that merely ended', async () => {
+    expect(await firebase({ error: 'USER_NOT_FOUND' }).identity.gone('rt')).toBe(true)
+    expect(await firebase({ error: 'TOKEN_EXPIRED' }).identity.gone('rt')).toBe(false)
+    expect(await firebase({ error: 'INVALID_REFRESH_TOKEN' }).identity.gone('rt')).toBe(false)
+    expect(await firebase({ id_token: 'x', refresh_token: 'rt-2', user_id: 'uid-1' }).identity.gone('rt')).toBe(false)
   })
 })

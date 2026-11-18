@@ -245,8 +245,8 @@ describe('changing the address', () => {
     const { db, changes, change } = await art()
     addUser(db, 'mom')
     expect(await rejection(change('mom@example.test', 'correct horse'))).toBe('email_taken')
-    // Wrong password or not: the answer is about the address.
-    expect(await rejection(change('mom@example.test', 'wrong'))).toBe('email_taken')
+    // Only to someone who knows the password: an open browser must not learn which addresses have an account.
+    expect(await rejection(change('mom@example.test', 'wrong'))).toBe('wrong_password')
     expect(changes).toEqual([])
   })
 
@@ -271,15 +271,20 @@ describe('changing the address', () => {
 
   it('goes by the login itself for an account that only logs in with Google', async () => {
     const db = makeDb()
-    const { identity, changes, tooOld } = fakeIdentity()
+    const { identity, changes, tooOld, refusing } = fakeIdentity()
     const lotte = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
     const change = (refreshToken?: string) =>
       requestEmailChange(db, identity, lotte.user, refreshToken, { email: 'lotte@new.test' }, legacyCheck)
-    // A login cookie from before Firebase, or a login Firebase finds too long ago.
+    // A login cookie from before Firebase, a login from long ago (whether Firebase would mind
+    // or not), or a fresh one that Firebase still refuses.
     expect(await rejection(change(undefined))).toBe('reauth_needed')
     tooOld.add(lotte.login.uid)
     expect(await rejection(change(lotte.login.refreshToken))).toBe('reauth_needed')
     tooOld.clear()
+    refusing.add(lotte.login.uid)
+    expect(await rejection(change(lotte.login.refreshToken))).toBe('reauth_needed')
+    refusing.clear()
+    expect(changes).toEqual([])
     await change(lotte.login.refreshToken)
     expect(changes).toMatchObject([{ uid: lotte.login.uid, email: 'lotte@new.test' }])
   })

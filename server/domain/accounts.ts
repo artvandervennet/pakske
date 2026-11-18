@@ -17,6 +17,8 @@ export interface FirebaseLogin {
   refreshToken: string
   /** The name Firebase has for the account, '' when it has none. Only a login just made knows it. */
   name?: string
+  /** When the person logged in, in ms. Only a login renewed from the cookie says, and only when its token is readable. */
+  signedInAt?: number
 }
 
 /** What Google gave this site after the person said yes there. */
@@ -47,6 +49,8 @@ export interface Identity {
   sendPasswordReset: (email: string, options?: { locale?: string, continueUrl?: string }) => Promise<void>
   /** null when the login was ended at Firebase (a new password, a disabled account). */
   refresh: (refreshToken: string) => Promise<FirebaseLogin | null>
+  /** Whether the account behind a login no longer exists at Firebase: deleted, not merely logged out. */
+  gone: (refreshToken: string) => Promise<boolean>
   changePassword: (idToken: string, password: string) => Promise<FirebaseLogin>
   /** What Firebase holds about the account: its address, and the ways it logs in ('password', 'google.com'). */
   account: (idToken: string) => Promise<{ email: string, providers: string[] }>
@@ -245,10 +249,14 @@ async function checkPassword(db: Db, identity: Identity, user: User, password: s
   throw new DomainError('wrong_password')
 }
 
+// How long ago an account without a password may have logged in to do what `reauthenticate` guards.
+const RECENT_LOGIN_MS = 5 * 60 * 1000
+
 /**
  * Makes sure the person themselves asks, before something a stranger at their open browser must
  * not do: the current password for an account that has one, and for an account that only logs in
- * with Google the login itself, which Firebase refuses when it is too long ago.
+ * with Google a login of the last few minutes. Firebase refuses an old login for some of what
+ * this guards; checking it here covers all of it.
  */
 async function reauthenticate(db: Db, identity: Identity, user: User, refreshToken: string | undefined, currentPassword: string | undefined, checkLegacy: CheckLegacy): Promise<FirebaseLogin> {
   if (currentPassword !== undefined) return checkPassword(db, identity, user, currentPassword, checkLegacy, refreshToken)
@@ -257,6 +265,7 @@ async function reauthenticate(db: Db, identity: Identity, user: User, refreshTok
   const current = await idTokenFor(identity, refreshToken)
   if (current.uid !== user.firebaseUid) throw new DomainError('reauth_needed')
   if ((await identity.account(current.idToken)).providers.includes('password')) throw new DomainError('wrong_password')
+  if (current.signedInAt === undefined || Date.now() - current.signedInAt > RECENT_LOGIN_MS) throw new DomainError('reauth_needed')
   return current
 }
 
@@ -269,7 +278,9 @@ export async function changePassword(db: Db, identity: Identity, user: User, cur
 /**
  * Asks for another address: Firebase mails it a link, and the address changes at Firebase once
  * the person clicks that. Here it changes the next time Firebase is heard from (`withAddress`).
- * An address another account here has is refused before anything is sent. Answers the login to keep.
+ * An address another account here has is refused before anything is sent, but only once the
+ * person showed it is them: otherwise an open browser could ask which addresses have an account.
+ * Answers the login to keep.
  */
 export async function requestEmailChange(
   db: Db,
@@ -280,8 +291,8 @@ export async function requestEmailChange(
   checkLegacy: CheckLegacy,
 ) {
   if (input.email === user.email) throw new DomainError('email_same')
-  if (findUserByEmail(db, input.email)) throw new DomainError('email_taken')
   const login = await reauthenticate(db, identity, user, refreshToken, input.currentPassword, checkLegacy)
+  if (findUserByEmail(db, input.email)) throw new DomainError('email_taken')
   const answer = await identity.requestEmailChange(login.idToken, input.email, { locale: input.locale, continueUrl: input.continueUrl })
   if (answer === 'email_exists') throw new DomainError('email_taken')
   if (answer === 'reauth_needed') throw new DomainError('reauth_needed')
@@ -292,8 +303,11 @@ export async function requestEmailChange(
  * Deletes the account for good, after making sure the person themselves asks. Firebase goes
  * first: were it the other way round and Firebase failed, the next login would find a Firebase
  * account without one here and make an empty one. An account from before Firebase that never
- * moved there has its password checked here, and Firebase has nothing to delete. Returns the
- * pictures nothing points at any more.
+ * moved there has its password checked here, and Firebase has nothing to delete. When Firebase
+ * says the account behind this login cookie is already gone, its half happened earlier and ours
+ * didn't (the server stopped in between, or a backup was put back): no password can check out
+ * any more, so the deletion is finished on the cookie's word. Returns the pictures nothing
+ * points at any more.
  */
 export async function deleteAccount(
   db: Db,
@@ -306,7 +320,7 @@ export async function deleteAccount(
   if (user.firebaseUid === null && user.passwordHash !== null) {
     if (currentPassword === undefined || !(await checkLegacy(user.passwordHash, currentPassword))) throw new DomainError('wrong_password')
   }
-  else {
+  else if (!(refreshToken && await identity.gone(refreshToken))) {
     const login = await reauthenticate(db, identity, user, refreshToken, currentPassword, checkLegacy)
     if ((await identity.deleteAccount(login.idToken)) === 'reauth_needed') throw new DomainError('reauth_needed')
   }
