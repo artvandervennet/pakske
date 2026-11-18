@@ -35,7 +35,8 @@ git fetch --quiet origin "$BRANCH"
 target="$(git rev-parse "origin/$BRANCH")"
 live="$(basename "$(readlink "$STATE_DIR/current" 2>/dev/null || echo none)")"
 if [ "$FORCE" != "--force" ]; then
-  [ "$live" = "$target" ] && exit 0
+  # a release folder is named after its commit, with a suffix when --force rebuilt that commit
+  [ "${live%%-*}" = "$target" ] && exit 0
   # a commit that failed once fails again: wait for the next commit instead of rebuilding every minute
   [ "$(cat "$STATE_DIR/failed" 2>/dev/null)" = "$target" ] && exit 0
 fi
@@ -47,8 +48,9 @@ fail() {
   exit 1
 }
 
-# only ever fast-forward: if someone edited files on the Pi, stop and say so instead of overwriting
-git merge --quiet --ff-only "origin/$BRANCH" || fail "the checkout on the Pi has its own changes"
+# build exactly that commit; if someone edited files on the Pi, stop and say so instead of overwriting
+[ -z "$(git status --porcelain --untracked-files=no)" ] || fail "the checkout on the Pi has its own changes"
+git checkout --quiet --detach "$target"
 
 # Pakske needs a newer Node than the Pi's own, which the other sites use. It gets its own copy,
 # at the version deploy/node-version names, checked against the checksum written there too.
@@ -82,7 +84,8 @@ pnpm build || fail "the build failed"
 # What the server reads from disk besides .output: the migrations, which run when it starts,
 # and the scripts. The same files the Dockerfile copies.
 release="$STATE_DIR/releases/$target"
-rm -rf "$release"
+# never write into the release the site is running from
+[ -e "$release" ] && release="$release-$(date +%s)"
 mkdir -p "$release/server/db"
 cp -a .output "$release/.output"
 cp -a server/db/migrations "$release/server/db/migrations"
