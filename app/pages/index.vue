@@ -129,7 +129,8 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
   <div>
     <div class="band hero" data-paint="deep">
       <div class="inner">
-        <h1 ref="pageTitle" tabindex="-1">{{ t('home.title') }}</h1>
+        <!-- The site's name, and the wordmark: <art-header> flies it up into its place as you scroll. -->
+        <h1 ref="pageTitle" tabindex="-1" data-wordmark>{{ t('site.name') }}</h1>
         <p class="lead">{{ t('home.lead') }}</p>
         <div v-if="!loggedIn" class="actions">
           <art-button>
