@@ -4,7 +4,6 @@ import '@vandervennet/gesso/components/art-header.js'
 import '@vandervennet/gesso/components/art-button.js'
 import '@vandervennet/gesso/components/art-tape.js'
 import '@vandervennet/gesso/components/art-decor.js'
-import '@vandervennet/gesso/components/art-scheme.js'
 import '@vandervennet/gesso/components/art-signature.js'
 import '@vandervennet/gesso/components/art-password.js'
 
