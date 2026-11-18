@@ -1,6 +1,6 @@
-# Wishlist
+# Pakske
 
-A wishlist site for family and friends. Everyone with an account can make several lists. Each list has an address the site makes up, and only people who have the link can find it; anyone who has it can pass it on. Buyers tick what they are getting and leave each other notes. The owners of a wish see none of that: to them it looks as if nobody bought anything, unless they tick it themselves.
+Pakske is a wishlist site for family and friends. Everyone with an account can make several lists. Each list has an address the site makes up, and only people who have the link can find it; anyone who has it can pass it on. Buyers tick what they are getting and leave each other notes. The owners of a wish see none of that: to them it looks as if nobody bought anything, unless they tick it themselves.
 
 A wish can belong to several people and show on a list of each of them, and a list can have several owners. Buyers from every list that shows a wish see the same purchases; each owner sees only their own tick.
 

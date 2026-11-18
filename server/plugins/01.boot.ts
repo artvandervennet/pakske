@@ -5,7 +5,7 @@ import { mkdirSync } from 'node:fs'
 export default defineNitroPlugin(() => {
   const secret = useRuntimeConfig().appSecret
   if (!import.meta.dev && (typeof secret !== 'string' || secret.length < 32)) {
-    console.error('[wishlist] NUXT_APP_SECRET is missing or shorter than 32 characters. Set it to the output of `openssl rand -base64 32`.')
+    console.error('[pakske] NUXT_APP_SECRET is missing or shorter than 32 characters. Set it to the output of `openssl rand -base64 32`.')
     process.exit(1)
   }
   useDb()

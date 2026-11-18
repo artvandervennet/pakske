@@ -1,4 +1,4 @@
-# The wishlist on a Raspberry Pi (or any Docker host).
+# Pakske on a Raspberry Pi (or any Docker host).
 #
 #   cp .env.example .env      # then fill in NUXT_APP_SECRET
 #   docker compose up -d --build

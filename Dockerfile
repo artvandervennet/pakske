@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Builds and runs the wishlist as a plain Node server. Both stages use the same Debian base,
+# Builds and runs Pakske as a plain Node server. Both stages use the same Debian base,
 # so the SQLite driver's prebuilt binary matches. On a Raspberry Pi this needs a 64-bit OS
 # (`uname -m` says aarch64).
 
