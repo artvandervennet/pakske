@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { changePassword, linkGoogle, logIn, logInWithGoogle, register, requestEmailChange, signInMethods, unlinkGoogle } from '../server/domain/accounts'
+import { changePassword, linkGoogle, logIn, logInWithGoogle, register, renameAtFirebase, requestEmailChange, signInMethods, unlinkGoogle } from '../server/domain/accounts'
 import { listMyLists } from '../server/domain/lists'
-import { createUser, findUserByEmail, findUserById } from '../server/domain/users'
+import { createUser, findUserByEmail, findUserById, updateDisplayName } from '../server/domain/users'
 import { fakeIdentity, googleCredential } from './fake-identity'
 import { addUser, makeDb } from './helpers'
 
@@ -331,5 +331,65 @@ describe('changing the address', () => {
     // Logged in again, a wrong password is a wrong password.
     const again = await logIn(db, identity, 'art@new.test', 'correct horse', legacyCheck)
     expect(await rejection(changePassword(db, identity, again!.user, 'wrong', 'battery staple', legacyCheck, again!.login.refreshToken))).toBe('wrong_password')
+  })
+})
+
+// Firebase's mails greet the person by the name Firebase has, so that name follows the one here.
+describe("the name in Firebase's mails", () => {
+  it('goes to Firebase with a new account', async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    await register(db, identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
+    expect(accounts[0]!.name).toBe('Art')
+  })
+
+  it('goes along when an account from before Firebase moves there', async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    createUser(db, { email: 'art@example.test', displayName: 'Art', passwordHash: 'hash:correct horse' })
+    await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)
+    expect(accounts[0]!.name).toBe('Art')
+  })
+
+  it('is filled in at the next login for an account Firebase has no name for', async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    await register(db, identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
+    accounts[0]!.name = null
+    await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)
+    expect(accounts[0]!.name).toBe('Art')
+  })
+
+  it("is the name here, not Google's, after a login with Google", async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    const { user } = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    updateDisplayName(db, user.id, 'Lotte')
+    await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    expect(accounts[0]!.name).toBe('Lotte')
+  })
+
+  it('follows a new name from Settings, when the login can ask Firebase', async () => {
+    const { identity, accounts } = fakeIdentity()
+    const login = await identity.signUp('art@example.test', 'correct horse', 'Art')
+    if (login === 'email_exists') throw new Error('unexpected')
+    await renameAtFirebase(identity, login.refreshToken, 'Art VdV')
+    expect(accounts[0]!.name).toBe('Art VdV')
+    // A login cookie from before Firebase has no token: the next login fills the name in.
+    await renameAtFirebase(identity, undefined, 'Someone else')
+    expect(accounts[0]!.name).toBe('Art VdV')
+  })
+
+  it("doesn't stop a login or a new name when Firebase refuses it", async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    const { user, login } = await register(db, identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
+    accounts[0]!.name = null
+    identity.setName = async () => {
+      throw new Error('Firebase is away')
+    }
+    expect((await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck))?.user.id).toBe(user.id)
+    await renameAtFirebase(identity, login.refreshToken, 'Art VdV')
+    expect(accounts[0]!.name).toBeNull()
   })
 })

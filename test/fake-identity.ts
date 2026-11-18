@@ -4,6 +4,8 @@ interface Account {
   uid: string
   email: string
   password: string | null
+  // The name Firebase greets the person by in its mails.
+  name: string | null
   emailVerified: boolean
   googleSub: string | null
   // Firebase ended the logins from before a change of address: their tokens no longer refresh.
@@ -29,7 +31,7 @@ export function fakeIdentity() {
   let next = 1
 
   const loginOf = (account: Account): FirebaseLogin =>
-    ({ uid: account.uid, email: account.email, idToken: `id:${account.uid}`, refreshToken: `rt:${account.uid}` })
+    ({ uid: account.uid, email: account.email, idToken: `id:${account.uid}`, refreshToken: `rt:${account.uid}`, name: account.name ?? '' })
   const byToken = (token: string, prefix: string) => accounts.find(account => `${prefix}:${account.uid}` === token)
 
   const identity: Identity = {
@@ -39,9 +41,9 @@ export function fakeIdentity() {
       account.ended = false
       return loginOf(account)
     },
-    async signUp(email, password) {
+    async signUp(email, password, name) {
       if (accounts.some(a => a.email === email)) return 'email_exists'
-      const account = { uid: `uid-${next++}`, email, password, emailVerified: false, googleSub: null }
+      const account = { uid: `uid-${next++}`, email, password, name: name ?? null, emailVerified: false, googleSub: null }
       accounts.push(account)
       return loginOf(account)
     },
@@ -68,7 +70,7 @@ export function fakeIdentity() {
         same.emailVerified = true
         return { kind: 'ok', login: loginOf(same), googleSub: sub, name: 'From Google', emailVerified: true }
       }
-      const account = { uid: `uid-${next++}`, email, password: null, emailVerified: true, googleSub: sub }
+      const account = { uid: `uid-${next++}`, email, password: null, name: 'Lotte Peeters', emailVerified: true, googleSub: sub }
       accounts.push(account)
       return { kind: 'ok', login: loginOf(account), googleSub: sub, name: 'Lotte Peeters', emailVerified: true }
     },
@@ -104,6 +106,9 @@ export function fakeIdentity() {
     },
     async unlinkGoogle(idToken) {
       byToken(idToken, 'id')!.googleSub = null
+    },
+    async setName(idToken, name) {
+      byToken(idToken, 'id')!.name = name
     },
   }
 

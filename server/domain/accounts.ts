@@ -15,6 +15,8 @@ export interface FirebaseLogin {
   email: string
   idToken: string
   refreshToken: string
+  /** The name Firebase has for the account, '' when it has none. Only a login just made knows it. */
+  name?: string
 }
 
 /** What Google gave this site after the person said yes there. */
@@ -37,7 +39,8 @@ export type GoogleLogin =
 export interface Identity {
   /** null for a wrong password, an unknown address, or an account without a password. */
   signIn: (email: string, password: string) => Promise<FirebaseLogin | null>
-  signUp: (email: string, password: string) => Promise<FirebaseLogin | 'email_exists'>
+  /** `name` is how Firebase's mails greet the person. */
+  signUp: (email: string, password: string, name?: string) => Promise<FirebaseLogin | 'email_exists'>
   /** Logs in with Google, or links Google to the account of `linkTo` (an id token). */
   google: (credential: GoogleCredential, linkTo?: string) => Promise<GoogleLogin>
   /** Firebase mails a link to choose a new password; nothing tells whether the address has an account. */
@@ -48,6 +51,8 @@ export interface Identity {
   /** What Firebase holds about the account: its address, and the ways it logs in ('password', 'google.com'). */
   account: (idToken: string) => Promise<{ email: string, providers: string[] }>
   unlinkGoogle: (idToken: string) => Promise<void>
+  /** The name Firebase's mails greet the person by. */
+  setName: (idToken: string, name: string) => Promise<void>
   /**
    * Firebase mails the new address a link; the account's address changes there once the person
    * clicks it. 'reauth_needed' when Firebase wants a fresher login before it does that.
@@ -97,16 +102,47 @@ function withAddress(db: Db, user: User, email: string): User {
 }
 
 /**
+ * Firebase's mails greet the person by the name Firebase has ("Dag Art,"), so that name follows
+ * the one here. It is only a greeting: when Firebase refuses, the login goes on and the next
+ * one tries again.
+ */
+async function tellName(identity: Identity, login: FirebaseLogin, name: string) {
+  if (login.name === name) return
+  try {
+    await identity.setName(login.idToken, name)
+  }
+  catch {
+    // The next login tries again.
+  }
+}
+
+/** A new name from Settings, for a login that can ask Firebase; another one is told at its next login. */
+export async function renameAtFirebase(identity: Identity, refreshToken: string | undefined, name: string) {
+  if (!refreshToken) return
+  try {
+    const login = await identity.refresh(refreshToken)
+    if (login) await identity.setName(login.idToken, name)
+  }
+  catch {
+    // The next login tries again.
+  }
+}
+
+/**
  * Logs in with an address and password, or answers null. An account from before Firebase moves
  * there on its first login: its own password, checked here, becomes its password at Firebase.
  */
 export async function logIn(db: Db, identity: Identity, email: string, password: string, checkLegacy: CheckLegacy) {
   const login = await identity.signIn(email, password)
-  if (login) return { user: accountOf(db, login), login }
+  if (login) {
+    const user = accountOf(db, login)
+    await tellName(identity, login, user.displayName)
+    return { user, login }
+  }
 
   const legacy = findUserByEmail(db, email)
   if (!legacy?.passwordHash || legacy.firebaseUid || !(await checkLegacy(legacy.passwordHash, password))) return null
-  const made = await identity.signUp(email, password)
+  const made = await identity.signUp(email, password, legacy.displayName)
   if (made === 'email_exists') return null
   return { user: accountOf(db, made), login: made }
 }
@@ -120,7 +156,7 @@ export async function register(
   // What can be answered here is answered before Firebase gets an account it would keep.
   if (options.maxUsers !== undefined && db.select({ n: count() }).from(users).get()!.n >= options.maxUsers) throw new DomainError('registration_closed')
   if (findUserByEmail(db, input.email)) throw new DomainError('email_taken')
-  const login = await identity.signUp(input.email, input.password)
+  const login = await identity.signUp(input.email, input.password, input.displayName)
   if (login === 'email_exists') throw new DomainError('email_taken')
   const user = createUser(db, { email: input.email, displayName: input.displayName, passwordHash: null, firebaseUid: login.uid }, { ...options, locale: input.locale })
   return { user, login }
@@ -145,12 +181,14 @@ export async function logInWithGoogle(db: Db, identity: Identity, credential: Go
     db.update(users).set({ googleSub: result.googleSub }).where(eq(users.id, known.id)).run()
     // Google's answer names the address at Google; the account's own may have changed since.
     const { email } = await identity.account(login.idToken)
+    await tellName(identity, login, known.displayName)
     return { user: withAddress(db, { ...known, googleSub: result.googleSub }, email), login }
   }
   if (findUserByEmail(db, login.email)) throw new DomainError('google_email_taken')
   if (!result.emailVerified) throw new DomainError('google_unverified')
   const displayName = (result.name?.trim() || login.email.split('@')[0]!).slice(0, 60)
   const user = createUser(db, { email: login.email, displayName, passwordHash: null, firebaseUid: login.uid, googleSub: result.googleSub }, options)
+  await tellName(identity, login, displayName)
   return { user, login }
 }
 

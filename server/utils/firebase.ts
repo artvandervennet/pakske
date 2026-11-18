@@ -16,6 +16,8 @@ interface Session {
   email?: string
   idToken: string
   refreshToken: string
+  // Left out when the account has no name.
+  displayName?: string
 }
 
 /** Firebase's answers of a person's credentials: these mean "no", not "something broke". */
@@ -50,7 +52,7 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
     call<T>(`${accountsUrl}/${method}`, { body: JSON.stringify(body), type: 'application/json', headers })
 
   const loginOf = (session: Session): FirebaseLogin =>
-    ({ uid: session.localId, email: (session.email ?? '').toLowerCase(), idToken: session.idToken, refreshToken: session.refreshToken })
+    ({ uid: session.localId, email: (session.email ?? '').toLowerCase(), idToken: session.idToken, refreshToken: session.refreshToken, name: session.displayName ?? '' })
 
   async function tooMany<T>(work: () => Promise<T>): Promise<T> {
     try {
@@ -88,9 +90,9 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
       }
     },
 
-    async signUp(email, password) {
+    async signUp(email, password, name) {
       try {
-        return loginOf(await strongEnough('password', () => tooMany(() => accounts<Session>('accounts:signUp', { email, password, returnSecureToken: true }))))
+        return loginOf(await strongEnough('password', () => tooMany(() => accounts<Session>('accounts:signUp', { email, password, ...(name ? { displayName: name } : {}), returnSecureToken: true }))))
       }
       catch (error) {
         if (error instanceof FirebaseError && error.reason === 'EMAIL_EXISTS') return 'email_exists'
@@ -178,6 +180,10 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
 
     async unlinkGoogle(idToken) {
       await accounts('accounts:update', { idToken, deleteProvider: ['google.com'] })
+    },
+
+    async setName(idToken, name) {
+      await accounts('accounts:update', { idToken, displayName: name })
     },
 
     async requestEmailChange(idToken, newEmail, options = {}) {

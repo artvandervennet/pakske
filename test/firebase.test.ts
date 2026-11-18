@@ -118,3 +118,21 @@ describe('deleting an account at Firebase', () => {
     await expect(firebase({ error: 'OPERATION_NOT_ALLOWED' }).identity.deleteAccount('id')).rejects.toThrow('OPERATION_NOT_ALLOWED')
   })
 })
+
+describe("the name in Firebase's mails", () => {
+  it('goes along with a new account, and comes back with a login', async () => {
+    const { identity, calls } = firebase(session, { ...session, displayName: 'Art' }, session)
+    await identity.signUp('art@example.test', 'long enough', 'Art')
+    expect(calls[0]!.body).toMatchObject({ email: 'art@example.test', displayName: 'Art' })
+    expect(await identity.signIn('art@example.test', 'long enough')).toMatchObject({ name: 'Art' })
+    // Firebase leaves the name out of its answer when the account has none.
+    expect(await identity.signIn('art@example.test', 'long enough')).toMatchObject({ name: '' })
+  })
+
+  it('is changed for the account the token is for', async () => {
+    const { identity, calls } = firebase({})
+    await identity.setName('id', 'Art VdV')
+    expect(calls[0]!.url).toContain('/v1/accounts:update?key=key')
+    expect(calls[0]!.body).toEqual({ idToken: 'id', displayName: 'Art VdV' })
+  })
+})
