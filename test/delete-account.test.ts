@@ -175,19 +175,38 @@ describe('deleting an account', () => {
 
   it('goes by the login itself for an account that only logs in with Google', async () => {
     const db = makeDb()
-    const { identity, accounts, tooOld } = fakeIdentity()
+    const { identity, accounts, tooOld, refusing } = fakeIdentity()
     const lotte = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
     const remove = (refreshToken?: string) => deleteAccount(db, identity, findUserById(db, lotte.user.id)!, refreshToken, undefined, legacyCheck)
     expect(await rejection(remove(undefined))).toBe('reauth_needed')
-    // A login Firebase finds too long ago: nothing goes, here or there.
+    // A login from long ago could be anyone at an open browser: nothing goes, here or there,
+    // whether Firebase would mind or not.
     tooOld.add(lotte.login.uid)
     expect(await rejection(remove(lotte.login.refreshToken))).toBe('reauth_needed')
     expect(accounts).toHaveLength(1)
     expect(findUserById(db, lotte.user.id)).toBeDefined()
     tooOld.clear()
+    // A fresh login that Firebase still refuses.
+    refusing.add(lotte.login.uid)
+    expect(await rejection(remove(lotte.login.refreshToken))).toBe('reauth_needed')
+    expect(findUserById(db, lotte.user.id)).toBeDefined()
+    refusing.clear()
     await remove(lotte.login.refreshToken)
     expect(accounts).toEqual([])
     expect(findUserById(db, lotte.user.id)).toBeUndefined()
+  })
+
+  // The server stopped between the two halves, or a backup from before the deletion was put back.
+  it('finishes a deletion whose Firebase half already happened, on the word of the login cookie', async () => {
+    const { db, accounts, art, lot, remove } = await setup()
+    accounts.splice(accounts.findIndex(account => account.email === 'art@example.test'), 1)
+    // No password can check out any more, and none is needed: the account at Firebase is gone.
+    await remove(art, null)
+    expect(findUserById(db, art.id)).toBeUndefined()
+    expect(getListView(db, art.first, null)).toBeUndefined()
+    // Someone else's cookie finishes nothing of Art's, and their own account still needs its password.
+    expect(await rejection(remove(lot, null))).toBe('wrong_password')
+    expect(findUserById(db, lot.id)).toBeDefined()
   })
 
   it('checks the password of an account from before Firebase here, and never asks Firebase', async () => {

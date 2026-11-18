@@ -20,14 +20,16 @@ interface Account {
  * A Google credential is written `google:<sub>:<email>`; `refreshToken` and `idToken` are `rt:<uid>`
  * and `id:<uid>`.
  * A new address waits in `changes` until `confirm` plays the person clicking the mailed link.
- * `tooOld` holds the ids of accounts whose login is too long ago for Firebase to change the
- * address or delete the account on its word.
+ * `tooOld` holds the ids of accounts that logged in long ago: their refreshed login says so.
+ * `refusing` holds the ids of accounts Firebase itself refuses to change the address of or to
+ * delete without a fresher login, whatever the login says.
  */
 export function fakeIdentity() {
   const accounts: Account[] = []
   const sent: string[] = []
   const changes: { uid: string, email: string, locale?: string, continueUrl?: string }[] = []
   const tooOld = new Set<string>()
+  const refusing = new Set<string>()
   let next = 1
 
   const loginOf = (account: Account): FirebaseLogin =>
@@ -79,7 +81,11 @@ export function fakeIdentity() {
     },
     async refresh(refreshToken) {
       const account = byToken(refreshToken, 'rt')
-      return account && !account.ended ? loginOf(account) : null
+      if (!account || account.ended) return null
+      return { ...loginOf(account), signedInAt: Date.now() - (tooOld.has(account.uid) ? 60 * 60 * 1000 : 1000) }
+    },
+    async gone(refreshToken) {
+      return !byToken(refreshToken, 'rt')
     },
     async changePassword(idToken, password) {
       const account = byToken(idToken, 'id')!
@@ -92,7 +98,7 @@ export function fakeIdentity() {
     },
     async requestEmailChange(idToken, newEmail, options = {}) {
       const account = byToken(idToken, 'id')
-      if (!account || tooOld.has(account.uid)) return 'reauth_needed'
+      if (!account || refusing.has(account.uid)) return 'reauth_needed'
       if (accounts.some(a => a.email === newEmail)) return 'email_exists'
       changes.push({ uid: account.uid, email: newEmail, ...options })
       return 'sent'
@@ -100,7 +106,7 @@ export function fakeIdentity() {
     async deleteAccount(idToken) {
       const account = byToken(idToken, 'id')
       if (!account) return 'deleted'
-      if (tooOld.has(account.uid)) return 'reauth_needed'
+      if (refusing.has(account.uid)) return 'reauth_needed'
       accounts.splice(accounts.indexOf(account), 1)
       return 'deleted'
     },
@@ -123,7 +129,7 @@ export function fakeIdentity() {
     account.ended = true
   }
 
-  return { identity, accounts, sent, changes, tooOld, confirm }
+  return { identity, accounts, sent, changes, tooOld, refusing, confirm }
 }
 
 export const googleCredential = (sub: string, email: string): GoogleCredential =>
