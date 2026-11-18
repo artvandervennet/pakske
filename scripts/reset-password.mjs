@@ -2,13 +2,14 @@
 // Gives an account from before Firebase a new, random password and prints it, for when someone
 // forgot theirs before their first login since Firebase. Accounts at Firebase get a mail instead.
 //
-//   docker compose exec wishlist node scripts/reset-password.mjs mom@example.com
+//   docker compose exec pakske node scripts/reset-password.mjs mom@example.com
 //
 // Outside Docker: NUXT_DATA_DIR=.data node scripts/reset-password.mjs mom@example.com
 //
 // The person logs in with the printed password and picks their own under Settings.
 // Uses only Node's built-ins, so it runs in the production image as it is.
 import { randomBytes, scryptSync } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
@@ -39,7 +40,9 @@ function randomPassword() {
   return Array.from({ length: 4 }, () => Array.from({ length: 4 }, pick).join('')).join('-')
 }
 
-const file = join(process.env.NUXT_DATA_DIR ?? '.data', 'wishlist.db')
+// The server renames wishlist.db, from before the site was called Pakske, when it starts.
+const dir = process.env.NUXT_DATA_DIR ?? '.data'
+const file = [join(dir, 'pakske.db'), join(dir, 'wishlist.db')].find(existsSync) ?? join(dir, 'pakske.db')
 const db = new DatabaseSync(file)
 db.exec('PRAGMA busy_timeout = 5000')
 

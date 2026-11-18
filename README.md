@@ -79,13 +79,13 @@ One limit: an owner can register a second account and open their own list as a b
 The Pi needs a 64-bit OS (`uname -m` says `aarch64`) and Docker.
 
 ```sh
-git clone <this repo> wishlist && cd wishlist
+git clone <this repo> pakske && cd pakske
 cp .env.example .env
 openssl rand -base64 32        # paste the output into .env as NUXT_APP_SECRET
 docker compose up -d --build
 ```
 
-The site listens on port 3000. Data lives in the Docker volume `wishlist-data`.
+The site listens on port 3000. Data lives in the Docker volume `pakske-data`.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -140,24 +140,39 @@ docker compose up -d --build
 
 New migrations run when the server starts.
 
-A database made by the first version, from before private lists, can't be upgraded: the server stops at start with a "table already exists" error. Remove the old `wishlist.db` and its `wishlist.db-wal` and `wishlist.db-shm` files from the data folder (in Docker, the volume `wishlist-data`) and start again. Accounts and wishes from the first version are not carried over.
+#### Coming from the name "wishlist"
+
+The site used to be called wishlist, and so were its Docker service and volume. Updating past the rename starts an empty site in a new volume, `pakske_pakske-data`, unless you copy the old one over once. Stop the old site before you pull, while the old `compose.yaml` is still there:
 
 ```sh
 docker compose down
-docker compose run --rm -u root wishlist sh -c 'rm -f /data/wishlist.db /data/wishlist.db-wal /data/wishlist.db-shm'
+git pull
+docker volume ls | grep wishlist     # the old volume, usually wishlist_wishlist-data
+docker compose build
+docker compose run --rm -u root -v wishlist_wishlist-data:/from:ro pakske sh -c 'cp -a /from/. /data/'
+docker compose up -d
+```
+
+On its first start the server renames `wishlist.db` to `pakske.db`. Once the site works, `docker volume rm wishlist_wishlist-data` removes the old volume. The folder you cloned into can keep its old name: `compose.yaml` names the project itself.
+
+A database made by the first version, from before private lists, can't be upgraded: the server stops at start with a "table already exists" error. Remove the old database and its `-wal` and `-shm` files from the data folder (in Docker, the volume `pakske-data`) and start again. Accounts and wishes from the first version are not carried over.
+
+```sh
+docker compose down
+docker compose run --rm -u root pakske sh -c 'rm -f /data/pakske.db* /data/wishlist.db*'
 docker compose up -d --build
 ```
 
 ### Back up
 
-Everything is in the volume: `wishlist.db` and the `uploads/` folder. This copies both into `backup/` while the site keeps running:
+Everything is in the volume: `pakske.db` and the `uploads/` folder. This copies both into `backup/` while the site keeps running:
 
 ```sh
 mkdir -p backup
-docker compose exec wishlist rm -f /data/backup.db
-docker compose exec wishlist node -e "new (require('node:sqlite').DatabaseSync)('/data/wishlist.db').exec(\"VACUUM INTO '/data/backup.db'\")"
-docker compose cp wishlist:/data/backup.db backup/wishlist.db
-docker compose cp wishlist:/data/uploads backup/
+docker compose exec pakske rm -f /data/backup.db
+docker compose exec pakske node -e "new (require('node:sqlite').DatabaseSync)('/data/pakske.db').exec(\"VACUUM INTO '/data/backup.db'\")"
+docker compose cp pakske:/data/backup.db backup/pakske.db
+docker compose cp pakske:/data/uploads backup/
 ```
 
 ### Restore
@@ -166,8 +181,8 @@ Stop the site, put the files back as the user the server runs as, and start it a
 
 ```sh
 docker compose down
-docker compose run --rm -u root -v "$PWD/backup:/backup:ro" wishlist sh -c \
-  'rm -f /data/wishlist.db-wal /data/wishlist.db-shm && cp /backup/wishlist.db /data/wishlist.db && mkdir -p /data/uploads && cp -r /backup/uploads/. /data/uploads/ && chown -R node:node /data'
+docker compose run --rm -u root -v "$PWD/backup:/backup:ro" pakske sh -c \
+  'rm -f /data/pakske.db-wal /data/pakske.db-shm && cp /backup/pakske.db /data/pakske.db && mkdir -p /data/uploads && cp -r /backup/uploads/. /data/uploads/ && chown -R node:node /data'
 docker compose up -d
 ```
 
@@ -178,7 +193,7 @@ The two `rm`'d files are SQLite's journal. Left in place after a power cut, they
 "Wachtwoord vergeten?" on the login page: Firebase mails a link to choose a new one. For an account from before Firebase that hasn't logged in since, give it a new password by hand:
 
 ```sh
-docker compose exec wishlist node scripts/reset-password.mjs mom@example.com
+docker compose exec pakske node scripts/reset-password.mjs mom@example.com
 ```
 
 It prints a random password. The person logs in with it and picks their own under Settings.

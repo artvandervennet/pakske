@@ -21,7 +21,7 @@ export type DomainErrorCode
     | 'wrong_password'
     | 'reauth_needed'
 
-/** A rule of the wishlist said no. The API turns the code into a status and the client into a sentence. */
+/** A rule of Pakske said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {
   constructor(public readonly code: DomainErrorCode) {
     super(code)

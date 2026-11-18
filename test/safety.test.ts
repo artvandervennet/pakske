@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { lastForwardedFor } from '../server/utils/client-ip'
 import { safeNextPath } from '../shared/utils/safe-next'
 
-const ORIGIN = 'https://wishlist.example'
+const ORIGIN = 'https://pakske.example'
 
 describe('where the login page sends someone afterwards', () => {
   it('keeps a path on this site, with its query', () => {

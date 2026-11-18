@@ -3,9 +3,10 @@
 #   cp .env.example .env      # then fill in NUXT_APP_SECRET
 #   docker compose up -d --build
 #
-# The database and the uploaded images live in the `wishlist-data` volume.
+# The database and the uploaded images live in the `pakske-data` volume.
+name: pakske
 services:
-  wishlist:
+  pakske:
     build: .
     restart: unless-stopped
     ports:
@@ -20,7 +21,7 @@ services:
       NUXT_OAUTH_GOOGLE_CLIENT_SECRET: ${NUXT_OAUTH_GOOGLE_CLIENT_SECRET:-}
       NUXT_OAUTH_GOOGLE_REDIRECT_URL: ${NUXT_OAUTH_GOOGLE_REDIRECT_URL:-}
     volumes:
-      - wishlist-data:/data
+      - pakske-data:/data
 
 volumes:
-  wishlist-data:
+  pakske-data:

@@ -28,8 +28,8 @@ function migrationsUpTo(last: number): string {
 
 describe('upgrading a database that has data in it', () => {
   it('keeps every account, list and purchase when the accounts table is rebuilt', () => {
-    const file = join(mkdtempSync(join(tmpdir(), 'db-')), 'wishlist.db')
-    dirs.push(file.replace(/\/wishlist\.db$/, ''))
+    const file = join(mkdtempSync(join(tmpdir(), 'db-')), 'pakske.db')
+    dirs.push(file.replace(/\/pakske\.db$/, ''))
     // Before Google login: the accounts table as it was.
     const before = openDb(file, migrationsUpTo(3))
     // Written by hand: the code of today would also fill in columns the old table doesn't have.

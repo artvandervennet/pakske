@@ -210,7 +210,7 @@ head -c 4000000 /dev/zero > "$TMP/big.png"
 upload art "/api/lists/$TOKEN/wishes/$PLUGS/image" "$TMP/big.png"; check "a 4 MB upload is refused" 413
 curl -s -D "$TMP/headers" -o /dev/null "$BASE$IMAGE"
 if grep -qi 'immutable' "$TMP/headers" && grep -qi 'content-type: image/png' "$TMP/headers"; then ok "the image is served as image/png, cacheable forever"; else bad "image headers: $(cat "$TMP/headers")"; fi
-STATUS=$(curl -s -o "$BODY" -w '%{http_code}' --path-as-is "$BASE/uploads/..%2f..%2fwishlist.db"); check "a path outside the uploads folder is not found" 404
+STATUS=$(curl -s -o "$BODY" -w '%{http_code}' --path-as-is "$BASE/uploads/..%2f..%2fpakske.db"); check "a path outside the uploads folder is not found" 404
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "mom cannot remove the image of art's wish" 404
 req art DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "art removes the image" 204
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' "$BASE$IMAGE"); check "the removed image is gone" 404
