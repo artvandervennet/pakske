@@ -2,6 +2,14 @@
    follows the theme and the colour scheme. The blocks marked "candidate for Gesso" fill gaps
    in the design system and could move there. */
 
+/* ── Focus ────────────────────────────────────────────────────────────────
+   The theme draws focus rings in its complement, a teal that belongs to no other part of this
+   site. Here a ring takes the accent of the paint it is on: the red on the light paints, the
+   yellow on the deep one. Declared where the theme declares --accent, and as specific as the
+   theme's own rules, so it wins by coming later. */
+:root:root,
+:root [data-paint="deep"] { --focus: var(--accent); }
+
 /* ── Before the components load ───────────────────────────────────────────
    The server sends plain buttons, links and headings. These rules give them roughly their
    final shape, so the page doesn't jump when the custom elements upgrade. */
@@ -84,7 +92,7 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
   -webkit-box-decoration-break: clone;
   box-shadow: inset 0 -2px 0 var(--rule);
 }
-.title-edit:hover { background: var(--accent-wash); color: var(--ink); }
+.title-edit:hover { box-shadow: inset 0 -2px 0 var(--accent); color: var(--ink); }
 .title-edit:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .title-edit-field .inline-edit {
   inline-size: calc(100% + 0.3em);
@@ -480,8 +488,9 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
 
 /* Candidate for Gesso: text edited where it is read. A real field without a field's edge or
    fill, in the type of the text it holds. The cue that it is editable is quiet: a line under
-   it in the rule colour, the text cursor, and a wash on hover and focus. The padding for the
-   wash is taken back by the margin, so the text sits exactly where it was read. */
+   it in the rule colour, which darkens on hover, and the text cursor. Focused, it has the focus
+   ring every field has and no fill: a field that changes colour reads as an error. The padding
+   gives that ring room and is taken back by the margin, so the text sits where it was read. */
 .inline-field { display: grid; gap: var(--space-1); min-inline-size: 0; }
 .inline-field-line { display: flex; align-items: baseline; min-inline-size: 0; }
 .inline-edit {
@@ -501,7 +510,8 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
   field-sizing: content;
 }
 textarea.inline-edit { overflow: hidden; }
-.inline-edit:is(:hover, :focus) { background: var(--accent-wash); }
+.inline-edit:hover { box-shadow: inset 0 -1px 0 var(--rule-strong); }
+.inline-edit:focus { box-shadow: none; }
 .inline-edit::placeholder { color: var(--ink-muted); opacity: 1; }
 .inline-edit[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--danger); }
 /* A text keeps the width of the column and grows with its lines. */

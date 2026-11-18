@@ -4,3 +4,6 @@
 @import "@vandervennet/gesso/layout.css";
 @import "./theme.css";
 @import "./app.css";
+@import "./settings.css";
+@import "./lists.css";
+@import "./share.css";

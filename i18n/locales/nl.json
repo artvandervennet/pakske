@@ -27,10 +27,10 @@
     "notices": "Meldingen"
   },
   "notice": {
-    "wish_linked": "{actor} zette \"{title}\" ook op een eigen lijst. Jullie delen die wens nu.",
-    "wish_unlinked": "{actor} heeft je losgekoppeld van \"{title}\". Je hebt nu een eigen kopie.",
-    "joint_link_used": "{actor} gebruikte je link. \"{title}\" is nu ook van {actor}. | {actor} gebruikte je link. \"{title}\" en nog {n} andere wens zijn nu ook van {actor}. | {actor} gebruikte je link. \"{title}\" en nog {n} andere wensen zijn nu ook van {actor}.",
-    "list_joined": "{actor} is nu mede-eigenaar van \"{title}\".",
+    "wish_linked": "{actor} zette “{title}” ook op een eigen lijst. Jullie delen die wens nu.",
+    "wish_unlinked": "{actor} heeft je losgekoppeld van “{title}”. Je hebt nu een eigen kopie.",
+    "joint_link_used": "{actor} gebruikte je link. “{title}” is nu ook van {actor}. | {actor} gebruikte je link. “{title}” en nog {n} andere wens zijn nu ook van {actor}. | {actor} gebruikte je link. “{title}” en nog {n} andere wensen zijn nu ook van {actor}.",
+    "list_joined": "{actor} is nu mede-eigenaar van “{title}”.",
     "undo": "Ongedaan maken",
     "dismiss": "Sluiten",
     "view": "Bekijken",
@@ -53,14 +53,14 @@
     "rename": "Naam wijzigen",
     "renameLabel": "Naam van de lijst",
     "delete": "Lijst verwijderen",
-    "deleteTitle": "\"{title}\" verwijderen?",
+    "deleteTitle": "“{title}” verwijderen?",
     "deleteBody": "De lijst verdwijnt, met alle wensen erop. Dat kun je niet ongedaan maken.",
     "deleteConfirm": "Lijst verwijderen",
     "deleteCancel": "Annuleren",
     "invite": "Mede-eigenaar uitnodigen",
     "inviteText": "Deze link werkt één keer. Wie hem opent, wordt mede-eigenaar van deze lijst en van alle wensen erop.",
     "leave": "Lijst verlaten",
-    "leaveTitle": "\"{title}\" verlaten?",
+    "leaveTitle": "“{title}” verlaten?",
     "leaveBody": "Je bent dan geen eigenaar meer van deze lijst, en ook niet van de wensen erop die niet op een andere lijst van jou staan. De lijst blijft van {names}.",
     "leaveConfirm": "Lijst verlaten"
   },
@@ -75,12 +75,12 @@
     "with": "met {names}",
     "alsoYours": "ook van jou",
     "removeFromList": "Van mijn lijst halen",
-    "removeTitle": "\"{title}\" van je lijst halen?",
+    "removeTitle": "“{title}” van je lijst halen?",
     "removeBody": "De wens verdwijnt van deze lijst. Op de andere lijsten waar hij staat, blijft hij staan.",
     "removeConfirm": "Van mijn lijst halen",
     "viewOn": "Bekijk op {host}",
     "delete": "Verwijderen",
-    "deleteTitle": "\"{title}\" verwijderen?",
+    "deleteTitle": "“{title}” verwijderen?",
     "deleteBody": "De wens verdwijnt van je lijst. Dat kun je niet ongedaan maken.",
     "deleteConfirm": "Verwijderen",
     "cancel": "Annuleren"
@@ -109,7 +109,7 @@
   },
   "unlink": {
     "action": "Ontkoppelen",
-    "title": "{name} ontkoppelen van \"{title}\"?",
+    "title": "{name} ontkoppelen van “{title}”?",
     "body": "{name} krijgt een eigen kopie zonder aankopen. Aan jouw wens verandert niets.",
     "confirm": "Ontkoppelen"
   },
@@ -122,7 +122,7 @@
     "linkedHint": "Jullie delen dan één wens, die één keer gekocht wordt. Je ziet daarna niet meer wie hem koopt.",
     "copy": "Kopie",
     "copyHint": "Een eigen wens die losstaat van deze. Niemand krijgt er bericht van.",
-    "done": "\"{title}\" staat nu op {list}.",
+    "done": "“{title}” staat nu op {list}.",
     "removed": "Deze wens staat niet meer op de lijst."
   },
   "invite": {
@@ -130,7 +130,7 @@
     "wishes": "{from} deelt een wens met je | {from} deelt {n} wensen met je",
     "wishesLead": "Kies op welke lijst van jou hij komt. Je wordt er mede-eigenaar van en ziet daarna niet meer wie hem koopt. | Kies op welke lijst van jou ze komen. Je wordt er mede-eigenaar van en ziet daarna niet meer wie ze koopt.",
     "accept": "Op mijn lijst zetten",
-    "list": "{from} nodigt je uit voor \"{title}\"",
+    "list": "{from} nodigt je uit voor “{title}”",
     "listLead": "Je wordt mede-eigenaar van deze lijst en van elke wens erop. Je ziet daarna niet meer wie daar wat koopt.",
     "acceptList": "Mede-eigenaar worden",
     "closed": "Deze link werkt niet meer. Vraag {from} om een nieuwe.",
@@ -149,7 +149,7 @@
     "someoneGives": "Iemand anders geeft er {n}",
     "someoneGivesThis": "Iemand anders geeft dit",
     "anonymous": "Anoniem geven",
-    "anonymousHint": "De andere kopers zien „Iemand anders” in plaats van je naam. De eigenaars zien sowieso niet wie wat geeft."
+    "anonymousHint": "De andere kopers zien “Iemand anders” in plaats van je naam. De eigenaars zien sowieso niet wie wat geeft."
   },
   "tick": {
     "box": "Ik koop {title}",
@@ -157,7 +157,7 @@
     "less": "Eén minder van {title}",
     "count": "Je koopt er {n}",
     "countOf": "Je koopt er {n} van {quantity}",
-    "warningTitle": "\"{title}\" zelf aanvinken?",
+    "warningTitle": "“{title}” zelf aanvinken?",
     "warning": "Je komt misschien te weten dat iemand dit al heeft. Doorgaan?",
     "continue": "Doorgaan",
     "cancel": "Annuleren",
@@ -165,7 +165,7 @@
     "notEnough": "Zoveel zijn er niet meer over.",
     "gone": "Dat bestaat niet meer.",
     "removed": "Dit staat niet meer op de lijst. Je kunt alleen je eigen aantal nog verlagen of weghalen.",
-    "goneFromList": "\"{title}\" bestaat niet meer en is van de lijst verdwenen."
+    "goneFromList": "“{title}” bestaat niet meer en is van de lijst verdwenen."
   },
   "notes": {
     "title": "Notities voor de andere kopers",
