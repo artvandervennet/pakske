@@ -96,11 +96,11 @@ function finish() {
 <template>
   <div class="quick-add">
     <button v-if="!open" ref="plus" type="button" class="quick-add-start" @click="start">
-      <span class="quick-add-plus" aria-hidden="true">+</span>
+      <span class="quick-add-plus"><AppIcon name="plus" /></span>
       <span class="quick-add-label">{{ label }}</span>
     </button>
     <template v-else>
-      <span class="quick-add-plus" aria-hidden="true">+</span>
+      <span class="quick-add-plus"><AppIcon name="plus" /></span>
       <label :for="id" class="visually-hidden">{{ fieldLabel }}</label>
       <input
         :id="id"

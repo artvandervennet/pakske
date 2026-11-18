@@ -5,7 +5,7 @@ import type { WishView } from '#shared/schemas/list'
 export function useWishStatus() {
   const { t } = useI18n()
   return {
-    secondLine: (wish: WishView) => wishLine(wish, t),
+    lineParts: (wish: WishView) => wishLineParts(wish, t),
     amountTag: (wish: WishView) => wishAmountTag(wish, t),
   }
 }

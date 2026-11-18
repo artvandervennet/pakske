@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { WishView } from '#shared/schemas/list'
+import type { WishTickState } from '~/composables/useWishTick'
 
-// What an unfolded row shows to someone who doesn't own the wish: the text and the shop links,
-// and for a buyer who is buying it, the notes, and a way to put it on a list of their own. A
-// visitor who isn't logged in gets a way to log in that brings them back to this row. An owner
-// gets WishEditor instead.
+// The body of an opened card for someone who doesn't own the wish: the photo, the text and the
+// shop links, and for someone who is logged in one block to give it: the button or the stepper
+// (WishGive), the choice to give without your name, who gives, and the notes. A visitor who
+// isn't logged in gets a way to log in that brings them back to this row. An owner gets
+// WishEditor instead. Putting the wish on a list of your own is the button in the card's head.
 // `owners` is the list's owners. The notes are hidden from them and from the wish's other owners.
-const props = defineProps<{ wish: WishView, token: string, owners: string[] }>()
-const emit = defineEmits<{ changed: [], added: [list: { token: string, title: string }], removed: [] }>()
+// `tick` is the row's own tick (useWishTick), shown here with its full stepper.
+const props = defineProps<{ wish: WishView, token: string, owners: string[], tick: WishTickState }>()
+const emit = defineEmits<{ changed: [] }>()
 
 const { t } = useI18n()
 const names = useNames()
@@ -16,9 +19,10 @@ const localePath = useLocalePath()
 
 const linkHosts = computed(() => linkNames(props.wish.urls))
 
-// Giving without your name. With a purchase, changing it saves at once; without one, the tick
-// that follows takes it along (useBuyAnonymously).
-const { isAnonymous, choose } = useBuyAnonymously()
+// Giving without your name. The switch is the one place where that is chosen for this wish.
+// With a purchase, changing it saves at once; without one, the tick that follows takes it along
+// (useBuyAnonymously). Until it is used, the account's own setting counts.
+const { isAnonymous, choiceFor, choose } = useBuyAnonymously()
 const { parse } = useApiError()
 const anonymousId = useId()
 const anonymousBusy = ref(false)
@@ -28,6 +32,7 @@ async function onAnonymous(event: Event) {
   const input = event.target as HTMLInputElement
   const anonymous = input.checked
   if (props.wish.role !== 'buyer' || anonymousBusy.value) return
+  const before = choiceFor(props.wish.id)
   choose(props.wish.id, anonymous)
   anonymousError.value = ''
   if (props.wish.mine === 0) return
@@ -37,15 +42,18 @@ async function onAnonymous(event: Event) {
     emit('changed')
   }
   catch (error) {
-    choose(props.wish.id, !anonymous)
-    input.checked = !anonymous
+    // Not saved: the choice is as it was before, and the switch shows that again.
+    choose(props.wish.id, before)
+    input.checked = isAnonymous(props.wish)
     anonymousError.value = parse(error).message
   }
   finally {
     anonymousBusy.value = false
   }
 }
-const hiddenFrom = computed(() => names([...props.owners, ...props.wish.sharedWith]))
+// Everyone who never sees the notes: the list's owners and the wish's other owners.
+const hiddenFrom = computed(() => [...props.owners, ...props.wish.sharedWith])
+const id = useId()
 const loginLink = computed(() => ({
   path: localePath('/login'),
   query: { next: `${route.path}#wish-${props.wish.id}` },
@@ -53,48 +61,61 @@ const loginLink = computed(() => ({
 </script>
 
 <template>
-  <div class="wish-details-body">
-    <p v-if="wish.description" class="wish-text">{{ wish.description }}</p>
-    <ul v-if="wish.urls.length" class="wish-links">
-      <li v-for="(url, index) in wish.urls" :key="url">
-        <art-button variant="secondary" size="s">
-          <a :href="url" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host: linkHosts[index] }) }}</a>
-        </art-button>
-      </li>
-    </ul>
-
-    <template v-if="wish.role === 'buyer'">
-      <p v-if="wish.removed" class="form-message">{{ t('wish.removedIntro', { names: names(owners) }, owners.length) }}</p>
-      <h3 class="wish-subtitle">{{ t('purchase.title') }}</h3>
-      <ul v-if="wish.purchases.length" class="people">
-        <li v-for="(purchase, index) in wish.purchases" :key="index">
-          <span>{{ purchase.mine ? (purchase.anonymous ? t('purchase.youAnonymous') : t('purchase.you')) : purchase.name ?? t('purchase.someone') }}</span>
-          <span class="count">{{ purchase.quantity }}×</span>
+  <div class="wish-card-body buyer" :class="{ pictured: wish.image }">
+    <img v-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
+    <div class="wish-card-column">
+      <p v-if="wish.role === 'buyer' && wish.removed" class="form-message">
+        {{ owners.length ? t('wish.removedIntro', { names: names(owners) }, owners.length) : t('wish.removedIntroNobody') }}
+      </p>
+      <p v-if="wish.description" class="wish-text">{{ wish.description }}</p>
+      <ul v-if="wish.urls.length" class="wish-links">
+        <li v-for="(url, index) in wish.urls" :key="url">
+          <art-button variant="secondary" size="s">
+            <a :href="url" target="_blank" rel="noopener noreferrer"><AppIcon name="link" />{{ t('wish.viewOn', { host: linkHosts[index] }) }}</a>
+          </art-button>
         </li>
       </ul>
-      <p v-else class="muted">{{ t('wish.nobody') }}</p>
-      <div v-if="!wish.removed" class="anonymous-choice">
-        <label class="switch">
-          <input
-            type="checkbox"
-            :checked="isAnonymous(wish)"
-            :aria-busy="anonymousBusy || undefined"
-            :aria-describedby="`${anonymousId}-hint`"
-            @change="onAnonymous"
-          >
-          {{ t('purchase.anonymous') }}
-        </label>
-        <p :id="`${anonymousId}-hint`" class="anonymous-hint">{{ t('purchase.anonymousHint') }}</p>
-        <p v-if="anonymousError" class="inline-field-error" role="alert">{{ anonymousError }}</p>
-      </div>
-      <h3 class="wish-subtitle">{{ t('notes.title') }}</h3>
-      <WishNotes :wish="wish" :token="token" :hidden-from="hiddenFrom" @changed="emit('changed')" />
-      <AddToMyList v-if="!wish.removed" :wish="wish" :token="token" @added="list => emit('added', list)" @removed="emit('removed')" />
-    </template>
 
-    <p v-else-if="wish.role === 'anon'" class="muted">
-      {{ t('wish.anonHint') }}
-      <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
-    </p>
+      <template v-if="wish.role === 'buyer'">
+        <div class="wish-give-block">
+          <!-- Also on a wish that left the list, where it can only be lowered: it stays, unavailable,
+               after the last one was taken back, so the focus has somewhere to be. -->
+          <WishGive :wish="wish" :tick="tick" />
+          <div v-if="!wish.removed" class="switch-field">
+            <label class="switch">
+              <input
+                type="checkbox"
+                role="switch"
+                :checked="isAnonymous(wish)"
+                :aria-busy="anonymousBusy || undefined"
+                :aria-describedby="`${anonymousId}-hint`"
+                @change="onAnonymous"
+              >
+              {{ t('purchase.anonymous') }}
+            </label>
+            <p :id="`${anonymousId}-hint`" class="switch-hint">{{ t('purchase.anonymousHint') }}</p>
+            <p v-if="anonymousError" class="inline-field-error" role="alert">{{ anonymousError }}</p>
+          </div>
+        </div>
+
+        <div class="wish-field">
+          <h4 :id="`${id}-who`" class="wish-label">{{ t('purchase.title') }}</h4>
+          <ul v-if="wish.purchases.length" class="people" :aria-labelledby="`${id}-who`">
+            <li v-for="(purchase, index) in wish.purchases" :key="index" :class="{ mine: purchase.mine }">
+              <span>{{ purchase.mine ? (purchase.anonymous ? t('purchase.youAnonymous') : t('purchase.you')) : purchase.name ?? t('purchase.someone') }}</span>
+              <span v-if="wish.quantity !== 1" class="count">{{ purchase.quantity }}×</span>
+            </li>
+          </ul>
+          <p v-else class="muted">{{ t('purchase.nobody') }}</p>
+        </div>
+
+        <WishNotes :wish="wish" :token="token" :hidden-from="hiddenFrom" @changed="emit('changed')" />
+      </template>
+
+      <p v-else-if="wish.role === 'anon'" class="muted">
+        {{ t('wish.anonHint') }}
+        <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
+      </p>
+    </div>
   </div>
 </template>

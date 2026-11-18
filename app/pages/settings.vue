@@ -116,7 +116,8 @@ async function onAnonymousDefault(event: Event) {
   try {
     await $fetch('/api/me', { method: 'PATCH', body: { anonymousDefault: anonymous } })
     anonymousDefault.value = anonymous
-    // A tick on a list starts from what the session says (useBuyAnonymously).
+    // The switch on a wish shows what the session says (useBuyAnonymously); a tick itself
+    // leaves it to the server, which reads the account.
     await refreshSession()
     givingSaved.value = t(anonymous ? 'settings.anonymousOn' : 'settings.anonymousOff')
   }
@@ -262,10 +263,12 @@ function openDelete() {
 
           <section class="settings-section" aria-labelledby="giving-title">
             <h2 id="giving-title" class="settings-heading">{{ t('settings.givingTitle') }}</h2>
-            <div class="settings-switch">
+            <!-- The same switch, in the same words, as "Anoniem geven" on a wish. -->
+            <div class="switch-field">
               <label class="switch">
                 <input
                   type="checkbox"
+                  role="switch"
                   :checked="anonymousDefault"
                   :aria-busy="givingBusy || undefined"
                   aria-describedby="anonymous-default-hint"
@@ -273,7 +276,7 @@ function openDelete() {
                 >
                 {{ t('settings.anonymousDefault') }}
               </label>
-              <p id="anonymous-default-hint" class="settings-intro">{{ t('settings.anonymousDefaultHint') }}</p>
+              <p id="anonymous-default-hint" class="switch-hint">{{ t('settings.anonymousDefaultHint') }}</p>
             </div>
             <p v-if="givingMessage" class="form-message" role="alert">{{ givingMessage }}</p>
             <p class="form-message" role="status">{{ givingSaved }}</p>

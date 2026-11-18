@@ -36,7 +36,7 @@
 /* A switch with what it means under it, close enough to read as one. The switch is as tall as
    a finger needs, with its words in the middle, so it starts a little higher to sit as far
    under the heading as a field's label does. */
-.settings-switch { display: grid; gap: 0; margin-block-start: calc(-1 * var(--space-3)); }
+.settings-section > .switch-field { margin-block-start: calc(-1 * var(--space-3)); }
 
 /* Candidate for Gesso: a button for something that can't be taken back, in the danger colour.
    A quiet one starts at the column's edge, where the text above it starts. */

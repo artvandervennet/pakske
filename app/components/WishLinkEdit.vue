@@ -2,13 +2,15 @@
 import type { OwnerWish } from '#shared/schemas/list'
 import type { WishSave } from '~/composables/useWishSave'
 
-// The shop links in an owner's row, each shown as the link it is, with a quiet "Change" and
-// "Remove" beside it, and "Add link" under them while there is room for one more. Changing or
-// adding turns that one link into a field in place; saving or Escape turns it back. The links
-// save together, as one list, so every change sends them all.
+// The shop links in an owner's card, under the label "Links": each a line with the shop's name
+// as the link it is, and two small buttons after it, a pencil to change it and a cross to take
+// it off. "Link toevoegen" is under them while there is room for one more. Changing or adding
+// turns that one line into a field in place; saving or Escape turns it back. The links save
+// together, as one list, so every change sends them all.
 const props = defineProps<{ wish: OwnerWish, saving: WishSave }>()
 
 const { t } = useI18n()
+const id = useId()
 // The saved links: the list's, or the ones just saved until the list has them (also when the
 // refresh after the save fails).
 const saved = ref([...props.wish.urls])
@@ -45,7 +47,7 @@ async function change(index: number) {
   field?.select()
 }
 
-/** Puts the focus on a link's "Change", or on "Add link" when that link isn't there. */
+/** Puts the focus on a link's pencil, or on "Link toevoegen" when that link isn't there. */
 function focusButton(index: number) {
   const button = root.value?.querySelector<HTMLButtonElement>(`[data-link-change="${index}"]`)
     ?? root.value?.querySelector<HTMLButtonElement>('[data-link-add]')
@@ -87,23 +89,33 @@ function remove(index: number) {
 </script>
 
 <template>
-  <div ref="root" class="wish-link-edit">
-    <ul v-if="lines.length" class="wish-links">
+  <div ref="root" class="wish-link-edit" role="group" :aria-labelledby="`${id}-label`">
+    <span :id="`${id}-label`" class="wish-label">{{ t('edit.links') }}</span>
+    <ul v-if="lines.length" class="wish-link-rows">
       <li v-for="(url, index) in lines" :key="index">
         <template v-if="editing !== index">
-          <art-button variant="secondary" size="s">
-            <a :href="url" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host: names[index] }) }}</a>
-          </art-button>
-          <art-button variant="quiet" size="s">
-            <button type="button" :data-link-change="index" :aria-label="t('edit.linkChangeLabel', { host: names[index] })" @click="change(index)">
-              {{ t('edit.linkChange') }}
-            </button>
-          </art-button>
-          <art-button variant="quiet" size="s">
-            <button type="button" :aria-label="t('edit.linkRemoveLabel', { host: names[index] })" :aria-disabled="removing || undefined" @click="remove(index)">
-              {{ t('edit.linkRemove') }}
-            </button>
-          </art-button>
+          <AppIcon name="link" />
+          <a class="wish-link-name" :href="url" target="_blank" rel="noopener noreferrer">{{ names[index] }}</a>
+          <button
+            type="button"
+            class="icon-button"
+            :data-link-change="index"
+            :aria-label="t('edit.linkChange', { host: names[index] })"
+            :title="t('edit.linkChange', { host: names[index] })"
+            @click="change(index)"
+          >
+            <AppIcon name="pencil" />
+          </button>
+          <button
+            type="button"
+            class="icon-button"
+            :aria-label="t('edit.linkRemove', { host: names[index] })"
+            :title="t('edit.linkRemove', { host: names[index] })"
+            :aria-disabled="removing || undefined"
+            @click="remove(index)"
+          >
+            <AppIcon name="close" />
+          </button>
         </template>
         <EditableText
           v-else
@@ -117,9 +129,10 @@ function remove(index: number) {
         />
       </li>
     </ul>
-    <art-button v-if="editing !== saved.length && saved.length < MAX_LINKS" variant="quiet" size="s">
-      <button type="button" data-link-add @click="change(saved.length)">{{ t('edit.linkAdd') }}</button>
-    </art-button>
+    <button v-if="editing !== saved.length && saved.length < MAX_LINKS" type="button" class="text-button" data-link-add @click="change(saved.length)">
+      <AppIcon name="plus" />
+      {{ t('edit.linkAdd') }}
+    </button>
     <p v-if="error" class="inline-field-error" role="alert">{{ error }}</p>
   </div>
 </template>

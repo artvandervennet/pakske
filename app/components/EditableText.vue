@@ -11,8 +11,10 @@
 const props = withDefaults(defineProps<{
   /** The saved text. */
   value: string
-  /** The field's name for screen readers; it has no visible label. */
+  /** The field's name. Only screen readers get it, unless `showLabel` puts it above the field. */
   label: string
+  /** Shows the label above the field, in the small type of a card's labels (.wish-label). */
+  showLabel?: boolean
   /**
    * Sends the text; `saved` is the field's last saved text, to compare with. Answers null
    * when it was saved (or nothing changed), or the reason it wasn't.
@@ -21,7 +23,7 @@ const props = withDefaults(defineProps<{
   kind?: 'line' | 'text' | 'url'
   placeholder?: string
   maxlength?: number
-}>(), { kind: 'line', placeholder: undefined, maxlength: undefined })
+}>(), { kind: 'line', showLabel: false, placeholder: undefined, maxlength: undefined })
 
 // After a save that worked or changed nothing, and after Escape; not after a failed save.
 const emit = defineEmits<{ done: [how: 'enter' | 'escape' | 'blur'] }>()
@@ -160,8 +162,9 @@ defineExpose({
 
 <template>
   <div class="inline-field" @click="onAreaClick">
+    <label v-if="showLabel" :for="id" class="wish-label">{{ label }}</label>
     <div class="inline-field-line">
-      <label :for="id" class="visually-hidden">{{ label }}</label>
+      <label v-if="!showLabel" :for="id" class="visually-hidden">{{ label }}</label>
       <input
         v-if="kind === 'url'"
         :id="id"

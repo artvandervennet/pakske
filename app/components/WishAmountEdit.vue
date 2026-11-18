@@ -2,10 +2,10 @@
 import type { OwnerWish } from '#shared/schemas/list'
 import type { WishSave } from '~/composables/useWishSave'
 
-// How many the owner asks for: the list's stepper (− number +) and a "No limit" switch. It
-// looks like the tick's stepper, so it says in words that this is the amount asked for. Each
-// step saves; quick steps go out one after another, the last one winning. Lowering always
-// works the same way, whatever buyers did.
+// How many the owner asks for: the list's stepper (− number +) and an "Onbeperkt" switch, under
+// the label "Aantal". It looks like the stepper of what you have yourself, so the label says
+// that this is the amount asked for. Each step saves; quick steps go out one after another, the
+// last one winning. Lowering always works the same way, whatever buyers did.
 const props = defineProps<{ wish: OwnerWish, saving: WishSave }>()
 
 const { t } = useI18n()
@@ -72,7 +72,7 @@ function onKeydown(event: KeyboardEvent) {
     :aria-invalid="error ? 'true' : undefined"
     @keydown="onKeydown"
   >
-    <span :id="`${id}-label`" class="amount-edit-label">{{ t('edit.amount') }}</span>
+    <span :id="`${id}-label`" class="wish-label">{{ t('edit.amount') }}</span>
     <div v-if="draft !== null" class="stepper">
       <button
         type="button"
@@ -81,7 +81,7 @@ function onKeydown(event: KeyboardEvent) {
         :aria-describedby="error ? `${id}-error` : undefined"
         @click="step(-1)"
       >
-        −
+        <AppIcon name="minus" />
       </button>
       <span class="stepper-count" aria-hidden="true">{{ draft }}</span>
       <span class="visually-hidden" aria-live="polite">{{ t('wish.wanted', { n: draft }) }}</span>
@@ -92,7 +92,7 @@ function onKeydown(event: KeyboardEvent) {
         :aria-describedby="error ? `${id}-error` : undefined"
         @click="step(1)"
       >
-        +
+        <AppIcon name="plus" />
       </button>
     </div>
     <label class="switch">
