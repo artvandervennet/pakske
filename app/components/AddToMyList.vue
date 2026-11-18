@@ -4,7 +4,7 @@ import type { BuyerWish, MyLists } from '#shared/schemas/list'
 
 // "Op mijn lijst zetten" on a wish someone else owns. The button unfolds the choice in place:
 // which list (ListChooser), and the two ways, each a button that does it at once with what it
-// means beside it. Gekoppeld makes the person an owner of this wish; Kopie gives them a wish of
+// means beside it. Samen makes the person an owner of this wish; Kopie gives them a wish of
 // their own. The person's lists are fetched when it first unfolds, and again after each add,
 // since an add can make a new list.
 // `added` says where the wish went; the page says so and refreshes. `removed` means the wish

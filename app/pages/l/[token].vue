@@ -136,8 +136,8 @@ async function onRenameDone(how: 'enter' | 'escape' | 'blur') {
 }
 
 // A list with more than one owner can't be deleted: each owner leaves, and the last one
-// deletes it. The band offers the one that applies. Either asks first, and afterwards the
-// owner goes home, where the list is gone.
+// deletes it. The edit bar offers the one that applies, away from the buttons people press
+// every day. Either asks first, and afterwards the owner goes home, where the list is gone.
 const shared = computed(() => list.value.owners.length > 1)
 const { user } = useUserSession()
 // The other owners, for "it stays with …": the viewer's own name taken out once, since two
@@ -151,7 +151,7 @@ const otherOwners = computed(() => {
 
 const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
 const leaveDialog = useTemplateRef<HTMLDialogElement>('leaveDialog')
-const bandError = ref('')
+const listError = ref('')
 const deleting = ref(false)
 
 function askToDeleteOrLeave() {
@@ -168,15 +168,15 @@ function answer(dialog: HTMLDialogElement | null): string {
 
 async function deleteOrLeave(how: 'delete' | 'leave') {
   deleting.value = true
-  bandError.value = ''
+  listError.value = ''
   try {
     if (how === 'delete') await $fetch(`/api/lists/${token.value}`, { method: 'DELETE' })
     else await $fetch(`/api/lists/${token.value}/leave`, { method: 'POST' })
     await navigateTo(localePath('/'))
   }
   catch (error) {
-    bandError.value = parse(error).message
-    // Someone joined or left since the page loaded: the band then offers the other one.
+    listError.value = parse(error).message
+    // Someone joined or left since the page loaded: the bar then offers the other one.
     await refresh()
   }
   finally {
@@ -192,11 +192,12 @@ function onLeaveDialogClose() {
   if (answer(leaveDialog.value) === 'leave' && !deleting.value) deleteOrLeave('leave')
 }
 
-// A link that makes someone a co-owner of the list. It shows under the band's buttons, with
-// the focus on its address.
+// "Lijst samen beheren": a link that makes someone a co-owner of the list. It shows under the
+// band's buttons, with the focus on its address.
 const listLink = ref<string | null>(null)
 const listLinkBox = useTemplateRef<{ focus: () => void }>('listLinkBox')
 const inviting = ref(false)
+const bandError = ref('')
 
 async function inviteCoOwner() {
   if (inviting.value) return
@@ -216,9 +217,10 @@ async function inviteCoOwner() {
   }
 }
 
-// Edit mode, for an owner: choose wishes to delete or make joint. The Edit button starts it with
-// nothing chosen; "Gezamenlijk maken" in an open wish starts it with that wish chosen. The ticks
-// turn into boxes and the bar above the list acts on what is chosen. Done or Escape ends it.
+// Edit mode, for an owner: choose wishes to delete or share, move them, and delete or leave the
+// list itself. The Edit button in the title band starts it with nothing chosen; "Delen" in an
+// open wish starts it with that wish chosen. The ticks turn into boxes and the bar above the list
+// acts on what is chosen. Done or Escape ends it. A list without wishes has the bar alone.
 const rows = new Map<number, RowControl>()
 function rowRef(id: number, row: unknown) {
   if (row) rows.set(id, row as RowControl)
@@ -228,24 +230,25 @@ const edit = useListEdit({ token: () => token.value, wishes: () => wishes.value,
 const { editing, selected } = edit
 const editButton = useTemplateRef<HTMLButtonElement>('editButton')
 const editCount = useTemplateRef<HTMLElement>('editCount')
-const wishLink = ref<string | null>(null)
-const wishLinkBox = useTemplateRef<{ focus: () => void }>('wishLinkBox')
 
 /** Starts edit mode; the focus goes to the chosen wish's box, else to the bar. */
 async function startEditing(wishId?: number) {
   if (!(await edit.enter(wishId))) return false
-  wishLink.value = null
+  listError.value = ''
   await nextTick()
   const box = wishId === undefined ? null : document.getElementById(`pick-${wishId}`)
   ;(box ?? editCount.value)?.focus()
   return true
 }
 
-/** Ends edit mode; the focus goes back to the Edit button, or the heading when the list is empty. */
+/**
+ * Ends edit mode; the focus goes back to the Edit button. That button is in the title band,
+ * which may be far above a long list: the page stays where it is rather than jumping there.
+ */
 async function stopEditing() {
   edit.leave()
   await nextTick()
-  ;(editButton.value ?? wishesTitle.value)?.focus()
+  ;(editButton.value ?? wishesTitle.value)?.focus({ preventScroll: true })
 }
 
 function onEscape(event: KeyboardEvent) {
@@ -255,10 +258,18 @@ function onEscape(event: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onEscape))
 onBeforeUnmount(() => document.removeEventListener('keydown', onEscape))
 
-// The list emptied while editing ends edit mode (useListEdit); the focus then goes to the heading.
-watch(editing, (on) => {
-  if (!on && !wishes.value.length) nextTick(() => wishesTitle.value?.focus())
-})
+// "Delen" in the bar: the dialog asks how, and makes the link for the chosen wishes. Once a link
+// was made the choice has served, so closing the dialog ends edit mode too.
+const shareDialog = useTemplateRef<{ open: () => Promise<void> }>('shareDialog')
+const shareIds = computed(() => edit.chosen().map(wish => wish.id))
+
+function share() {
+  if (selected.size && !edit.busy.value) shareDialog.value?.open()
+}
+
+function onShareClose(made: boolean) {
+  if (made && editing.value) stopEditing()
+}
 
 // Moving wishes in edit mode: drag the handle, or hold the row and drag (on a phone), or the
 // arrow keys on the handle. The list shows the move at once; the order is saved whole.
@@ -336,14 +347,6 @@ async function onEditDeleteClose() {
   editCount.value?.focus()
 }
 
-async function makeJoint() {
-  const path = await edit.makeLink()
-  if (!path) return
-  wishLink.value = path
-  await nextTick()
-  wishLinkBox.value?.focus()
-}
-
 const adding = ref(false)
 const addError = ref('')
 
@@ -391,11 +394,12 @@ async function addWish(title: string) {
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
         <ShareButton v-if="!list.deleted" :path="localePath(`/l/${list.token}`)" />
         <template v-if="canManage">
+          <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
+          <art-button v-if="!editing" variant="secondary">
+            <button ref="editButton" type="button" @click="startEditing()">{{ t('listEdit.start') }}</button>
+          </art-button>
           <art-button variant="secondary">
             <button type="button" :aria-disabled="inviting || undefined" @click="inviteCoOwner">{{ t('list.invite') }}</button>
-          </art-button>
-          <art-button variant="quiet">
-            <button type="button" :aria-disabled="deleting || undefined" @click="askToDeleteOrLeave">{{ shared ? t('list.leave') : t('list.delete') }}</button>
           </art-button>
           <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" />
           <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
@@ -407,11 +411,6 @@ async function addWish(title: string) {
       <div class="inner">
         <div class="section-head">
           <h2 id="wishes-title" ref="wishesTitle" class="section-title" tabindex="-1">{{ t('list.wishes') }}</h2>
-          <div v-if="canManage && wishes.length && !editing" class="actions">
-            <art-button variant="secondary" size="s">
-              <button ref="editButton" type="button" @click="startEditing()">{{ t('listEdit.start') }}</button>
-            </art-button>
-          </div>
         </div>
         <div class="section-body">
           <p v-if="gone" class="form-message" role="alert">
@@ -421,26 +420,34 @@ async function addWish(title: string) {
           <p v-else-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>
           <div v-if="editing" class="joint-bar" role="group" :aria-label="t('listEdit.label')">
-            <p ref="editCount" class="joint-bar-count" role="status" tabindex="-1">{{ t('listEdit.selected', { n: selected.size }, selected.size) }}</p>
+            <p ref="editCount" class="joint-bar-count" role="status" tabindex="-1">
+              {{ wishes.length ? t('listEdit.selected', { n: selected.size }, selected.size) : t('list.empty') }}
+            </p>
+            <art-button size="s">
+              <button type="button" @click="stopEditing">{{ t('listEdit.done') }}</button>
+            </art-button>
             <div class="joint-bar-actions">
-              <art-button variant="secondary" size="s">
-                <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="askToDeleteChosen">{{ t('listEdit.delete') }}</button>
-              </art-button>
-              <art-button variant="secondary" size="s">
-                <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="makeJoint">{{ t('joint.make') }}</button>
-              </art-button>
-              <art-button size="s">
-                <button type="button" @click="stopEditing">{{ t('listEdit.done') }}</button>
+              <template v-if="wishes.length">
+                <art-button variant="secondary" size="s">
+                  <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="askToDeleteChosen">{{ t('listEdit.delete') }}</button>
+                </art-button>
+                <art-button variant="secondary" size="s">
+                  <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="share">{{ t('joint.make') }}</button>
+                </art-button>
+              </template>
+              <!-- About the whole list, not the chosen wishes: quieter, at the far end, and it asks first. -->
+              <art-button class="joint-bar-list" variant="quiet" size="s">
+                <button type="button" :aria-disabled="deleting || undefined" @click="askToDeleteOrLeave">{{ shared ? t('list.leave') : t('list.delete') }}</button>
               </art-button>
             </div>
             <p v-if="edit.error.value" class="form-message" role="alert">{{ edit.error.value }}</p>
             <p v-if="edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
+            <p v-if="listError" class="form-message" role="alert">{{ listError }}</p>
           </div>
-          <OneTimeLink v-else-if="wishLink" ref="wishLinkBox" class="joint-link" :path="wishLink" :text="t('joint.linkText')" />
           <p v-if="!editing && edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
           <p v-if="editing" class="visually-hidden" role="status">{{ orderStatus }}</p>
           <p v-if="editing" id="order-help" class="visually-hidden">{{ t('listEdit.moveHelp') }}</p>
-          <ul v-if="wishes.length || canManage" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
+          <ul v-if="wishes.length || (canManage && !editing)" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
             <WishRow
               v-for="wish in shownWishes"
               :key="wish.id"
@@ -508,6 +515,8 @@ async function addWish(title: string) {
     </section>
 
     <TickWarning v-if="hasOwnWishes" ref="warning" />
+
+    <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 
     <dialog v-if="canManage && shared" ref="leaveDialog" class="dialog" aria-labelledby="list-leave-title" aria-describedby="list-leave-text" @close="onLeaveDialogClose">
       <h2 id="list-leave-title">{{ t('list.leaveTitle', { title: list.title }) }}</h2>
