@@ -760,8 +760,7 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 @media (max-width: 48rem) { .nav-mark-wide { display: none; } }
 @media (width > 48rem) { .nav-mark-narrow { display: none; } }
 
-/* "Doorgaan met Google" above the email form, as wide as its fields, and a rule with "of" in it
-   that leads on to the form. */
+/* "Doorgaan met Google" under the email form, as wide as its fields, after a rule with "of" in it. */
 .google-login { display: grid; gap: var(--space-6); }
 .google-login art-button { display: block; }
 .google-login art-button > a { inline-size: 100%; justify-content: center; gap: var(--space-3); }

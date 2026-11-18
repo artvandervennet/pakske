@@ -40,7 +40,6 @@ const { form, pending, message, errors, run } = useForm(async () => {
       <div class="inner">
         <form ref="form" class="form" method="post" novalidate @submit.prevent="run">
           <p v-if="googleMessage" class="form-message" role="alert">{{ googleMessage }}</p>
-          <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')" />
           <p v-if="message" class="form-message" role="alert">{{ message }}</p>
           <FormField id="name" v-slot="field" :label="t('auth.displayName')" :hint="t('auth.displayNameHint')" :error="errors.displayName">
             <input
@@ -76,6 +75,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
               <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.register') }}</button>
             </art-button>
           </div>
+          <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')" />
           <p>
             {{ t('auth.haveAccount') }}
             <NuxtLink :to="{ path: localePath('/login'), query: next ? { next } : {} }">{{ t('auth.login') }}</NuxtLink>
