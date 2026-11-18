@@ -16,15 +16,27 @@
     "title": "Verlanglijstjes",
     "lead": "Maak een lijst en deel de link. Wie iets koopt, spreekt het hier af zonder dat jij het ziet.",
     "yourLists": "Jouw lijsten",
+    "visited": "Bezocht",
+    "allLists": "Alle lijsten ({n})",
+    "notices": "Meldingen"
+  },
+  "lists": {
+    "title": "Lijsten",
+    "search": "Zoek op naam van de lijst of van wie ze is",
+    "found": "Geen lijsten gevonden | {n} lijst gevonden | {n} lijsten gevonden",
+    "mine": "Mijn lijsten",
+    "visited": "Bezocht",
+    "wishes": "nog geen wensen | {n} wens | {n} wensen",
     "newList": "Nieuwe lijst",
     "newListName": "Naam van de nieuwe lijst",
-    "wishes": "nog geen wensen | {n} wens | {n} wensen",
-    "opened": "Lijsten die je opende",
-    "openedIntro": "Stuurt iemand je de link van een lijst, dan vind je die hier terug. Weghalen neemt een lijst alleen van deze pagina; de link blijft werken.",
-    "openedEmpty": "Nog geen lijsten. Open de link die iemand je stuurde.",
+    "mineEmpty": "Je hebt nog geen lijst.",
+    "mineNone": "Geen van jouw lijsten past bij “{query}”.",
+    "visitedIntro": "Stuurt iemand je de link van een lijst, dan vind je die hier terug. Weghalen neemt een lijst alleen hier weg; de link blijft werken.",
+    "visitedEmpty": "Nog geen lijsten. Open de link die iemand je stuurde.",
+    "visitedNone": "Geen bezochte lijst past bij “{query}”.",
     "deleted": "Verwijderd",
     "remove": "Weghalen",
-    "notices": "Meldingen"
+    "login": "Log in om zelf lijsten te maken"
   },
   "notice": {
     "wish_linked": "{actor} zette “{title}” ook op een eigen lijst. Jullie delen die wens nu.",

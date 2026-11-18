@@ -238,6 +238,29 @@ STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "opened-lists=junk.%%%.$UNKNOWN
 check "a cookie with junk in it still gives a home page" 200
 has "… with the list it could find" "\"token\":\"$TOKEN\""; lacks "… and not the token that matches nothing" "$UNKNOWN"
 
+echo "── the home page's five and the lists page"
+# Counts of own lists are "at least": an account may start with a list of its own.
+register veel Veel; check "veel registers" 201
+register kijker Kijker; check "kijker registers" 201
+V=()
+for i in 1 2 3 4 5 6; do req veel POST /api/lists "{\"title\":\"Lijst $i\"}"; V+=("$(json .token)"); done
+req veel GET /api/home; check "veel opens the home page" 200
+same "… which shows five of her lists" ".owned.length" 5; same "… the newest first" ".owned[0].title" "Lijst 6"
+same "… and says how many she has" ".ownedTotal>=6" true; lacks "… without the oldest of the six" "${V[0]}"
+req veel GET /api/lists; check "veel opens the lists page" 200; has "… which has the oldest too" "${V[0]}"
+same "… and every list she owns" ".owned.length>=6" true; same "… each with its owners' names" ".owned[0].owners.join()" Veel
+req veel GET "/api/lists/${V[0]}"; check "veel opens her oldest list" 200
+req veel GET /api/home; same "… and it is the first on her home page" ".owned[0].title" "Lijst 1"
+same "… and not among the visited ones" ".opened.length" 0; same "… of which she has none" ".openedTotal" 0
+for token in "${V[@]}"; do req kijker GET "/api/lists/$token"; done
+req kijker GET /api/home; same "kijker's home page shows five visited lists" ".opened.length" 5
+same "… of six" ".openedTotal" 6; same "… the one opened last first" ".opened[0].title" "Lijst 6"
+req kijker GET /api/lists; same "kijker's lists page has all six" ".opened.length" 6; same "… with whose they are" ".opened[5].owners.join()" Veel
+lacks "… and no list kijker never opened" "$MOMLIST"
+req lists-visitor GET "/api/lists/$TOKEN"
+req lists-visitor GET /api/lists; check "a visitor who isn't logged in opens the lists page" 200
+has "… owning nothing" '"owned":[]'; has "… with the list this browser opened" "\"token\":\"$TOKEN\""; lacks "… and no other" "$MOMLIST"
+
 # From here on, joint wishes and lists, on lists of their own, so art's first list stays as the
 # comparisons above left it.
 echo "── a link that makes wishes joint"
@@ -421,14 +444,16 @@ req art POST /api/lists '{"title":"Samen"}'; check "art makes a list" 201; JOINT
 req art POST "/api/lists/$JOINT/invites" '{"kind":"list"}'; check "art makes a link for the whole list" 201; LISTINVITE=$(json .invite)
 req lot GET "/api/invites/$LISTINVITE"; check "lot opens it" 200; has "… and it is for a list" '"kind":"list"'; lacks "… without the list's token" "$JOINT"
 req lot POST "/api/invites/$LISTINVITE/accept" '{}'; check "lot accepts" 200; has "… and is sent to the list" "\"token\":\"$JOINT\""
-req lot GET /api/home; has "lot's home page has it, shared with Art" "\"token\":\"$JOINT\",\"title\":\"Samen\",\"wishes\":0,\"sharedWith\":[\"Art\"]"
-req art GET /api/home; has "art is told Lotte joined" '"kind":"list_joined","actor":"Lotte"'; has "… and his row names her" '"title":"Samen","wishes":0,"sharedWith":["Lotte"]'
+req lot GET /api/home; has "lot's home page has it, shared with Art" "\"token\":\"$JOINT\",\"title\":\"Samen\",\"wishes\":0,\"owners\":[\"Art\",\"Lotte\"],\"sharedWith\":[\"Art\"]"
+same "… as the first of her lists, since she just joined it" ".owned[0].token" "$JOINT"
+req art GET /api/home; has "art is told Lotte joined" '"kind":"list_joined","actor":"Lotte"'
+req art GET /api/lists; has "… and his row names her" '"title":"Samen","wishes":0,"owners":["Art","Lotte"],"sharedWith":["Lotte"]'
 req lot POST "/api/lists/$JOINT/wishes" '{"title":"Picknickmand"}'; check "lot adds a wish" 201; BASKET=$(json .id)
 req art GET "/api/lists/$JOINT"; same "… and it is art's too" ".wishes.find(w=>w.id===$BASKET).role" owner
 req art DELETE "/api/lists/$JOINT"; check "art cannot delete a list lot owns too" 409; has "… with the code list_shared" list_shared
 req mom POST "/api/lists/$JOINT/leave"; check "mom cannot leave a list that isn't hers" 404
 req lot POST "/api/lists/$JOINT/leave"; check "lot leaves it" 204
-req lot GET /api/home; lacks "… and it is gone from her home page" "$JOINT"
+req lot GET /api/lists; lacks "… and it is gone from her lists: she never opened it, so it isn't a visited one either" "$JOINT"
 req art POST "/api/lists/$JOINT/leave"; check "art cannot leave as the last owner" 409; has "… with the code last_owner" last_owner
 req art DELETE "/api/lists/$JOINT"; check "art deletes it" 204
 
@@ -449,7 +474,7 @@ req anon GET "/api/lists/$TOKEN"; check "a visitor no longer gets it" 404
 req mom GET "/api/lists/$TOKEN"; check "mom, who bought from it, still gets it" 200; has "… marked as deleted" '"deleted":true'
 req mom PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":2}'; check "mom cannot buy more on it" 409; has "… because it was removed" wish_removed
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/purchase"; check "mom can still take back her purchase" 204
-req art GET /api/home; lacks "art's home page no longer has it" "$TOKEN"
+req art GET /api/lists; lacks "art's lists no longer have it, own or visited" "$TOKEN"
 
 echo "── guard rails"
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -X POST -b "$TMP/mom.jar" -H 'Origin: https://evil.example' -H 'Content-Type: application/json' --data '{"title":"x"}' "$BASE/api/lists"); check "a request from another site is refused" 403

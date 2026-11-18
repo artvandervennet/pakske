@@ -28,14 +28,15 @@ async function logout() {
 
 <template>
   <art-header :key="headerKey" :label="t('nav.label')" data-paint="deep">
-    <!-- On small screens the links fold away under "Menu", so the mark sits on the wordmark,
-         which links to the same page; on wide screens it sits on "Lijsten". CSS shows one. The
-         words are an aria-label, not text: <art-header> copies the links' text into the second
-         coat of its repaint, where hidden words would show. -->
-    <NuxtLink slot="wordmark" :to="localePath('/')">{{ t('site.name') }}<span v-if="unseen > 0" class="nav-mark nav-mark-narrow" role="img" :aria-label="newNotices" /></NuxtLink>
-    <NuxtLink :to="localePath('/')">{{ t('nav.lists') }}<span v-if="unseen > 0" class="nav-mark nav-mark-wide" role="img" :aria-label="newNotices" /></NuxtLink>
+    <!-- The link to the page you are on carries aria-current="page": NuxtLink sets it when its
+         address is the current one, whatever the query, and <art-header> paints its stroke
+         under that link.
+         The mark for new notices sits on the wordmark, which leads to the home page, where the
+         notices are. Its words are an aria-label, not text: <art-header> copies the links' text
+         into the second coat of its repaint, where hidden words would show. -->
+    <NuxtLink slot="wordmark" :to="localePath('/')">{{ t('site.name') }}<span v-if="unseen > 0" class="nav-mark" role="img" :aria-label="newNotices" /></NuxtLink>
+    <NuxtLink :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
-    <art-scheme slot="actions" remember />
     <art-button v-if="loggedIn" slot="actions" size="s" variant="secondary">
       <button type="button" @click="logout">{{ t('nav.logout') }}</button>
     </art-button>

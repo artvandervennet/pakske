@@ -1,1 +1,30 @@
 /* The lists page, and the list sections of the home page. Written against Gesso's role tokens, like app.css. */
+
+/* ── Search ───────────────────────────────────────────────────────────────
+   The field stands where a section has its title: above the tabs on a phone, and from 60rem in
+   the column beside them, where it stays in view while the lists scroll. */
+.lists-search { display: grid; gap: var(--space-2); }
+@media (width < 60rem) {
+  .lists-search { max-inline-size: 34rem; margin-block-end: var(--space-6); }
+}
+/* How many lists fit the search. The line keeps its height while it is empty, so the tabs
+   under it don't move at the first letter. */
+.lists-found { min-block-size: 1lh; font-size: var(--step--1); color: var(--ink-muted); }
+
+/* ── Tabs and their panels ────────────────────────────────────────────────
+   A hidden panel is hidden "until found" and keeps its box, so the spacing is on what is
+   inside it and never on the panel itself. */
+.lists-panel { display: grid; }
+/* Right under the tabs their rule is the list's top rule; a second one would double it. */
+.tabs + [role="tabpanel"] > .lists-panel > .rows:first-child { border-block-start: 0; }
+.lists-note,
+.lists-none { margin-block: var(--space-4); color: var(--ink-muted); }
+.lists-note { font-size: var(--step--1); }
+.lists-panel > .form-message { margin-block: var(--space-4); }
+[role="tabpanel"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+
+/* A quiet way on, under a list: "Alle lijsten (12)" on the home page, logging in on the lists
+   page. The link is a block of its own with some height, so a thumb finds it. */
+.lists-all,
+.lists-login { margin-block-start: var(--space-2); font-weight: var(--weight-medium); }
+:is(.lists-all, .lists-login) > a { display: inline-block; padding-block: var(--space-2); }

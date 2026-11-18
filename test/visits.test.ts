@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteList } from '../server/domain/lists'
+import { deleteList, leaveList, listOwnedLists } from '../server/domain/lists'
 import { newListToken } from '../server/domain/tokens'
 import { describeLists, forgetList, listOpenedLists, mergeVisits, rememberList } from '../server/domain/visits'
 import { parseOpened, withOpened } from '../server/utils/opened-lists'
-import { addList, addUser, makeDb } from './helpers'
+import { addList, addOwner, addUser, makeDb } from './helpers'
 
 describe('opened lists in the account', () => {
   let db: ReturnType<typeof makeDb>
@@ -39,9 +39,35 @@ describe('opened lists in the account', () => {
     expect(listOpenedLists(db, bob).map(l => l.token)).toEqual([token, other])
   })
 
-  it('never lists a list the person owns', () => {
+  it('never lists a list the person owns, however often they opened it', () => {
+    rememberList(db, ann, token)
+    later()
     rememberList(db, ann, token)
     expect(listOpenedLists(db, ann)).toEqual([])
+  })
+
+  it('never lists a list the person deleted, though they opened it', () => {
+    rememberList(db, ann, token)
+    deleteList(db, ann, token)
+    expect(listOpenedLists(db, ann)).toEqual([])
+  })
+
+  it('lists a list the person left only when they opened it themselves', () => {
+    const unopened = addList(db, ann, 'Verjaardag')
+    addOwner(db, token, bob)
+    addOwner(db, unopened, bob)
+    rememberList(db, bob, token)
+    leaveList(db, bob, token)
+    leaveList(db, bob, unopened)
+    expect(listOpenedLists(db, bob).map(l => l.token)).toEqual([token])
+  })
+
+  it('keeps one owner\'s visits from another owner and from everyone else', () => {
+    addOwner(db, token, bob)
+    rememberList(db, ann, token)
+    leaveList(db, bob, token)
+    expect(listOpenedLists(db, bob)).toEqual([])
+    expect(listOpenedLists(db, addUser(db, 'cas').id)).toEqual([])
   })
 
   it('ignores a token that matches no list', () => {
@@ -53,6 +79,21 @@ describe('opened lists in the account', () => {
     rememberList(db, bob, token)
     forgetList(db, bob, token)
     expect(listOpenedLists(db, bob)).toEqual([])
+  })
+
+  it('does not forget when the person last opened a list of their own', () => {
+    const other = addList(db, ann, 'Verjaardag')
+    later()
+    rememberList(db, ann, token)
+    forgetList(db, ann, token)
+    expect(listOwnedLists(db, ann).map(l => l.token)).toEqual([token, other])
+  })
+
+  it('does not count a cookie\'s visit to a list of the person\'s own as opening it', () => {
+    const other = addList(db, ann, 'Verjaardag')
+    later()
+    mergeVisits(db, ann, [token])
+    expect(listOwnedLists(db, ann).map(l => l.token)).toEqual([other, token])
   })
 
   it('merges lists from a cookie, ignoring ones already there and ones the person owns', () => {
