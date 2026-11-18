@@ -29,13 +29,20 @@ export const loginInput = z.object({
   password: z.string('required').min(1, 'required').max(128, 'too_long'),
 })
 
+/** The page's language, for what Firebase mails. */
+export const mailLocale = z.enum(['nl', 'en']).default('nl')
+
+/** "Wachtwoord vergeten": the address, and the page's language for the mail. */
+export const forgotInput = z.object({ email, locale: mailLocale })
+
+export const passwordMailInput = z.object({ locale: mailLocale })
+
 export const profileInput = z.object({
   displayName: requiredText(60),
 })
 
 export const passwordInput = z.object({
-  // Left out by an account made with Google, which has no password yet.
-  currentPassword: z.string('required').max(128, 'too_long').optional(),
+  currentPassword: z.string('required').min(1, 'required').max(128, 'too_long'),
   newPassword,
 })
 

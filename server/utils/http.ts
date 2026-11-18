@@ -4,6 +4,7 @@ import { fieldErrors } from '../../shared/schemas/input'
 import { DomainError, type DomainErrorCode } from '../domain/errors'
 import { LIST_TOKEN } from '../domain/tokens'
 import { findUserById, sessionBelongsTo } from '../domain/users'
+import { mergeVisits } from '../domain/visits'
 
 const STATUS: Record<DomainErrorCode, number> = {
   not_found: 404,
@@ -25,6 +26,8 @@ const STATUS: Record<DomainErrorCode, number> = {
   google_email_taken: 409,
   google_taken: 409,
   password_needed: 409,
+  wrong_password: 403,
+  reauth_needed: 401,
 }
 
 /** Ends the request with a status and an error code the client can translate. */
@@ -36,6 +39,17 @@ export function fail(statusCode: number, code: string, fields?: Record<string, s
 export function domain<T>(fn: () => T): T {
   try {
     return fn()
+  }
+  catch (error) {
+    if (error instanceof DomainError) fail(STATUS[error.code], error.code)
+    throw error
+  }
+}
+
+/** `domain` for the rules that wait on Firebase. */
+export async function domainAsync<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
   }
   catch (error) {
     if (error instanceof DomainError) fail(STATUS[error.code], error.code)
@@ -66,6 +80,21 @@ export function tokenParam(event: H3Event, name = 'token'): string {
   const token = String(getRouterParam(event, name))
   if (!LIST_TOKEN.test(token)) fail(404, 'not_found')
   return token
+}
+
+/**
+ * Logs the browser into an account: its cookie, with Firebase's token kept on the server side
+ * of it. The lists opened while logged out move into the account, so their cookie can go.
+ */
+export async function startSession(event: H3Event, user: { id: number, displayName: string, createdAt: Date }, login: { refreshToken: string }) {
+  await replaceUserSession(event, { user: sessionUserOf(user), secure: { firebaseRefreshToken: login.refreshToken } })
+  mergeVisits(useDb(), user.id, readOpened(event))
+  clearOpened(event)
+}
+
+/** Firebase's token of this login, when it has one (cookies from before Firebase don't). */
+export async function firebaseRefreshToken(event: H3Event): Promise<string | undefined> {
+  return (await getUserSession(event)).secure?.firebaseRefreshToken
 }
 
 /** What the login cookie holds about an account. */

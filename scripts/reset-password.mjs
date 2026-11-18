@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Gives an account a new, random password and prints it. For when someone forgot theirs:
-// the site sends no email, so whoever runs the server does this by hand.
+// Gives an account from before Firebase a new, random password and prints it, for when someone
+// forgot theirs before their first login since Firebase. Accounts at Firebase get a mail instead.
 //
 //   docker compose exec wishlist node scripts/reset-password.mjs mom@example.com
 //
@@ -43,12 +43,20 @@ const file = join(process.env.NUXT_DATA_DIR ?? '.data', 'wishlist.db')
 const db = new DatabaseSync(file)
 db.exec('PRAGMA busy_timeout = 5000')
 
-const password = randomPassword()
-const result = db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(hashPassword(password), email)
-db.close()
-
-if (result.changes === 0) {
+const account = db.prepare('SELECT firebase_uid FROM users WHERE email = ?').get(email)
+if (!account) {
+  db.close()
   console.error(`No account with the email address ${email} in ${file}.`)
   process.exit(1)
 }
+// Moved to Firebase: the password lives there, and "Wachtwoord vergeten" mails a new one.
+if (account.firebase_uid) {
+  db.close()
+  console.error(`${email} logs in through Firebase. Use "Wachtwoord vergeten" on the login page, or the Firebase console (Authentication → Users → Reset password).`)
+  process.exit(1)
+}
+
+const password = randomPassword()
+db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(hashPassword(password), email)
+db.close()
 console.log(`New password for ${email}: ${password}`)

@@ -1,13 +1,13 @@
 import type { H3Event } from 'h3'
-import { linkGoogle, logInWithGoogle } from '../../domain/users'
+import { linkGoogle, logInWithGoogle, type GoogleCredential } from '../../domain/accounts'
 import { DomainError } from '../../domain/errors'
-import { mergeVisits } from '../../domain/visits'
 
 // Logging in with Google, and linking Google to an account from Settings. A page sends the
 // browser here with `?from=` (the page to come back to with a problem) and `?next=` (where to go
 // after logging in); Settings adds `?link=1`. This route sends it on to Google, and Google sends
 // it back here with a code (nuxt-auth-utils checks the state that ties the two together).
-// What the pages asked for waits in a short cookie in between.
+// What the pages asked for waits in a short cookie in between. Google's answer then goes to
+// Firebase, which holds the link between the Google account and the account here.
 
 const FLOW = 'google-flow'
 
@@ -21,42 +21,32 @@ interface Flow {
 // Made per request, so its answers are written with this route's own request.
 const google = (event: H3Event) => defineOAuthGoogleEventHandler({
   config: { scope: ['openid', 'email', 'profile'], authorizationParams: { prompt: 'select_account' } },
-  async onSuccess(_, { user: profile }) {
+  async onSuccess(_, { tokens, user: profile }) {
     const flow = takeFlow(event)
     const db = useDb()
-    const me = await sessionUserId(event)
-
-    if (flow.link !== null) {
-      // Only the account that asked, still logged in, gets linked.
-      if (me !== flow.link) return back(event, flow, 'unauthorized')
-      try {
-        linkGoogle(db, me, String(profile.sub))
-      }
-      catch (error) {
-        if (error instanceof DomainError) return back(event, flow, error.code)
-        throw error
-      }
-      return sendRedirect(event, withQuery(flow.from, { google: 'linked' }))
+    const identity = useIdentity()
+    const credential: GoogleCredential = {
+      idToken: typeof tokens.id_token === 'string' ? tokens.id_token : undefined,
+      accessToken: typeof tokens.access_token === 'string' ? tokens.access_token : undefined,
+      requestUri: googleRedirectUrl(event),
+      email: typeof profile?.email === 'string' ? profile.email : undefined,
     }
-
-    let user
     try {
-      user = logInWithGoogle(db, {
-        sub: String(profile.sub),
-        email: String(profile.email ?? ''),
-        emailVerified: profile.email_verified === true,
-        name: typeof profile.name === 'string' ? profile.name : null,
-      }, { maxUsers: Number(useRuntimeConfig().maxUsers) })
+      if (flow.link !== null) {
+        // Only the account that asked, still logged in, gets linked.
+        if ((await sessionUserId(event)) !== flow.link) return back(event, flow, 'unauthorized')
+        const login = await linkGoogle(db, identity, flow.link, await firebaseRefreshToken(event), credential)
+        await setUserSession(event, { secure: { firebaseRefreshToken: login.refreshToken } })
+        return sendRedirect(event, withQuery(flow.from, { google: 'linked' }))
+      }
+      const { user, login } = await logInWithGoogle(db, identity, credential, { maxUsers: Number(useRuntimeConfig().maxUsers) })
+      await startSession(event, user, login)
+      return sendRedirect(event, flow.next ?? '/')
     }
     catch (error) {
       if (error instanceof DomainError) return back(event, flow, error.code)
       throw error
     }
-    await replaceUserSession(event, { user: sessionUserOf(user) })
-    // As with a password: the lists opened while logged out move into the account.
-    mergeVisits(db, user.id, readOpened(event))
-    clearOpened(event)
-    return sendRedirect(event, flow.next ?? '/')
   },
   onError() {
     return back(event, takeFlow(event), 'google_failed')
@@ -120,6 +110,14 @@ function takeFlow(event: H3Event): Flow {
   catch {
     return { from: '/login', next: null, link: null }
   }
+}
+
+/** The address Google sends the person back to: set in .env, or this route's own. */
+function googleRedirectUrl(event: H3Event): string {
+  const configured = useRuntimeConfig().oauth?.google?.redirectURL
+  if (configured) return configured
+  const url = getRequestURL(event, { xForwardedProto: true })
+  return `${url.origin}${url.pathname}`
 }
 
 /** A path on this site with one more query parameter. */

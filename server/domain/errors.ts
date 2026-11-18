@@ -18,6 +18,8 @@ export type DomainErrorCode
     | 'google_email_taken'
     | 'google_taken'
     | 'password_needed'
+    | 'wrong_password'
+    | 'reauth_needed'
 
 /** A rule of the wishlist said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {

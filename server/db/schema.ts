@@ -9,10 +9,14 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
-  // Null for an account made with Google that never set a password.
+  // The account at Firebase Authentication, which holds the password and the Google login and
+  // sends the emails. Null for an account from before Firebase that hasn't logged in since.
+  firebaseUid: text('firebase_uid').unique(),
+  // Only for an account from before Firebase: its password, until its first login moves it to
+  // Firebase. Null after that, and for every newer account.
   passwordHash: text('password_hash'),
-  // Google's id for the person ("sub"), once they log in with Google. Their email at Google can
-  // change; this doesn't.
+  // Google's id for the person ("sub") once Google is linked, so Settings can say so. Firebase
+  // holds the link itself.
   googleSub: text('google_sub').unique(),
   createdAt: createdAt(),
 })

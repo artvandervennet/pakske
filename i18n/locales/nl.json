@@ -209,7 +209,13 @@
     "busy": "Even geduld",
     "showPassword": "Toon wachtwoord",
     "google": "Doorgaan met Google",
-    "or": "of met je e-mailadres"
+    "or": "of met je e-mailadres",
+    "forgotLink": "Wachtwoord vergeten?",
+    "forgotTitle": "Wachtwoord vergeten",
+    "forgotLead": "Vul je e-mailadres in. Je krijgt een mail met een link om een nieuw wachtwoord te kiezen.",
+    "forgotSend": "Stuur de mail",
+    "forgotSent": "Heeft {email} een account, dan is de mail onderweg. Kijk ook in je spam.",
+    "backToLogin": "Terug naar inloggen"
   },
   "settings": {
     "title": "Instellingen",
@@ -232,9 +238,9 @@
     "googleLinked": "Google is gekoppeld. Je kunt er voortaan mee inloggen.",
     "googleUnlinked": "Google is ontkoppeld.",
     "passwordSetTitle": "Wachtwoord instellen",
-    "passwordSetIntro": "Je logt nu in met Google. Met een wachtwoord kun je ook zonder Google inloggen.",
-    "setPassword": "Wachtwoord instellen",
-    "passwordSet": "Je wachtwoord is ingesteld."
+    "passwordSetIntro": "Je logt in met Google. Wil je ook met een wachtwoord kunnen inloggen? Je krijgt een mail met een link om er een te kiezen.",
+    "passwordMail": "Stuur me de mail",
+    "passwordMailSent": "De mail is onderweg naar {email}."
   },
   "error": {
     "notFoundTitle": "Deze pagina bestaat niet",
@@ -269,7 +275,9 @@
     "google_unverified": "Google heeft dit e-mailadres niet bevestigd. Bevestig het eerst bij Google.",
     "google_email_taken": "Er bestaat al een account met dit e-mailadres. Log hieronder in met je wachtwoord en koppel Google daarna bij Instellingen.",
     "google_taken": "Dat Google-account hoort al bij een ander account hier.",
-    "password_needed": "Stel eerst een wachtwoord in, anders kun je niet meer inloggen."
+    "password_needed": "Stel eerst een wachtwoord in, anders kun je niet meer inloggen.",
+    "firebase_missing": "Inloggen is nog niet ingesteld. Vraag het aan wie de site beheert.",
+    "reauth_needed": "Log uit en opnieuw in, en probeer het dan nog eens."
   },
   "fields": {
     "required": "Vul dit in.",

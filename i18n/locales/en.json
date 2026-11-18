@@ -209,7 +209,13 @@
     "busy": "One moment",
     "showPassword": "Show password",
     "google": "Continue with Google",
-    "or": "or with your email address"
+    "or": "or with your email address",
+    "forgotLink": "Forgot your password?",
+    "forgotTitle": "Forgot your password",
+    "forgotLead": "Enter your email address. You'll get an email with a link to choose a new password.",
+    "forgotSend": "Send the email",
+    "forgotSent": "If {email} has an account, the email is on its way. Check your spam too.",
+    "backToLogin": "Back to logging in"
   },
   "settings": {
     "title": "Settings",
@@ -232,9 +238,9 @@
     "googleLinked": "Google is linked. You can log in with it from now on.",
     "googleUnlinked": "Google is unlinked.",
     "passwordSetTitle": "Set a password",
-    "passwordSetIntro": "You log in with Google now. With a password you can also log in without Google.",
-    "setPassword": "Set password",
-    "passwordSet": "Your password is set."
+    "passwordSetIntro": "You log in with Google. Want to log in with a password too? You'll get an email with a link to choose one.",
+    "passwordMail": "Send me the email",
+    "passwordMailSent": "The email is on its way to {email}."
   },
   "error": {
     "notFoundTitle": "This page doesn't exist",
@@ -269,7 +275,9 @@
     "google_unverified": "Google hasn't confirmed this email address. Confirm it at Google first.",
     "google_email_taken": "An account with this email address already exists. Log in below with your password, then link Google under Settings.",
     "google_taken": "That Google account already belongs to another account here.",
-    "password_needed": "Set a password first, or you won't be able to log in any more."
+    "password_needed": "Set a password first, or you won't be able to log in any more.",
+    "firebase_missing": "Logging in isn't set up yet. Ask whoever runs the site.",
+    "reauth_needed": "Log out and in again, then try once more."
   },
   "fields": {
     "required": "Fill this in.",

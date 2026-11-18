@@ -2,6 +2,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 const { fetch: refreshSession } = useUserSession()
 
 useHead({ title: () => t('settings.title') })
@@ -27,20 +28,23 @@ const currentPassword = ref('')
 const newPassword = ref('')
 const passwordSaved = ref('')
 
-// An account made with Google has no password yet; it sets one without an old one.
+// An account made with Google has no password: Firebase mails it a link to choose one.
 const hasPassword = computed(() => me.value?.hasPassword !== false)
 
 const password = useForm(async () => {
   passwordSaved.value = ''
-  const setting = !hasPassword.value
-  await $fetch('/api/me/password', {
-    method: 'PUT',
-    body: setting ? { newPassword: newPassword.value } : { currentPassword: currentPassword.value, newPassword: newPassword.value },
-  })
+  await $fetch('/api/me/password', { method: 'PUT', body: { currentPassword: currentPassword.value, newPassword: newPassword.value } })
   currentPassword.value = ''
   newPassword.value = ''
-  await refreshMe()
-  passwordSaved.value = t(setting ? 'settings.passwordSet' : 'settings.passwordSaved')
+  passwordSaved.value = t('settings.passwordSaved')
+})
+
+const { locale } = useI18n()
+const mailSent = ref('')
+const passwordMail = useForm(async () => {
+  mailSent.value = ''
+  await $fetch('/api/me/password-mail', { method: 'POST', body: { locale: locale.value } })
+  mailSent.value = t('settings.passwordMailSent', { email: me.value?.email ?? '' })
 })
 
 // Back from Google after linking: that it worked, or why not (server/routes/auth/google.get.ts).
@@ -132,18 +136,28 @@ async function unlinkGoogle() {
           <p class="intro">{{ hasPassword ? t('settings.passwordIntro') : t('settings.passwordSetIntro') }}</p>
         </div>
         <div class="section-body">
-          <form :ref="password.form" class="form" method="post" novalidate aria-labelledby="password-title" @submit.prevent="password.run">
+          <form v-if="hasPassword" :ref="password.form" class="form" method="post" novalidate aria-labelledby="password-title" @submit.prevent="password.run">
             <p v-if="password.message.value" class="form-message" role="alert">{{ password.message.value }}</p>
             <!-- Lets a password manager tie the new password to the right account. -->
             <input type="email" name="email" autocomplete="username" :value="me?.email" hidden readonly>
-            <PasswordField v-if="hasPassword" id="current-password" v-model="currentPassword" :label="t('settings.currentPassword')" autocomplete="current-password" :error="password.errors.value.currentPassword" />
+            <PasswordField id="current-password" v-model="currentPassword" :label="t('settings.currentPassword')" autocomplete="current-password" :error="password.errors.value.currentPassword" />
             <PasswordField id="new-password" v-model="newPassword" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="10" :error="password.errors.value.newPassword" />
             <div class="actions">
               <art-button>
-                <button type="submit" :disabled="password.pending.value">{{ hasPassword ? t('settings.changePassword') : t('settings.setPassword') }}</button>
+                <button type="submit" :disabled="password.pending.value">{{ t('settings.changePassword') }}</button>
               </art-button>
             </div>
             <p class="form-message" role="status">{{ passwordSaved }}</p>
+            <p class="form-hint"><NuxtLink :to="localePath('/forgot')">{{ t('auth.forgotLink') }}</NuxtLink></p>
+          </form>
+          <form v-else :ref="passwordMail.form" class="form" method="post" novalidate aria-labelledby="password-title" @submit.prevent="passwordMail.run">
+            <p v-if="passwordMail.message.value" class="form-message" role="alert">{{ passwordMail.message.value }}</p>
+            <div class="actions">
+              <art-button>
+                <button type="submit" :disabled="passwordMail.pending.value">{{ t('settings.passwordMail') }}</button>
+              </art-button>
+            </div>
+            <p class="form-message" role="status">{{ mailSent }}</p>
           </form>
         </div>
       </div>

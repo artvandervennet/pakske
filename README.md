@@ -13,7 +13,7 @@ pnpm install
 pnpm dev
 ```
 
-The site is at <http://localhost:3400> (set in `nuxt.config.ts` under `devServer`). The database and uploaded images go in `.data/`. In development Nuxt makes its own secret, so no `.env` is needed.
+The site is at <http://localhost:3400> (set in `nuxt.config.ts` under `devServer`). The database and uploaded images go in `.data/`. In development Nuxt makes its own secret. Logging in needs Firebase: put `NUXT_FIREBASE_API_KEY` in a `.env` (a second Firebase project for trying things out is a good idea), or run the Firebase emulator (`npx firebase-tools emulators:start --only auth`, which needs Java) and set `NUXT_FIREBASE_AUTH_EMULATOR_HOST=localhost:9099` with any API key.
 
 | Command | What it does |
 | --- | --- |
@@ -93,18 +93,36 @@ The site listens on port 3000. Data lives in the Docker volume `wishlist-data`.
 | `NUXT_SESSION_COOKIE_SECURE` | `true` | The login cookie is only sent over HTTPS. Set `false` only when you open the site as plain `http://` on your home network; otherwise logging in silently fails there. |
 | `NUXT_TRUST_PROXY` | `false` | Set `true` behind a tunnel or reverse proxy, so the rate limits see each visitor's own address. Leave `false` when the port is reached directly. |
 | `NUXT_MAX_USERS` | `200` | Registration closes at this many accounts. |
+| `NUXT_FIREBASE_API_KEY` | none, required | The Web API key of your Firebase project. Firebase Authentication holds the passwords and sends the mails. Without it nobody can log in. |
+| `NUXT_FIREBASE_AUTH_EMULATOR_HOST` | empty | `host:port` of the Firebase emulator, to try logging in locally without the real project. |
 | `NUXT_OAUTH_GOOGLE_CLIENT_ID` | empty | With the two below: offers "Doorgaan met Google". Empty: email and password only. |
 | `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` | empty | The secret of that OAuth client. |
 | `NUXT_OAUTH_GOOGLE_REDIRECT_URL` | empty | The site's address followed by `/auth/google`, the same as the authorised redirect URI at Google. |
 | `PORT` | `3000` | The port on the host. |
 
+### Logging in: Firebase
+
+Firebase Authentication (Google's) holds the passwords and the Google logins, and sends the mails: a forgotten password, and a password for someone who only used Google. The site talks to Firebase from the server; the browser only ever talks to the site, and the login cookie stays the site's own.
+
+1. At https://console.firebase.google.com, make a project (Analytics isn't needed).
+2. Under Build → Authentication → Sign-in method, turn on Email/Password. Under Settings → User account linking, keep "Link accounts that use the same email".
+3. Under Settings → Authorised domains, add the site's address, so the mail's button leads back to the login page.
+4. Under Templates, set the template language to Dutch and, if you like, the sender's name.
+5. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`.
+
+The free plan sends 150 password mails a day.
+
+Accounts from before Firebase move there one by one: the first time someone logs in with their old password, the site makes their Firebase account with that same password. Until then, `scripts/reset-password.mjs` still works for them.
+
 ### Logging in with Google
 
-1. At https://console.cloud.google.com, make a project, set up the OAuth consent screen (type External, the app's name, your email), and publish it. With only the `email`, `profile` and `openid` scopes Google doesn't need to review it.
-2. Under APIs & Services → Credentials, make an OAuth client ID of type Web application. Add `https://<your address>/auth/google` as an authorised redirect URI.
-3. Put its client ID and secret in `.env`, with that same URI as `NUXT_OAUTH_GOOGLE_REDIRECT_URL`, and run `docker compose up -d`.
+Google goes through Firebase too, so do the steps above first.
 
-Someone who logs in with Google for the first time gets an account without a password, named as at Google. They can set a password under Settings. An account that already has their address is not entered that way: anyone can make an account here with any address, so it could be someone else's. Its owner logs in with the password once and links Google under Settings. After that, the Google account is the key, even if its address changes.
+1. In the Firebase console, under Authentication → Sign-in method, turn on Google. Firebase makes an OAuth client for it in the same Google Cloud project.
+2. At https://console.cloud.google.com, in that project, under APIs & Services → Credentials, open "Web client (auto created by Google Service)". Add `https://<your address>/auth/google` as an authorised redirect URI.
+3. Put that client's ID and secret in `.env`, with that same URI as `NUXT_OAUTH_GOOGLE_REDIRECT_URL`, and run `docker compose up -d`.
+
+Someone who logs in with Google for the first time gets an account without a password, named as at Google; Settings mails them a link if they want a password too. An account that already has their address logs in with its password and links Google under Settings. When that address was never confirmed, Firebase lets Google take the account over and drops its password: Google has shown the address is theirs. "Wachtwoord vergeten" gives them a password again.
 
 To reach the site from outside your home, put HTTPS in front of it: a Cloudflare Tunnel, Tailscale Funnel, or Caddy with a port forward. In that case:
 
@@ -157,7 +175,7 @@ The two `rm`'d files are SQLite's journal. Left in place after a power cut, they
 
 ### Someone forgot their password
 
-The site sends no email. Someone with Google linked can simply keep logging in with Google. Otherwise, give the account a new password by hand:
+"Wachtwoord vergeten?" on the login page: Firebase mails a link to choose a new one. For an account from before Firebase that hasn't logged in since, give it a new password by hand:
 
 ```sh
 docker compose exec wishlist node scripts/reset-password.mjs mom@example.com
@@ -186,7 +204,7 @@ shared/
 test/           unit tests and the API check
 ```
 
-- **Accounts**: `nuxt-auth-utils`, a sealed cookie session and scrypt password hashes. Registering asks for a name, an email address and a password. The cookie holds the account's id and the moment the account was made; a cookie whose account is gone, or whose id now belongs to another account (after a restore, say), logs nobody in, for the API and the page alike (`sessionBelongsTo` in `server/domain/users.ts`).
+- **Accounts**: Firebase Authentication holds the passwords and the Google logins (`server/domain/accounts.ts`, through its REST API in `server/utils/firebase.ts`); `users.firebase_uid` ties an account here to the one there. `nuxt-auth-utils` keeps the session in a sealed cookie, with Firebase's refresh token on its server-only side, for what Settings asks of Firebase. Registering asks for a name, an email address and a password. The cookie holds the account's id and the moment the account was made; a cookie whose account is gone, or whose id now belongs to another account (after a restore, say), logs nobody in, for the API and the page alike (`sessionBelongsTo` in `server/domain/users.ts`).
 - **Lists**: a list has a title, one or more owners (`list_owners`) and a token of 16 random bytes in base64url, made by `newListToken` in `server/domain/tokens.ts`. The token is the list's address, `/l/<token>`, and the only way in: no page lists other people's lists. Owners rename a list (the address stays). A list with one owner can be deleted; with more, each owner can leave it and the last one deletes it.
 - **Placements**: `list_wishes` says which lists show a wish. Taking a wish off a list sets `removed_at` on its placement and keeps the row. One rule in `server/domain/placement.ts` covers every way a wish leaves a list (deleting a wish or a list, unlinking, undo): `takeOffList`, which ends with `settleOwners`. `settleOwners` is the only code that writes `wish_owners`: it makes a wish's owners the owners of the live lists that show it, and marks a wish deleted when nobody owns it any more. Leaving a list calls `settleOwners` directly. Each placement has a join order that only goes up, so the site knows who had a wish first. Each placement also has a position: a list shows its wishes by position, the same for everyone, and only its owners change it. A wish that arrives or comes back goes to the bottom; the copy an unlink leaves takes the original's place.
 - **Linked and Copy**: on a wish on someone else's list, "Add to my list" asks which of your lists it goes on (the one used last is chosen) and offers two buttons (`server/domain/sharing.ts`). Linked puts the same wish on your list: you own it at once, stop seeing who buys it, and its earlier owners get a notice with Undo. Copy makes a new wish of your own with the same title, text, link, picture and amount; nobody is told. Either can make a new list on the way.
@@ -219,7 +237,7 @@ Things to know when changing the UI:
 
 ## Not included
 
-- Email: no verification and no reset mail. Notices stay inside the site. Logging in with Google is the way around a forgotten password.
+- Email of the site's own: Firebase mails only a forgotten password. Notices stay inside the site, and an address isn't confirmed.
 - Fetching a title or picture from a pasted shop link.
 - Prices, restoring a deleted wish.
 - Seeing who opened your list, or taking a list away from someone who has the link.

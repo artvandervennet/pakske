@@ -37,6 +37,13 @@ export default defineNuxtConfig({
     maxUsers: 200,
     // NUXT_TRUST_PROXY=true when a reverse proxy of yours sets X-Forwarded-For and X-Forwarded-Host.
     trustProxy: false,
+    // Firebase Authentication holds the passwords and sends the emails (server/utils/firebase.ts).
+    firebase: {
+      // NUXT_FIREBASE_API_KEY: the Web API key of the Firebase project.
+      apiKey: '',
+      // NUXT_FIREBASE_AUTH_EMULATOR_HOST: host:port of the Firebase emulator, for trying it locally.
+      authEmulatorHost: '',
+    },
     session: {
       maxAge: 60 * 60 * 24 * 60,
       // NUXT_SESSION_COOKIE_SECURE=false when the site is served over plain http.

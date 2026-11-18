@@ -767,3 +767,5 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .google-or { margin: 0; font-size: var(--step--1); color: var(--ink-muted); }
 .google-settings { display: grid; gap: var(--space-4); justify-items: start; }
 .google-settings > p:not(.form-message) { margin: 0; }
+/* A small link under a field, such as "Wachtwoord vergeten?". */
+.form-hint { margin: calc(var(--space-4) * -1) 0 0; font-size: var(--step--1); }
