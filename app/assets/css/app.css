@@ -537,7 +537,10 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
 .wish-card-actions { flex: none; display: flex; align-items: center; gap: var(--space-1); }
 /* The button that folds the card: its target spreads under the whole head, like the row's
    own button, and the other controls of the head sit above it. */
-.wish-fold { position: static; }
+/* A flex item with a z-index stacks like a positioned box, so the fold button would lift its
+   own target over the buttons before it and take their clicks. Without one, its target stays
+   under them. */
+.wish-fold { position: static; z-index: auto; }
 .wish-fold::after { content: ""; position: absolute; inset: 0; }
 .wish-fold .icon { rotate: 180deg; }
 /* An owner's title is a field where it stands (.inline-edit), in a taller target than its line
