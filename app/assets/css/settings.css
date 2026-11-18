@@ -1,1 +1,49 @@
 /* The Settings page. Written against Gesso's role tokens, like app.css. */
+
+/* One column as wide as a form, the sections one under the other with a rule between them. */
+.settings { max-inline-size: 34rem; }
+.settings-section {
+  display: grid;
+  /* Never wider than the column, whatever is in it. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  padding-block: var(--space-8);
+  border-block-start: 1px solid var(--rule);
+}
+.settings-section:first-child { padding-block-start: 0; border-block-start: 0; }
+.settings-section:last-child { padding-block-end: 0; }
+/* Two forms in one section, such as the name and the address: apart enough to read as two. */
+.settings-section > .form + .form { margin-block-start: var(--space-4); }
+
+/* A section's title in the body type, not Gesso's display serif at its section size: that one
+   ran out of its column. This one fits a 320px phone and wraps at a space when it has to. */
+.settings-head { display: grid; gap: var(--space-1); }
+.settings-heading {
+  font: var(--weight-bold) var(--step-1)/var(--leading-snug) var(--font-body);
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+}
+.settings-intro { font-size: var(--step--1); color: var(--ink-muted); }
+/* What a form says back may name an address, which has no spaces to wrap at. */
+.settings .form-message { overflow-wrap: anywhere; }
+
+/* What the account has now, above the field for a new one: its name as a label, the value
+   under it. An address has no spaces, so it may break anywhere. */
+.settings-current { display: grid; gap: var(--space-1); }
+.settings-current-label { font-weight: var(--weight-medium); }
+.settings-current-value { overflow-wrap: anywhere; }
+
+/* A switch with what it means under it, close enough to read as one. The switch is as tall as
+   a finger needs, with its words in the middle, so it starts a little higher to sit as far
+   under the heading as a field's label does. */
+.settings-switch { display: grid; gap: 0; margin-block-start: calc(-1 * var(--space-3)); }
+
+/* Candidate for Gesso: a button for something that can't be taken back, in the danger colour.
+   A quiet one starts at the column's edge, where the text above it starts. */
+art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, var(--danger) 12%, transparent); }
+.settings-quiet-action { margin-inline-start: calc(-1 * var(--space-3)); }
+
+/* The dialog that deletes the account: what goes, as a list, and the form's buttons at the
+   end, where a dialog's own buttons are. */
+.settings-gone { display: grid; gap: var(--space-2); padding-inline-start: 1.25em; }
+.dialog .form > .actions { justify-content: flex-end; }

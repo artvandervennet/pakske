@@ -42,7 +42,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
         <form ref="form" class="form" method="post" novalidate @submit.prevent="run">
           <p v-if="googleMessage" class="form-message" role="alert">{{ googleMessage }}</p>
           <p v-if="message" class="form-message" role="alert">{{ message }}</p>
-          <FormField id="name" v-slot="field" :label="t('auth.displayName')" :hint="t('auth.displayNameHint')" :error="errors.displayName">
+          <FormField id="name" v-slot="field" :label="t('auth.displayName')" :error="errors.displayName">
             <input
               id="name"
               v-model="displayName"
