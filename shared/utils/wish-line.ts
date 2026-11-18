@@ -8,7 +8,7 @@ export interface Translate {
 }
 
 /** The shop's name from a link, without "www.", or null when the link doesn't parse. */
-export function hostOf(url: string | null): string | null {
+export function hostOf(url: string | null | undefined): string | null {
   if (!url) return null
   try {
     return new URL(url).host.replace(/^www\./, '')
@@ -19,17 +19,31 @@ export function hostOf(url: string | null): string | null {
 }
 
 /**
+ * What each link of a wish is called: its shop's name. When several lead to one shop, the later
+ * ones get a number ("bol.com", "bol.com (2)"), so no two links or their buttons read the same.
+ */
+export function linkNames(urls: readonly string[]): string[] {
+  const seen = new Map<string, number>()
+  return urls.map((url) => {
+    const name = hostOf(url) ?? url
+    const count = (seen.get(name) ?? 0) + 1
+    seen.set(name, count)
+    return count === 1 ? name : `${name} (${count})`
+  })
+}
+
+/**
  * The line under a wish's title. For a buyer, who bought it; how many are left is in the
  * stepper (`tickCeiling`). For an owner who bought it themselves, that they did, and never how
  * many are left: that would tell them what others bought. Otherwise the start of the text, or
- * the shop's name when there is no text.
+ * the shop's name from the first link when there is no text.
  */
 export function wishLine(wish: WishView, t: Translate): string {
   if (wish.role === 'owner' && wish.mine > 0) return t('wish.yours', wish.mine)
   if (wish.role === 'buyer' && wish.purchases.length > 0) return buyers(wish, t)
   const text = wish.description?.replace(/\s+/g, ' ').trim()
   // The row cuts the line off with an ellipsis; this only keeps the payload small.
-  return text ? text.slice(0, 160) : (hostOf(wish.url) ?? '')
+  return text ? text.slice(0, 160) : (hostOf(wish.urls[0]) ?? '')
 }
 
 /** "Jij geeft er 2 · Moeke geeft er 1 · Iemand anders geeft er 1", or "Moeke geeft dit" for a wish asked for once. */

@@ -56,7 +56,7 @@ export function copyWish(db: Db, userId: number, token: string, wishId: number, 
 }
 
 /**
- * Makes a new wish with the same title, text, link, picture and amount, and puts it on the list,
+ * Makes a new wish with the same title, text, links, picture and amount, and puts it on the list,
  * whose owners own it. The copy shares nothing else with the original: no owners, no link to
  * undo, and nobody is told. It goes to the bottom of the list as a wish made now, unless `like`
  * gives it the place and the age of the wish it stands in for. Returns the copy's id. Runs in the
@@ -66,8 +66,9 @@ export function copyWishOnto(db: Db, wish: typeof wishes.$inferSelect, listId: n
   const copy = db.insert(wishes).values({
     title: wish.title,
     description: wish.description,
-    url: wish.url,
+    urls: wish.urls,
     imageFile: wish.imageFile,
+    imageFromLink: wish.imageFromLink,
     quantity: wish.quantity,
     createdAt: like?.createdAt,
   }).returning({ id: wishes.id }).get()

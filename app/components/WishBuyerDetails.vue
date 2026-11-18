@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { WishView } from '#shared/schemas/list'
 
-// What an unfolded row shows to someone who doesn't own the wish: the text and the shop link,
+// What an unfolded row shows to someone who doesn't own the wish: the text and the shop links,
 // and for a buyer who is buying it, the notes, and a way to put it on a list of their own. A
 // visitor who isn't logged in gets a way to log in that brings them back to this row. An owner
 // gets WishEditor instead.
@@ -14,7 +14,7 @@ const names = useNames()
 const route = useRoute()
 const localePath = useLocalePath()
 
-const host = computed(() => hostOf(props.wish.url))
+const linkHosts = computed(() => linkNames(props.wish.urls))
 
 // Giving without your name. With a purchase, changing it saves at once; without one, the tick
 // that follows takes it along (useBuyAnonymously).
@@ -55,9 +55,13 @@ const loginLink = computed(() => ({
 <template>
   <div class="wish-details-body">
     <p v-if="wish.description" class="wish-text">{{ wish.description }}</p>
-    <art-button v-if="wish.url && host" variant="secondary" size="s">
-      <a :href="wish.url" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host }) }}</a>
-    </art-button>
+    <ul v-if="wish.urls.length" class="wish-links">
+      <li v-for="(url, index) in wish.urls" :key="url">
+        <art-button variant="secondary" size="s">
+          <a :href="url" target="_blank" rel="noopener noreferrer">{{ t('wish.viewOn', { host: linkHosts[index] }) }}</a>
+        </art-button>
+      </li>
+    </ul>
 
     <template v-if="wish.role === 'buyer'">
       <p v-if="wish.removed" class="form-message">{{ t('wish.removedIntro', { names: names(owners) }, owners.length) }}</p>

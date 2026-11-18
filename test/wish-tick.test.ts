@@ -6,8 +6,9 @@ const base = {
   id: 1,
   title: 'Slimme stekkers',
   description: null,
-  url: null,
+  urls: [],
   image: null,
+  imageFromLink: false,
   createdAt: '2026-11-17T10:00:00.000Z',
   updatedAt: '2026-11-17T10:00:00.000Z',
 }

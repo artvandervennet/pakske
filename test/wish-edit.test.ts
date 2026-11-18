@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { amountChange, cleanText, commitAction, fieldChange, followsSaved, oneLine, savedText, stepAmount, type WishTextField } from '../shared/utils/wish-edit'
+import { amountChange, cleanText, commitAction, fieldChange, followsSaved, linkChange, linkRemoval, MAX_LINKS, oneLine, savedText, stepAmount, type WishTextField } from '../shared/utils/wish-edit'
 
 const wish = {
   title: 'Slimme stekkers',
   description: 'Twee, voor de lampen\nin de woonkamer',
-  url: 'https://example.com/stekker',
 }
-const bare = { title: 'Sokken', description: null, url: null }
+const bare = { title: 'Sokken', description: null }
 // The change a field of this wish sends, measured against the wish as the list has it.
 const change = (from: typeof wish | typeof bare, field: WishTextField, text: string) => fieldChange(field, text, savedText(from, field))
 
@@ -14,12 +13,10 @@ describe('what a field shows of the saved wish, and what Escape puts back', () =
   it('is the saved text', () => {
     expect(savedText(wish, 'title')).toBe('Slimme stekkers')
     expect(savedText(wish, 'description')).toBe('Twee, voor de lampen\nin de woonkamer')
-    expect(savedText(wish, 'url')).toBe('https://example.com/stekker')
   })
 
-  it('is empty for a text or link the wish has none of', () => {
+  it('is empty for a text the wish has none of', () => {
     expect(savedText(bare, 'description')).toBe('')
-    expect(savedText(bare, 'url')).toBe('')
   })
 })
 
@@ -27,7 +24,6 @@ describe('the change a field sends', () => {
   it('sends only the field that was edited', () => {
     expect(change(wish, 'title', 'Slimme stekkers (3)')).toEqual({ title: 'Slimme stekkers (3)' })
     expect(change(wish, 'description', 'Drie')).toEqual({ description: 'Drie' })
-    expect(change(wish, 'url', 'https://example.com/ander')).toEqual({ url: 'https://example.com/ander' })
   })
 
   it('sends nothing when the text says what is saved already', () => {
@@ -35,12 +31,10 @@ describe('the change a field sends', () => {
     expect(change(wish, 'title', '  Slimme stekkers ')).toBeNull()
     expect(change(wish, 'description', 'Twee, voor de lampen\nin de woonkamer\n')).toBeNull()
     expect(change(bare, 'description', '')).toBeNull()
-    expect(change(bare, 'url', '   ')).toBeNull()
   })
 
-  it('clears a text or a link that was emptied', () => {
+  it('clears a text that was emptied', () => {
     expect(change(wish, 'description', '  ')).toEqual({ description: null })
-    expect(change(wish, 'url', '')).toEqual({ url: null })
   })
 
   it('sends an emptied title, so the server can say it is needed', () => {
@@ -147,10 +141,52 @@ describe("the change a field sends, measured against the field's own saved text"
 
   it('sends nothing when it is what the field last saved', () => {
     expect(fieldChange('description', ' Nieuw ', 'Nieuw')).toBeNull()
-    expect(fieldChange('url', '', '')).toBeNull()
+    expect(fieldChange('description', '', '')).toBeNull()
   })
 
-  it('clears an emptied text or link', () => {
-    expect(fieldChange('url', ' ', 'https://example.com')).toEqual({ url: null })
+  it('clears an emptied text', () => {
+    expect(fieldChange('description', ' ', 'Nieuw')).toEqual({ description: null })
+  })
+})
+
+describe('the change the field of one link sends', () => {
+  const shop = 'https://example.com/stekker'
+  const other = 'https://example.org/stekker'
+
+  it('is the whole list, with that link changed and the others where they were', () => {
+    expect(linkChange([shop, other], 0, 'https://example.net/x')).toEqual({ urls: ['https://example.net/x', other] })
+    expect(linkChange([shop, other], 1, ' https://example.net/x ')).toEqual({ urls: [shop, 'https://example.net/x'] })
+  })
+
+  it('puts a new link at the end', () => {
+    expect(linkChange([], 0, shop)).toEqual({ urls: [shop] })
+    expect(linkChange([shop], 1, other)).toEqual({ urls: [shop, other] })
+  })
+
+  it('sends nothing when the field says what is saved already', () => {
+    expect(linkChange([shop, other], 1, ` ${other} `)).toBeNull()
+    expect(linkChange([shop], 1, '  ')).toBeNull()
+    expect(linkChange([], 0, '')).toBeNull()
+  })
+
+  it('takes an emptied link off the list', () => {
+    expect(linkChange([shop, other], 0, ' ')).toEqual({ urls: [other] })
+    expect(linkChange([shop], 0, '')).toEqual({ urls: [] })
+  })
+
+  it('takes one link off with its button, and keeps the order of the rest', () => {
+    expect(linkRemoval([shop, other, 'https://example.net/x'], 1)).toEqual({ urls: [shop, 'https://example.net/x'] })
+    expect(linkRemoval([shop], 0)).toEqual({ urls: [] })
+  })
+
+  it('never changes the list it was given', () => {
+    const saved = [shop, other]
+    linkChange(saved, 0, '')
+    linkRemoval(saved, 0)
+    expect(saved).toEqual([shop, other])
+  })
+
+  it('allows as many links as the server does', () => {
+    expect(MAX_LINKS).toBe(5)
   })
 })

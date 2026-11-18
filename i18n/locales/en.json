@@ -216,7 +216,9 @@
     "descriptionEmpty": "Add a description",
     "link": "Link",
     "linkChange": "Change",
-    "linkChangeLabel": "Change link",
+    "linkChangeLabel": "Change link to {host}",
+    "linkRemove": "Remove",
+    "linkRemoveLabel": "Remove link to {host}",
     "linkAdd": "Add link",
     "amount": "Asked for",
     "amountLess": "Ask for one fewer",
@@ -226,6 +228,7 @@
     "pictureChange": "Choose another image",
     "pictureRemove": "Remove",
     "pictureRemoveLabel": "Remove image",
+    "pictureFromLink": "from {host}",
     "saved": "Saved"
   },
   "auth": {
@@ -347,6 +350,8 @@
     "invalid_email": "That isn’t a valid email address.",
     "password_short": "Choose a password of at least 8 characters.",
     "invalid_url": "Start the link with http:// or https://.",
+    "too_many_links": "A wish can have five links. Remove one first.",
+    "duplicate_link": "This link is already there.",
     "invalid_amount": "Choose a whole number of 1 or more.",
     "invalid": "That isn’t right."
   }

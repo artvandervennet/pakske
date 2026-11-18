@@ -4,7 +4,8 @@ import type { WishSave } from '~/composables/useWishSave'
 
 // The picture in an owner's row is its own control: activating it opens the file chooser, and
 // the chosen picture is made smaller in the browser and saved at once. A small "Remove" sits
-// on it. Without a picture, the row's painted study invites to add one.
+// on it. Without a picture, the row's painted study invites to add one. A picture the server
+// took from the first link's shop says so under it, with a way to put up a photo of one's own.
 const props = defineProps<{ wish: OwnerWish, saving: WishSave }>()
 
 const { t } = useI18n()
@@ -17,6 +18,8 @@ const preview = ref<string | null>(null)
 const busy = ref(false)
 const shown = computed(() => preview.value ?? props.wish.image)
 const imageUrl = (): string => `${props.saving.url()}/image`
+// The shop the picture came from, when it is the first link's cover and not the owner's photo.
+const coverHost = computed(() => !preview.value && props.wish.image && props.wish.imageFromLink ? hostOf(props.wish.urls[0]) : null)
 
 function setPreview(blob: Blob | null) {
   if (preview.value) URL.revokeObjectURL(preview.value)
@@ -92,6 +95,12 @@ const picture = useTemplateRef<HTMLButtonElement>('picture')
       </button>
       <art-button v-if="shown" size="s" class="picture-edit-remove">
         <button type="button" :aria-label="t('edit.pictureRemoveLabel')" :aria-disabled="busy || undefined" @click="remove">{{ t('edit.pictureRemove') }}</button>
+      </art-button>
+    </div>
+    <div v-if="coverHost" class="picture-edit-source">
+      <span>{{ t('edit.pictureFromLink', { host: coverHost }) }}</span>
+      <art-button variant="quiet" size="s">
+        <button type="button" :aria-disabled="busy || undefined" @click="choose">{{ t('edit.pictureAdd') }}</button>
       </art-button>
     </div>
     <input

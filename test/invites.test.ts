@@ -261,7 +261,7 @@ describe('a link that gives copies', () => {
 
   it('gives everyone who opens it copies of their own, once each, and tells nobody', () => {
     const { db, art, lot, mom, A, book, L } = setup()
-    const vase = addWish(db, art.id, A, wishInput.parse({ title: 'Vaas', description: 'Blauw', url: 'https://example.test/vaas', quantity: 3 }))
+    const vase = addWish(db, art.id, A, wishInput.parse({ title: 'Vaas', description: 'Blauw', urls: ['https://example.test/vaas'], quantity: 3 }))
     setWishImage(db, art.id, A, vase.id, 'vaas.png')
     setPurchase(db, A, vase.id, mom.id, 2)
     const { invite } = createInvite(db, art.id, A, { kind: 'wishes', mode: 'copy', wishIds: [book.id, vase.id] })
@@ -274,7 +274,7 @@ describe('a link that gives copies', () => {
     expect(titles(landed)).toEqual(['Boek', 'Vaas'])
     const copy = db.select().from(wishes).where(eq(wishes.id, landed.wishes[1]!.id)).get()!
     expect(copy.id).not.toBe(vase.id)
-    expect(copy).toMatchObject({ title: 'Vaas', description: 'Blauw', url: 'https://example.test/vaas', imageFile: 'vaas.png', quantity: 3, deletedAt: null })
+    expect(copy).toMatchObject({ title: 'Vaas', description: 'Blauw', urls: ['https://example.test/vaas'], imageFile: 'vaas.png', quantity: 3, deletedAt: null })
     for (const wish of landed.wishes) expect(wish).toMatchObject({ role: 'owner', mine: 0, coOwners: [], sharedWith: [] })
     // The originals stay Art's alone, and Lotte is still a buyer of them.
     expect(ownerIds(db, vase.id)).toEqual([art.id])

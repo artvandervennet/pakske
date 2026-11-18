@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { count, eq } from 'drizzle-orm'
 import { openDb } from '../server/db/client'
-import { listOwners, lists, purchases, users } from '../server/db/schema'
+import { linkChanges, listOwners, lists, purchases, users, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
 import { LIST_TOKEN } from '../server/domain/tokens'
 
@@ -55,6 +55,16 @@ function oldDb(last: number) {
     purchase: (wishId: number, userId: number) => {
       sql.prepare(`INSERT INTO purchases (wish_id, user_id, quantity, created_at, updated_at) VALUES (?, ?, 1, ?, ?)`).run(wishId, userId, now, now)
     },
+    /** The wish's one link, in the column it had while a wish had one. */
+    link: (wishId: number, url: string) => {
+      sql.prepare(`UPDATE wishes SET url = ? WHERE id = ?`).run(url, wishId)
+    },
+    /** Someone linked the wish and changed a field: what their link remembers, as JSON. */
+    remembered: (wishId: number, userId: number, field: string, before: string) => {
+      const linkId = id(sql.prepare(`INSERT INTO wish_links (wish_id, user_id, created_at) VALUES (?, ?, ?)`).run(wishId, userId, now))
+      sql.prepare(`INSERT INTO link_changes (link_id, field, before) VALUES (?, ?, ?)`).run(linkId, field, before)
+      return linkId
+    },
   }
 }
 
@@ -93,5 +103,40 @@ describe('upgrading a database that has data in it', () => {
     expect(first!.token).toMatch(LIST_TOKEN)
     // The list works like any other: its owner can open it.
     expect(getListView(after, first!.token, mom)).toMatchObject({ viewerOwnsList: true, wishes: [] })
+  })
+
+  it('moves a wish\'s one link, and what an undo remembers of it, to the list of links', () => {
+    const before = oldDb(6)
+    const art = before.user('art')
+    const lot = before.user('lot')
+    const mom = before.user('mom')
+    const list = before.list(art, 'A'.repeat(22))
+    const lamp = before.wish(art, list, 'Lamp')
+    before.link(lamp, 'https://example.test/lamp?kleur=rood&maat=3')
+    const book = before.wish(art, list, 'Boek')
+    const vase = before.wish(art, list, 'Vaas')
+    before.link(vase, 'https://example.test/vaas')
+    // Lotte replaced the lamp's link, mom gave the book its first one, and Lotte renamed the vase.
+    const hadLink = before.remembered(lamp, lot, 'url', JSON.stringify('https://example.test/"oude" lamp'))
+    const hadNone = before.remembered(book, mom, 'url', 'null')
+    const renamed = before.remembered(vase, lot, 'title', JSON.stringify('Pot'))
+    before.close()
+
+    const after = openDb(before.file)
+    const urlsOf = (wishId: number) => after.select({ urls: wishes.urls }).from(wishes).where(eq(wishes.id, wishId)).get()!.urls
+    expect(urlsOf(lamp)).toEqual(['https://example.test/lamp?kleur=rood&maat=3'])
+    expect(urlsOf(book)).toBeNull()
+    expect(urlsOf(vase)).toEqual(['https://example.test/vaas'])
+    expect(after.$client.prepare(`SELECT name FROM pragma_table_info('wishes')`).all().map(column => (column as { name: string }).name)).not.toContain('url')
+
+    const rememberedBy = (linkId: number) => after.select({ field: linkChanges.field, before: linkChanges.before }).from(linkChanges)
+      .where(eq(linkChanges.linkId, linkId)).all().map(row => ({ field: row.field, before: JSON.parse(row.before) }))
+    expect(rememberedBy(hadLink)).toEqual([{ field: 'urls', before: ['https://example.test/"oude" lamp'] }])
+    expect(rememberedBy(hadNone)).toEqual([{ field: 'urls', before: [] }])
+    expect(rememberedBy(renamed)).toEqual([{ field: 'title', before: 'Pot' }])
+    // The wishes show their links to whoever opens the list.
+    expect(getListView(after, 'A'.repeat(22), null)!.wishes.map(wish => wish.urls)).toEqual([
+      ['https://example.test/lamp?kleur=rood&maat=3'], [], ['https://example.test/vaas'],
+    ])
   })
 })

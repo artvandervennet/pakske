@@ -145,7 +145,7 @@ describe('deleting an account', () => {
       const spel = addWishTo(db, art.id, art.first, 'Bordspel')
       setWishImage(db, art.id, art.first, spel.id, 'old.png')
       linkWish(db, lot.id, art.first, spel.id, { list: lot.first })
-      expect(setWishImage(db, lot.id, lot.first, spel.id, 'new.png')).toEqual({ unused: [] })
+      expect(setWishImage(db, lot.id, lot.first, spel.id, 'new.png')).toEqual({ unused: [], coverOf: null })
       return { ...world, spel }
     }
     const left = (db: Db) => ({ links: db.select().from(wishLinks).all().length, remembered: db.select().from(linkChanges).all().length })

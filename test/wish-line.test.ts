@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnonWish, BuyerWish, OwnerWish } from '../shared/schemas/list'
-import { wishLine, wishOwnerTag, type Translate } from '../shared/utils/wish-line'
+import { linkNames, wishLine, wishOwnerTag, type Translate } from '../shared/utils/wish-line'
 
 // Writes out the key and its arguments instead of a sentence, so a test can see which strings
 // a line is made of without depending on the wording in the locale files.
@@ -13,8 +13,9 @@ const base = {
   id: 1,
   title: 'Slimme stekkers',
   description: null,
-  url: null,
+  urls: [],
   image: null,
+  imageFromLink: false,
   createdAt: '2026-11-17T10:00:00.000Z',
   updatedAt: '2026-11-17T10:00:00.000Z',
 }
@@ -29,11 +30,27 @@ function buyer(quantity: number | null, purchases: BuyerWish['purchases'], extra
   return { ...base, role: 'buyer', quantity, sharedWith: [], removed: false, bought, mine, purchases, notes: [], ...extra }
 }
 
+describe('what the links of a wish are called', () => {
+  it('is the shop each leads to, without "www."', () => {
+    expect(linkNames(['https://www.coolblue.be/x', 'http://bol.com/y?z=1'])).toEqual(['coolblue.be', 'bol.com'])
+    expect(linkNames([])).toEqual([])
+  })
+
+  it('numbers the later links to one shop, so no two read the same', () => {
+    expect(linkNames(['https://www.bol.com/a', 'https://coolblue.be/x', 'https://bol.com/b', 'https://www.bol.com/c']))
+      .toEqual(['bol.com', 'coolblue.be', 'bol.com (2)', 'bol.com (3)'])
+  })
+
+  it('falls back on the link itself when it names no shop', () => {
+    expect(linkNames(['geen adres'])).toEqual(['geen adres'])
+  })
+})
+
 describe("a row's second line", () => {
   it('never tells an owner what is left, whatever the amount', () => {
     for (const quantity of [1, 3, null]) {
       for (const mine of [0, 1, 2]) {
-        const line = wishLine(owner(quantity, mine, { url: 'https://www.coolblue.be/x' }), t)
+        const line = wishLine(owner(quantity, mine, { urls: ['https://www.coolblue.be/x', 'https://www.bol.com/y'] }), t)
         expect(line).not.toContain('wish.left')
       }
     }
@@ -44,9 +61,9 @@ describe("a row's second line", () => {
     expect(wishLine(owner(3, 2), t)).toBe('[wish.yours 2]')
   })
 
-  it("shows an owner who got nothing the wish's own text or shop", () => {
+  it("shows an owner who got nothing the wish's own text, or the shop of its first link", () => {
     expect(wishLine(owner(3, 0, { description: 'Twee  voor\nde living' }), t)).toBe('Twee voor de living')
-    expect(wishLine(owner(3, 0, { url: 'https://www.coolblue.be/x' }), t)).toBe('coolblue.be')
+    expect(wishLine(owner(3, 0, { urls: ['https://www.coolblue.be/x', 'https://www.bol.com/y'] }), t)).toBe('coolblue.be')
   })
 
   it('names who bought, and leaves what is left to the stepper', () => {
