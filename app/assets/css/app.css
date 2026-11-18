@@ -542,6 +542,9 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
    under them. */
 .wish-fold { position: static; z-index: auto; }
 .wish-fold::after { content: ""; position: absolute; inset: 0; }
+/* Its target is the whole head, so a hover fill would light up the chevron wherever the pointer
+   is on the card's head, and go out again over the button beside it. No fill, then. */
+.wish-fold:hover { background: none; }
 .wish-fold .icon { rotate: 180deg; }
 /* An owner's title is a field where it stands (.inline-edit), in a taller target than its line
    of text: a tap just above or below the title edits it rather than folding the card
