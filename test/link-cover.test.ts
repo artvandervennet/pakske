@@ -241,6 +241,24 @@ describe('the cover a page names', () => {
     expect(coverAddress(page(`<!-- a --><script>x</script>${tag}<!-- b -->`), base)).toBe('https://cdn.example/lamp.jpg')
   })
 
+  it('reads what is outside a comment, script or style that never closes, as a browser does', () => {
+    const tag = '<meta property="og:image" content="https://cdn.example/lamp.jpg">'
+    for (const opener of ['<!--', '<script>', '<style>']) {
+      expect(coverAddress(page(`${tag}${opener} the rest`), base), opener).toBe('https://cdn.example/lamp.jpg')
+      expect(coverAddress(page(`${opener}${tag}`), base), opener).toBeNull()
+    }
+  })
+
+  // The page is read in one go, on the one thread that also answers everyone else.
+  it('reads a page made of openers that never close without slowing down', () => {
+    for (const opener of ['<!--', '<script', '<style ', '</script ', '<meta ']) {
+      const hostile = opener.repeat(Math.floor(512 * 1024 / opener.length))
+      const start = performance.now()
+      expect(coverAddress(hostile, base), opener).toBeNull()
+      expect(performance.now() - start, opener).toBeLessThan(250)
+    }
+  })
+
   it('copes with a page that was cut off or is broken', () => {
     expect(coverAddress('<html><head><meta property="og:image" content="https://cdn.example/lamp.jpg"><meta property="og:ti', base)).toBe('https://cdn.example/lamp.jpg')
     expect(coverAddress('<meta property="og:image" content="https://cdn.example/lamp.jpg', base)).toBeNull()

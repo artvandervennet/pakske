@@ -157,14 +157,41 @@ function attributesAt(html: string, from: number): { attributes: Map<string, str
 }
 
 /**
+ * The page without its comments, scripts and styles: what sits in those is not the page's own
+ * markup. One that never closes takes the rest of the page with it, as in a browser. Each
+ * character is looked at once: a pattern that searches on to the end of the page from every
+ * opener takes seconds on a page made of openers, and nothing else is answered meanwhile.
+ */
+function ownMarkup(html: string): string {
+  const opener = /<!--|<(script|style)(?=[\s/>])/gi
+  let markup = ''
+  let from = 0
+  for (let match = opener.exec(html); match; match = opener.exec(html)) {
+    markup += html.slice(from, match.index)
+    let end = -1
+    if (match[1]) {
+      const closer = new RegExp(`</${match[1]}\\s*>`, 'gi')
+      closer.lastIndex = opener.lastIndex
+      if (closer.exec(html)) end = closer.lastIndex
+    }
+    else {
+      const at = html.indexOf('-->', opener.lastIndex)
+      if (at >= 0) end = at + 3
+    }
+    if (end < 0) return markup
+    from = opener.lastIndex = end
+  }
+  return markup + html.slice(from)
+}
+
+/**
  * The address of the picture a page gives as its cover, or null: its `og:image`, else
  * `og:image:secure_url`, `twitter:image` or `<link rel="image_src">`, made absolute against
  * `base`, the address the page was fetched from. Only http and https addresses count, so a
  * `data:` or `javascript:` one is never returned.
  */
 export function coverAddress(html: string, base: string): string | null {
-  // What sits in a comment, a script or a style is not the page's own markup.
-  const markup = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, '')
+  const markup = ownMarkup(html)
   const found = new Map<string, string[]>()
   const tag = /<(meta|link)(?=[\s/>])/gi
   for (let match = tag.exec(markup); match; match = tag.exec(markup)) {
