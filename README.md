@@ -204,7 +204,7 @@ Things to know when changing the UI:
 - `<art-signature>` writes its text into `innerHTML`. It only gets fixed text.
 - The words inside `<art-scheme>` (System, Light, Dark) and the header's "Menu" come from Gesso and are English in both languages.
 
-`app.css` marks the blocks that fill gaps in Gesso as candidates to move there: among them the rows of a list, the rows that unfold, the tick box and stepper, the + row that turns into the new row, the small picture with its painted study, text edited where it is read (`.inline-edit`, used for an owner's wish and a list's title), the amount with its stepper and switch, the picture that is its own control, the choice of a list in a sentence with a menu, the bar for choosing wishes in edit mode, the single-use link, and the mark in the header.
+`app.css` marks the blocks that fill gaps in Gesso as candidates to move there: among them the rows of a list, the rows that unfold, the tick box and stepper, the + row that turns into the new row, the small picture with its painted study, text edited where it is read (`.inline-edit`, used for an owner's wish and a list's title), the amount with its stepper and switch, the picture that is its own control, the choice of a list with every list on view, the bar for choosing wishes in edit mode, the single-use link, and the mark in the header.
 
 ## Not included
 
