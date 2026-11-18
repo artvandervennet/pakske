@@ -81,7 +81,7 @@ const { removeError, forget } = useForgetList(refresh, () => (loggedIn.value ? t
 
 <template>
   <div>
-    <PageHead :title="t('lists.title')" />
+    <PageHead :title="t('lists.title')" drip />
 
     <div class="band wide" data-paint="1">
       <div class="inner">

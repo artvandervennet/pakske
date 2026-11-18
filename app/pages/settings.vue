@@ -149,7 +149,7 @@ function openDelete() {
 
 <template>
   <div>
-    <PageHead :title="t('settings.title')" />
+    <PageHead :title="t('settings.title')" drip />
 
     <div class="band wide" data-paint="1">
       <div class="inner">
