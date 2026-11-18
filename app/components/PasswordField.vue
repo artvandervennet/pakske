@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// A password field with a button to show what was typed.
+// A password field with Gesso's eye at its end, which shows what was typed (<art-password>).
+// The `aside` slot goes on the label's line, at its end: "Wachtwoord vergeten?".
 defineProps<{
   id: string
   label: string
@@ -10,29 +11,30 @@ defineProps<{
 }>()
 const model = defineModel<string>({ required: true })
 const { t } = useI18n()
-const shown = ref(false)
 </script>
 
 <template>
-  <FormField :id="id" v-slot="field" :label="label" :hint="hint" :error="error">
-    <div class="field-row">
-      <input
-        :id="id"
-        v-model="model"
-        :name="id"
-        :type="shown ? 'text' : 'password'"
-        :autocomplete="autocomplete"
-        :minlength="minlength"
-        maxlength="128"
-        required
-        autocapitalize="none"
-        spellcheck="false"
-        :aria-describedby="field.describedBy"
-        :aria-invalid="field.invalid"
-      >
-      <art-button variant="quiet" size="s">
-        <button type="button" :aria-pressed="shown" @click="shown = !shown">{{ t('auth.showPassword') }}</button>
-      </art-button>
-    </div>
+  <FormField :id="id" :label="label" :hint="hint" :error="error">
+    <template v-if="$slots.aside" #aside>
+      <slot name="aside" />
+    </template>
+    <template #default="field">
+      <art-password :label="t('auth.showPassword')">
+        <input
+          :id="id"
+          v-model="model"
+          :name="id"
+          type="password"
+          :autocomplete="autocomplete"
+          :minlength="minlength"
+          maxlength="128"
+          required
+          autocapitalize="none"
+          spellcheck="false"
+          :aria-describedby="field.describedBy"
+          :aria-invalid="field.invalid"
+        >
+      </art-password>
+    </template>
   </FormField>
 </template>

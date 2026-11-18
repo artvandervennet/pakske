@@ -113,6 +113,9 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 /* ── Forms ────────────────────────────────────────────────────────────────*/
 .form { display: grid; gap: var(--space-6); max-inline-size: 34rem; }
 .field { display: grid; gap: var(--space-2); }
+/* A label with something at the end of its line, such as "Wachtwoord vergeten?". */
+.field-label { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-1) var(--space-4); }
+.field-aside { font-size: var(--step--1); }
 .field > .hint { font-size: var(--step--1); color: var(--ink-muted); }
 .form > .actions { margin-block-start: var(--space-2); }
 
@@ -764,8 +767,6 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .actions.wide { display: grid; }
 :is(.actions.wide, .google-login) art-button { display: block; }
 :is(.actions.wide, .google-login) art-button > :is(a, button) { inline-size: 100%; justify-content: center; }
-/* "Wachtwoord vergeten?" right under the password field, at its end. */
-.forgot-link { margin: calc(var(--space-4) * -1) 0 0; text-align: end; font-size: var(--step--1); }
 
 /* "Doorgaan met Google" under the email form, after a rule with "of" in it. */
 .google-login { display: grid; gap: var(--space-6); }

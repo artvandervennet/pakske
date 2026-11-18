@@ -6,5 +6,6 @@ import '@vandervennet/gesso/components/art-tape.js'
 import '@vandervennet/gesso/components/art-decor.js'
 import '@vandervennet/gesso/components/art-scheme.js'
 import '@vandervennet/gesso/components/art-signature.js'
+import '@vandervennet/gesso/components/art-password.js'
 
 export default defineNuxtPlugin(() => {})
