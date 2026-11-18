@@ -222,7 +222,8 @@ defineExpose({ settle })
           :aria-label="t('wish.close', { title: wish.title })"
           @click="toggle"
         >
-          <AppIcon name="chevron" />
+          <!-- The square that shows the hover: the button's own target is the whole head. -->
+          <span class="wish-fold-face"><AppIcon name="chevron" /></span>
         </button>
       </div>
     </div>
