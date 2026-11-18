@@ -2,10 +2,12 @@
 import type { OwnerWish } from '#shared/schemas/list'
 import type { WishSave } from '~/composables/useWishSave'
 
-// The picture in an owner's row is its own control: activating it opens the file chooser, and
-// the chosen picture is made smaller in the browser and saved at once. A small "Remove" sits
-// on it. Without a picture, the row's painted study invites to add one. A picture the server
-// took from the first link's shop says so under it, with a way to put up a photo of one's own.
+// The photo in an owner's card is its own control: a square tile that opens the file chooser,
+// and the chosen photo is made smaller in the browser and saved at once. Without a photo the
+// tile is empty and invites to add one. A photo of the owner's own has a small "remove" on its
+// corner. A picture the server took from the first link's shop says so on the tile ("van
+// bol.com"), and under it is the way to put up a photo of one's own instead; it has no remove,
+// since the cover would only come back.
 const props = defineProps<{ wish: OwnerWish, saving: WishSave }>()
 
 const { t } = useI18n()
@@ -85,24 +87,37 @@ const picture = useTemplateRef<HTMLButtonElement>('picture')
         ref="picture"
         type="button"
         class="picture-edit-choose"
+        :class="{ empty: !shown }"
         :aria-busy="busy || undefined"
         :aria-describedby="error ? errorId : undefined"
         @click="choose"
       >
-        <img v-if="shown" :src="shown" alt="">
-        <WishThumb v-else :wish="{ id: wish.id, image: null }" />
-        <span :class="shown ? 'visually-hidden' : 'picture-edit-label'">{{ shown ? t('edit.pictureChange') : t('edit.pictureAdd') }}</span>
+        <template v-if="shown">
+          <img :src="shown" alt="">
+          <span class="visually-hidden">{{ t('edit.pictureChange') }}</span>
+        </template>
+        <template v-else>
+          <AppIcon name="image" />
+          <span class="picture-edit-label">{{ t('edit.pictureAdd') }}</span>
+        </template>
       </button>
-      <art-button v-if="shown" size="s" class="picture-edit-remove">
-        <button type="button" :aria-label="t('edit.pictureRemoveLabel')" :aria-disabled="busy || undefined" @click="remove">{{ t('edit.pictureRemove') }}</button>
-      </art-button>
+      <span v-if="coverHost" class="picture-edit-source">{{ t('edit.pictureFromLink', { host: coverHost }) }}</span>
+      <button
+        v-if="shown && !coverHost"
+        type="button"
+        class="icon-button picture-edit-remove"
+        :aria-label="t('edit.pictureRemove')"
+        :title="t('edit.pictureRemove')"
+        :aria-disabled="busy || undefined"
+        @click="remove"
+      >
+        <AppIcon name="close" />
+      </button>
     </div>
-    <div v-if="coverHost" class="picture-edit-source">
-      <span>{{ t('edit.pictureFromLink', { host: coverHost }) }}</span>
-      <art-button variant="quiet" size="s">
-        <button type="button" :aria-disabled="busy || undefined" @click="choose">{{ t('edit.pictureAdd') }}</button>
-      </art-button>
-    </div>
+    <button v-if="coverHost" type="button" class="text-button" :aria-disabled="busy || undefined" @click="choose">
+      <AppIcon name="image" />
+      {{ t('edit.pictureOwn') }}
+    </button>
     <input
       ref="input"
       type="file"

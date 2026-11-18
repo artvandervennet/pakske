@@ -14,6 +14,7 @@ const { list, gone, refresh } = await useListView(token)
 useHead({ title: () => list.value.title })
 
 const names = useNames()
+// Empty for a deleted list whose owners' accounts are gone too: the page then names nobody.
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
@@ -60,13 +61,14 @@ async function refreshList() {
   await nextTick()
 }
 
-// A change can take the focused control away with it: deleting a wish removes its row, delete
-// button and all; unlinking removes the person's line. Then the focus goes to the row's own
-// button while the row is still there, else to the list's heading rather than the start of the page.
+// A change can take the focused control away with it: unlinking removes the person's line, and
+// putting a wish on your own list can turn its card into an owner's. Then the focus goes to the
+// row's own button (the one that folds an open card) while the row is still there, else to the
+// list's heading rather than the start of the page.
 const wishesTitle = useTemplateRef<HTMLElement>('wishesTitle')
 function keepFocus(wishId: number) {
   if (document.activeElement && document.activeElement !== document.body) return
-  const rowButton = document.querySelector<HTMLElement>(`#wish-${wishId} .wish-toggle`)
+  const rowButton = document.querySelector<HTMLElement>(`#wish-${wishId} :is(.wish-toggle, .wish-fold)`)
   ;(rowButton ?? wishesTitle.value)?.focus()
 }
 
@@ -77,7 +79,7 @@ async function onWishChanged(wish: WishView) {
 }
 
 // "Op mijn lijst zetten" worked or found the wish gone. The row says so at the top of its
-// details; a linked wish is an owner's row after the refresh, with the line still above it.
+// card; a linked wish is an owner's card after the refresh, with the line still above it.
 // When the row went with the refresh, the list says it instead.
 const rowMessage = ref<{ wishId: number, title: string, list?: { token: string, title: string } } | null>(null)
 
@@ -218,9 +220,10 @@ async function inviteCoOwner() {
 }
 
 // Edit mode, for an owner: choose wishes to delete or share, move them, and delete or leave the
-// list itself. The Edit button in the title band starts it with nothing chosen; "Delen" in an
-// open wish starts it with that wish chosen. The ticks turn into boxes and the bar above the list
-// acts on what is chosen. Done or Escape ends it. A list without wishes has the bar alone.
+// list itself. The Edit button in the title band starts it with nothing chosen; holding a row
+// starts it with that wish chosen. The ticks turn into boxes and the bar above the list acts on
+// what is chosen. Done or Escape ends it. A list without wishes has the bar alone. Deleting a
+// wish is only done here: an open wish has no delete button to press by mistake.
 const rows = new Map<number, RowControl>()
 function rowRef(id: number, row: unknown) {
   if (row) rows.set(id, row as RowControl)
@@ -258,13 +261,22 @@ function onEscape(event: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onEscape))
 onBeforeUnmount(() => document.removeEventListener('keydown', onEscape))
 
-// "Delen" in the bar: the dialog asks how, and makes the link for the chosen wishes. Once a link
-// was made the choice has served, so closing the dialog ends edit mode too.
+// "Delen": the dialog asks how, and makes the link. The bar's button opens it for the chosen
+// wishes; once a link was made that choice has served, so closing the dialog ends edit mode too.
+// The button in an open wish's card opens it for that one wish, without edit mode. The browser
+// gives the focus back to the button that opened it.
 const shareDialog = useTemplateRef<{ open: () => Promise<void> }>('shareDialog')
-const shareIds = computed(() => edit.chosen().map(wish => wish.id))
+const shareIds = ref<number[]>([])
+
+async function openShare(wishIds: number[]) {
+  shareIds.value = wishIds
+  // The dialog takes its wishes when it opens: let it have these first.
+  await nextTick()
+  await shareDialog.value?.open()
+}
 
 function share() {
-  if (selected.size && !edit.busy.value) shareDialog.value?.open()
+  if (selected.size && !edit.busy.value) openShare(edit.chosen().map(wish => wish.id))
 }
 
 function onShareClose(made: boolean) {
@@ -370,7 +382,7 @@ async function addWish(title: string) {
 
 <template>
   <div>
-    <PageHead :title="list.title" :lead="list.viewerOwnsList ? null : t('list.owners', { names: owners })">
+    <PageHead :title="list.title" :lead="list.viewerOwnsList || !owners ? null : t('list.owners', { names: owners })">
       <template v-if="canManage" #title>
         <h1 v-if="!renaming">
           <button ref="renameButton" type="button" class="title-edit" aria-describedby="list-rename-hint" @click="startRenaming">{{ list.title }}</button>
@@ -396,7 +408,7 @@ async function addWish(title: string) {
         <template v-if="canManage">
           <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
           <art-button v-if="!editing" variant="secondary">
-            <button ref="editButton" type="button" @click="startEditing()">{{ t('listEdit.start') }}</button>
+            <button ref="editButton" type="button" @click="startEditing()"><AppIcon name="pencil" />{{ t('listEdit.start') }}</button>
           </art-button>
           <art-button variant="secondary">
             <button type="button" :aria-disabled="inviting || undefined" @click="inviteCoOwner">{{ t('list.invite') }}</button>
@@ -416,7 +428,9 @@ async function addWish(title: string) {
           <p v-if="gone" class="form-message" role="alert">
             {{ t('list.gone') }} <NuxtLink :to="localePath('/')">{{ t('error.home') }}</NuxtLink>
           </p>
-          <p v-if="list.deleted" class="form-message">{{ t('list.deleted', { names: owners }, list.owners.length) }}</p>
+          <p v-if="list.deleted" class="form-message">
+            {{ owners ? t('list.deleted', { names: owners }, list.owners.length) : t('list.deletedNobody') }}
+          </p>
           <p v-else-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>
           <div v-if="editing" class="joint-bar" role="group" :aria-label="t('listEdit.label')">
@@ -461,9 +475,10 @@ async function addWish(title: string) {
               :edit-mode="editing"
               @toggle="toggle(wish.id)"
               @changed="onWishChanged(wish)"
+              @ticked="reason => onTickChanged(wish, reason)"
               @added="landed => onAdded(wish, landed)"
               @removed="onAddRemoved(wish)"
-              @joint="startEditing(wish.id)"
+              @share="openShare([wish.id])"
             >
               <template #message>
                 <!-- Always there in an open row, so the words are announced when they appear. -->
@@ -491,9 +506,10 @@ async function addWish(title: string) {
                   <span aria-hidden="true">⠿</span>
                 </button>
               </template>
-              <template v-if="wish.role !== 'anon'" #tick>
+              <!-- In edit mode the tick makes way for the box that chooses the wish. -->
+              <template v-if="editing" #tick>
                 <!-- Named by the row itself, a <label> for it in edit mode (WishRow). -->
-                <div v-if="editing" class="wish-tick joint-pick">
+                <div class="wish-tick joint-pick">
                   <span class="tick-box">
                     <input
                       :id="`pick-${wish.id}`"
@@ -503,7 +519,6 @@ async function addWish(title: string) {
                     >
                   </span>
                 </div>
-                <WishTick v-else :wish="wish" :token="list.token" @changed="reason => onTickChanged(wish, reason)" />
               </template>
             </WishRow>
             <li v-if="canManage && !editing" class="wish-add">

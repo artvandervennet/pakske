@@ -42,7 +42,7 @@ onBeforeUnmount(() => clearTimeout(timer))
 <template>
   <div class="share">
     <art-button variant="secondary">
-      <button type="button" @click="copy">{{ t('share.copy') }}</button>
+      <button type="button" @click="copy"><AppIcon name="share" />{{ t('share.copy') }}</button>
     </art-button>
     <span class="share-status" role="status">{{ status }}</span>
     <div v-if="address" class="field">

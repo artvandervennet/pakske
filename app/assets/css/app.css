@@ -173,7 +173,8 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   inline-size: var(--quick-add-plus);
   block-size: var(--quick-add-plus);
   border-radius: var(--radius-dab);
-  background: var(--accent-wash);
+  /* The sunken shade of the paint it is on: the accent's wash is too close to the palest paints. */
+  background: var(--surface-sunken);
   color: var(--accent);
   font: var(--weight-bold) var(--step-1)/1 var(--font-body);
 }
@@ -210,54 +211,13 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
 
-/* Candidate for Gesso: rows that unfold in place. Each row is a picture, a title with a line
-   of detail, and a tag; the details open under it, and several can be open at once. The
-   toggle is a real button whose ::after covers the whole row, so the picture and the tag
-   are part of what you tap. Anything else you can press in the row sits above it. */
+/* Candidate for Gesso: rows that unfold in place. Each row is a tick, a picture, a title with
+   a line of detail, and a tag; unfolded, the row becomes a card as wide as the list (see "The
+   opened wish" below), and several can be open at once. The toggle is a real button whose
+   ::after covers the whole row, so the picture and the tag are part of what you tap. Anything
+   else you can press in the row sits above it. */
 .wish-list { list-style: none; padding: 0; border-block-start: 1px solid var(--rule); }
-/* The room the tick takes at the start of each row, the gap after it included: none for a
-   visitor, a box, or a stepper. Every row of a list gets the same, so the titles line up. */
-.wish-list { --wish-tick: 0px; --wish-tick-room: 0px; }
-.wish-list:has(.wish-tick) { --wish-tick: 2.75rem; --wish-tick-room: calc(var(--wish-tick) + var(--space-3)); }
-.wish-list:has(.wish-tick .stepper) { --wish-tick: 7rem; }
-/* A count of two or three digits on both sides ("100 / 120") doesn't fit between the buttons
-   in 7rem; the column grows for the whole list, so the titles still line up. */
-.wish-list:has(.wish-tick .stepper[data-long]) { --wish-tick: 9rem; }
 .wish-list > li { max-inline-size: none; border-block-end: 1px solid var(--rule); }
-/* The room the small picture takes before the title, the gap after it included. */
-.wish-list > li { --wish-thumb-room: calc(3rem + var(--space-3)); }
-
-/* An open wish is a card: raised from the list, its contents still in line with the rows
-   around it. With a big picture the small one goes, and the text moves up to the tick. */
-.wish-row.open {
-  margin-block: var(--space-2);
-  margin-inline: calc(-1 * var(--space-3));
-  padding-inline: var(--space-3);
-  padding-block-end: var(--space-2);
-  background: var(--surface-raised);
-  border-block-end: 0;
-  border-radius: var(--radius-canvas);
-  box-shadow: var(--shadow-card);
-}
-.wish-row.open:has(.wish-card-picture img) { --wish-thumb-room: 0px; }
-.wish-row.open:has(.wish-card-picture img) .wish-head > .wish-thumb { display: none; }
-.wish-card-picture { padding-block: var(--space-2); }
-/* Without a picture, an owner's "add a picture" sits where the text starts. */
-.wish-card-picture:not(:has(img)) { padding-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room)); }
-.wish-picture,
-.wish-card-picture .picture-edit-choose img {
-  display: block;
-  inline-size: 100%;
-  max-inline-size: none;
-  block-size: auto;
-  max-block-size: min(70vh, 32rem);
-  object-fit: contain;
-  background: var(--surface-sunken);
-  border-radius: var(--radius-chip);
-  box-shadow: none;
-}
-.wish-card-picture .picture-edit:has(img),
-.wish-card-picture .picture-edit:has(img) :is(.picture-edit-frame, .picture-edit-choose) { display: block; inline-size: 100%; }
 .wish-head {
   position: relative;
   display: flex;
@@ -268,16 +228,18 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   min-block-size: 4rem;
   padding-block: var(--space-2);
 }
+/* The tick's column is as wide as a finger's target on every row, whatever the wishes on the
+   list ask for, so every picture and title starts at the same place and nothing is pushed in. */
 .wish-tick {
   position: relative;
   z-index: 1;
   flex: none;
   display: flex;
   justify-content: center;
-  inline-size: var(--wish-tick);
+  inline-size: 2.75rem;
 }
-/* The + sits under the pictures and the field under the titles, past the tick's room. */
-.wish-list .quick-add { --quick-add-plus: 3rem; min-block-size: 4rem; padding-inline-start: var(--wish-tick-room); }
+/* The + sits at the list's edge, as wide as the pictures above it. */
+.wish-list .quick-add { --quick-add-plus: 3rem; min-block-size: 4rem; }
 .wish-toggle {
   all: unset;
   /* A basis of 0: with its text's width as basis, a long title would wrap the row. */
@@ -290,8 +252,8 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 .wish-toggle::after { content: ""; position: absolute; inset: 0; }
 .wish-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 .wish-title { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
-/* A chevron right after the title, where the eye already is; it turns when the row opens. */
-.wish-title::after, .wish-chevron {
+/* A chevron right after the title, where the eye already is: it says the row opens. */
+.wish-title::after {
   content: "";
   display: inline-block;
   inline-size: 0.45em;
@@ -303,52 +265,52 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   translate: 0 -0.2em;
   color: var(--ink-muted);
 }
-.wish-row.open .wish-title::after, .wish-row.open .wish-chevron { rotate: 225deg; translate: 0 0.05em; }
-@media (prefers-reduced-motion: no-preference) {
-  .wish-title::after, .wish-chevron { transition: rotate var(--dur-dab) var(--ease-brush), translate var(--dur-dab) var(--ease-brush); }
-}
-/* An owner's unfolded row: the title is a field where it stood (.inline-edit), above the row's
-   button, which stays to fold the row and spreads under everything else. */
-.wish-row.editing .wish-toggle { position: absolute; inset: 0; }
-.wish-row.editing .wish-toggle:focus-visible { outline-offset: -3px; }
-.wish-heading { flex: 1 1 0; min-inline-size: 0; display: grid; gap: var(--space-1); }
-.wish-title-edit .inline-edit {
-  font-weight: var(--weight-medium);
-}
-/* The title's field sits above the row's button, in a taller target than its line of text:
-   a tap just above or below the title edits it rather than folding the row (EditableText
-   puts the cursor in the field). The margin takes the room back, so the title stays put;
-   the field itself keeps the look of the text. The chevron after it still folds the row. */
-.wish-title-edit {
-  position: relative;
-  z-index: 1;
-  justify-self: start;
-  padding-block: 0.375em;
-  margin-block: -0.375em;
-}
-.wish-title-edit .wish-chevron { cursor: pointer; }
-.wish-chevron { flex: none; }
+/* The line under the title stays one line: a tape for what you give, then the rest, cut off
+   with an ellipsis where the row ends. */
 .wish-line {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
   font-size: var(--step--1);
   color: var(--ink-muted);
 }
+.wish-line > art-tape { flex: none; }
+.wish-line-rest { min-inline-size: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .wish-tags { flex: none; display: flex; flex-direction: column; align-items: end; gap: var(--space-1); }
-.wish-row.removed .wish-title { color: var(--ink-muted); }
-/* Checked off: everything asked for is taken. The title is crossed and greyed, but the tick
-   keeps its colour, so the check itself stays easy to see and to undo. */
+/* Taken off the list: quieter, unless it is one you give. */
+.wish-row.removed:not(.mine) .wish-title { color: var(--ink-muted); }
+
+/* Candidate for Gesso: a row that is yours among rows that are not. What you give has an edge
+   in the accent at its start and your part of the line on a tape in the partner pigment, the
+   yellow of the title band's buttons; the ink on it is the darkest neutral in both schemes
+   (about 13:1). It is never greyed, even when the wish is fully taken. */
+.wish-row.mine:not(.open) {
+  margin-inline-start: calc(-1 * var(--space-3));
+  padding-inline-start: var(--space-3);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.tape-mine { --tape: var(--pigment-partner); --on-tape: var(--neutral-950); }
+/* Before the tape upgrades it is plain text: give it its colours, so the line doesn't flash. */
+art-tape.tape-mine:not(:defined) {
+  padding: 0.15em 0.6em;
+  background: var(--pigment-partner);
+  color: var(--neutral-950);
+  font-weight: var(--weight-medium);
+}
+/* Taken by others: everything asked for is given and none of it by you. The title is crossed
+   and greyed and the picture fades; the tick keeps its own look. */
 .wish-row.done .wish-title {
   color: var(--ink-muted);
   text-decoration: line-through;
   text-decoration-thickness: 2px;
 }
 /* Only the picture fades: it sits under the row's button, so it doesn't change what a tap hits. */
-.wish-row.done:not(.open) .wish-head > .wish-thumb { opacity: 0.5; filter: grayscale(1); }
+.wish-row.done .wish-head > .wish-thumb { opacity: 0.5; filter: grayscale(1); }
 
-/* Candidate for Gesso: a tick box with a target as big as a finger, and a stepper: two
-   buttons around a count. A control that can't be used now is aria-disabled rather than
+/* Candidate for Gesso: a tick box with a target as big as a finger; a count the size of that
+   box, for a wish asked for more than once, that gives one more when pressed; and a stepper:
+   two buttons around a count. A control that can't be used now is aria-disabled rather than
    disabled, so it keeps the focus of whoever is pressing it. */
 .tick-box {
   display: grid;
@@ -358,28 +320,59 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   cursor: pointer;
 }
 .tick-box input { inline-size: 1.4rem; block-size: 1.4rem; margin: 0; cursor: inherit; }
-.stepper { display: flex; align-items: center; inline-size: 100%; }
+.tick-count {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  cursor: pointer;
+}
+/* The pill itself is as tall as the box; the button around it is the target. Empty it is an
+   outline like an unticked box, with a number of yours it fills with the accent like a ticked one. */
+.tick-count-number {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-inline-size: 1.75rem;
+  block-size: 1.75rem;
+  padding-inline: 0.4em;
+  border-radius: var(--radius-round);
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
+  font: var(--weight-bold) var(--step--1)/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+.tick-count.on .tick-count-number { background: var(--accent); box-shadow: none; color: var(--on-accent); }
+.tick-count:hover:not([aria-disabled="true"]) .tick-count-number { box-shadow: inset 0 0 0 2px var(--accent); }
+.tick-count:focus-visible .tick-count-number { outline: 3px solid var(--focus); outline-offset: 2px; }
+.tick-count[aria-disabled="true"] { cursor: not-allowed; }
+/* A number of your own stays in full colour when no more can be given: it is what you give. */
+.tick-count[aria-disabled="true"]:not(.on) { opacity: 0.4; }
+.stepper { display: inline-flex; align-items: center; }
+/* The buttons are a finger's target; the wash they show is a little smaller, inside a
+   transparent edge. */
 .stepper > button {
   all: unset;
   box-sizing: border-box;
   flex: none;
   display: inline-grid;
   place-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
-  border-radius: var(--radius-dab);
-  background: var(--accent-wash);
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: 0.25rem solid transparent;
+  border-radius: calc(0.25rem + 9px);
+  background: var(--accent-wash) padding-box;
   color: var(--accent);
-  font: var(--weight-bold) var(--step-1)/1 var(--font-body);
   cursor: pointer;
 }
-.stepper > button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stepper > button:focus-visible { outline: 3px solid var(--focus); outline-offset: -1px; }
 .stepper-count {
-  flex: 1;
+  min-inline-size: 2.5ch;
   text-align: center;
   white-space: nowrap;
-  font-size: var(--step--1);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
 :is(.tick-box:has(> [aria-disabled="true"]), .tick-box:has(> :disabled), .stepper > [aria-disabled="true"]) {
@@ -391,14 +384,14 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
    upgrade, where the button sets its own cursor. */
 art-button:has(> [aria-disabled="true"]) { opacity: 0.4; }
 art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
-/* Under the row, in line with the title. Above the row's toggle, so tapping it doesn't unfold. */
+/* A refused tick: under the row, from the list's edge, or under the card's own control. Above
+   the row's toggle, so tapping it doesn't unfold. */
 .wish-tick-message {
   position: relative;
   z-index: 1;
   order: 2;
   flex: 1 0 100%;
   max-inline-size: none;
-  padding-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room));
   font-size: var(--step--1);
   font-weight: var(--weight-medium);
   color: var(--danger);
@@ -419,50 +412,269 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
   background: linear-gradient(var(--study-angle), var(--study-a) 55%, var(--study-b) 55%);
 }
 
-.wish-details-body {
-  display: grid;
-  gap: var(--space-4);
-  justify-items: start;
-  padding-block: var(--space-2) var(--space-6);
-  /* In line with the title: past the tick, the picture and the gaps after them. */
-  padding-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room));
-}
-.wish-details-body > * { max-inline-size: min(100%, var(--measure)); }
-.wish-details-body > .people, .wish-notes { inline-size: 100%; }
-.wish-subtitle {
-  margin-block: var(--space-2) calc(-1 * var(--space-2));
-  font: var(--weight-bold) var(--step--1)/1.3 var(--font-body);
-  color: var(--ink-muted);
-}
-.wish-notes { display: grid; gap: var(--space-4); }
-.wish-notes-list { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
-.wish-notes-list > li { max-inline-size: none; }
 @media (width < 40rem) {
-  /* A phone has no room to spare beside the details. */
-  .wish-details-body, .wish-tick-message, .wish-card-picture:not(:has(img)) { padding-inline-start: 0; }
   /* With a tick at the start, the tags at the end leave the title too little room: they go
      on a line of their own, under the title. */
-  .wish-list:has(.wish-tick) .wish-tags {
+  .wish-list:has(.wish-tick) .wish-head > .wish-tags {
     order: 1;
     flex: 1 0 100%;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    /* Under the title, unless a wide stepper on a narrow phone leaves less than a tag's
-       width there ("120 gevraagd"); then the tags move left instead of past the edge. */
-    padding-inline-start: min(calc(var(--wish-tick-room) + var(--wish-thumb-room)), 100% - 7rem);
+    /* Under the title: past the tick, the picture and the gaps after them. */
+    padding-inline-start: calc(2.75rem + 3rem + 2 * var(--space-3));
   }
 }
-.wish-text { white-space: pre-line; overflow-wrap: anywhere; }
 
-.people { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
-.people > li { display: flex; align-items: center; gap: var(--space-3); max-inline-size: none; }
+/* Candidate for Gesso: a line drawing beside or instead of a button's words (AppIcon.vue). It
+   takes the colour and the size of the text it sits in. */
+.icon {
+  flex: none;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Candidate for Gesso: a button that is an icon, with a finger's target. Its name is an
+   aria-label, or words beside the icon that show where there is room (.worded): on a phone
+   those are hidden from the eye only, so the name stays. */
+.icon-button {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-chip);
+  color: var(--accent);
+  font: var(--weight-bold) var(--step--1)/1 var(--font-body);
+  cursor: pointer;
+}
+.icon-button:hover { background: var(--accent-wash); }
+.icon-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.icon-button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.icon-button.worded { padding-inline: var(--space-3); }
+@media (width < 40rem) {
+  .icon-button.worded { padding-inline: 0; }
+  .icon-button-words {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+/* Candidate for Gesso: a quiet button of an icon and a few words, such as "Link toevoegen". */
+.text-button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  border-radius: var(--radius-chip);
+  color: var(--accent);
+  font: var(--weight-bold) var(--step--1)/1.2 var(--font-body);
+  cursor: pointer;
+}
+.text-button:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.text-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.text-button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+/* An icon before the words of a Gesso button. Gesso spaces them itself once the button is
+   upgraded; this is for the plain HTML before that. */
+art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--space-2); }
+
+/* ── The opened wish ──────────────────────────────────────────────────────
+   Candidate for Gesso: an unfolded row is a card, raised from the list and as wide as it,
+   a little past its edges. Everything in it starts at the card's own edge: nothing is pushed
+   in to line up with the rows around it. A head with the title and, at the far end, small
+   buttons; under it the body, in columns where the card is wide enough. */
+.wish-row.open {
+  margin-block: var(--space-3);
+  margin-inline: calc(-1 * var(--space-3));
+  background: var(--surface-raised);
+  border-block-end: 0;
+  border-radius: var(--radius-canvas);
+  box-shadow: var(--shadow-card);
+}
+/* The row above a card ends at the card, without a rule of its own. */
+.wish-list > li:has(+ .wish-row.open) { border-block-end-color: transparent; }
+.wish-card-head {
+  position: relative;
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--rule);
+}
+.wish-card-heading {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  /* As tall as the buttons beside it, so a one-line title sits in the middle of them. */
+  min-block-size: 2.75rem;
+}
+.wish-card-title {
+  font: var(--weight-bold) var(--step-0)/1.3 var(--font-body);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.wish-card-heading > .wish-tags { flex-direction: row; flex-wrap: wrap; align-items: center; max-inline-size: 100%; }
+.wish-card-actions { flex: none; display: flex; align-items: center; gap: var(--space-1); }
+/* The button that folds the card: its target spreads under the whole head, like the row's
+   own button, and the other controls of the head sit above it. */
+.wish-fold { position: static; }
+.wish-fold::after { content: ""; position: absolute; inset: 0; }
+.wish-fold .icon { rotate: 180deg; }
+/* An owner's title is a field where it stands (.inline-edit), in a taller target than its line
+   of text: a tap just above or below the title edits it rather than folding the card
+   (EditableText puts the cursor in the field). The margin takes the room back. */
+.wish-title-edit {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding-block: 0.375em;
+  margin-block: -0.375em;
+}
+.wish-title-edit .inline-edit { font: var(--weight-bold) var(--step-0)/1.3 var(--font-body); }
+
+/* The columns follow the card's own width, not the screen's: the list is narrower than the
+   screen wherever the page has two columns. */
+.wish-details { container-type: inline-size; }
+.wish-card-body { display: grid; gap: var(--space-4) var(--space-6); padding: var(--space-4); }
+.wish-card-column { display: grid; gap: var(--space-4); align-content: start; min-inline-size: 0; }
+.wish-card-column > * { max-inline-size: none; }
+/* Someone else's wish reads as text: no wider than a comfortable line. */
+.wish-card-body.buyer > .wish-card-column { max-inline-size: 36rem; }
+@container (inline-size >= 40rem) {
+  /* An owner: the photo, the description with the amount, the links. */
+  .wish-card-body.owner { grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1fr); }
+  /* Everyone else, when there is a photo: the photo beside the rest. */
+  .wish-card-body.buyer.pictured { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); align-items: start; }
+}
+/* The small bold name above each part of a card. */
+.wish-label {
+  margin: 0;
+  font: var(--weight-bold) var(--step--1)/1.3 var(--font-body);
+  letter-spacing: 0;
+  color: var(--ink-muted);
+}
+.wish-field { display: grid; gap: var(--space-2); }
+.wish-text { white-space: pre-line; overflow-wrap: anywhere; }
+.wish-picture {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 20rem;
+  object-fit: contain;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-chip);
+}
+/* A wish's links for someone who may buy it: buttons side by side. */
+.wish-links { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
+.wish-links > li { max-inline-size: 100%; }
+.wish-links a { overflow-wrap: anywhere; }
+
+/* Candidate for Gesso: "I'm giving this", the one thing to do with someone else's wish. Asked
+   for once, it is a button as wide as the card's column that stays pressed while you give it:
+   a box in it fills and gets its check. Asked for more than once, it is a sentence around the
+   stepper, on the accent's wash. An owner's own is the same control without the fill, since it
+   is not what their card is for. */
+.wish-give-block { display: grid; gap: var(--space-1); }
+.wish-give { display: grid; gap: var(--space-2); justify-items: start; min-inline-size: 0; }
+.give-button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 3rem;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-dab);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: var(--weight-bold) var(--step-0)/1.2 var(--font-body);
+  cursor: pointer;
+}
+.give-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.give-button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.give-box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: var(--radius-chip);
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.give-box .icon { stroke-width: 2.6; inline-size: 1.1rem; block-size: 1.1rem; }
+.give-button[aria-pressed="true"] .give-box { background: var(--on-accent); box-shadow: none; color: var(--accent); }
+.give-count {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+  border-radius: var(--radius-dab);
+  background: var(--accent-wash);
+  font-weight: var(--weight-bold);
+}
+/* On the wash the stepper's buttons take the card's own colour, so they still stand out. */
+.give-count .stepper > button { background-color: var(--surface-raised); }
+.wish-give-hint { font-size: var(--step--1); color: var(--ink-muted); }
+.wish-give .wish-tick-message { flex: none; }
+.wish-give.own .give-button {
+  inline-size: auto;
+  min-block-size: 2.75rem;
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  font: var(--weight-regular) var(--step-0)/1.2 var(--font-body);
+}
+.wish-give.own .give-box { box-shadow: inset 0 0 0 2px var(--rule-strong); }
+.wish-give.own .give-button[aria-pressed="true"] .give-box { background: var(--accent); color: var(--on-accent); }
+.wish-give.own .give-count { inline-size: auto; padding: 0; background: none; font-weight: var(--weight-regular); }
+.wish-give.own .give-count .stepper > button { background-color: var(--accent-wash); }
+
+/* Who gives, or who the wish is shared with: a name per line, with a number or a button at
+   the line's end. */
+.people { display: grid; gap: var(--space-1); list-style: none; padding: 0; }
+.people > li { display: flex; align-items: center; gap: var(--space-3); max-inline-size: none; min-block-size: 1.75rem; }
+.people > li.mine { font-weight: var(--weight-bold); }
 .people .count { margin-inline-start: auto; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
 
-.note { display: grid; gap: var(--space-2); }
-.note > header { display: flex; align-items: center; gap: var(--space-3); font-size: var(--step--1); color: var(--ink-muted); }
+.wish-notes { display: grid; gap: var(--space-3); }
+.wish-notes-list { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
+.wish-notes-list > li { max-inline-size: none; }
+.wish-notes .form { gap: var(--space-3); max-inline-size: none; }
+.wish-notes .form > .actions { margin-block-start: 0; }
+/* The note's label is in the card's small type, with who doesn't see it on the same line,
+   after a dot that is only for the eye. */
+.wish-notes .field > label { font: var(--weight-bold) var(--step--1)/1.3 var(--font-body); color: var(--ink-muted); }
+.wish-notes .field > label > .hint { display: inline; }
+.wish-notes .field > label > .hint::before { content: "· "; content: "· " / ""; }
+.note { display: grid; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3); border-radius: var(--radius-chip); background: var(--surface-sunken); }
+.note > header { display: flex; align-items: center; gap: var(--space-3); min-block-size: 2.75rem; font-size: var(--step--1); color: var(--ink-muted); }
 .note > header strong { color: var(--ink); }
-.note > header art-button { margin-inline-start: auto; }
+.note > header .icon-button { margin-inline-start: auto; }
 .note > p { white-space: pre-line; overflow-wrap: anywhere; }
 
 /* Candidate for Gesso: text edited where it is read. A real field without a field's edge or
@@ -509,75 +721,172 @@ textarea.inline-edit { overflow: hidden; }
   color: var(--danger);
 }
 
-/* An owner's unfolded row, the wish's parts each editable in place. */
-.wish-edit > .wish-text-edit { justify-self: stretch; }
-.wish-link-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); justify-self: stretch; }
-/* A wish's links: side by side for a buyer, one per line with its buttons for an owner. */
-.wish-links { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
-.wish-links > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-inline-size: none; }
-.wish-link-edit > :is(.wish-links, .inline-field-error) { flex: 1 1 100%; }
-.wish-link-edit > .wish-links { flex-direction: column; }
-.wish-link-edit .wish-links .inline-field { flex: 1 1 100%; }
-.wish-edit-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
-.wish-saved { font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
+/* An owner's card, the wish's parts each editable in place. */
+.wish-text-edit { gap: var(--space-2); }
+/* The links: one per line, the shop's name as the link it is, then its two small buttons. */
+.wish-link-edit { display: grid; align-content: start; justify-items: start; min-inline-size: 0; }
+.wish-link-rows { display: grid; inline-size: 100%; list-style: none; padding: 0; }
+.wish-link-rows > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-inline-size: none;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  color: var(--accent);
+}
+.wish-link-name {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: var(--weight-bold);
+}
+.wish-link-rows .inline-field { flex: 1 1 100%; color: var(--ink); }
+/* Under the columns: what the owner has of the wish themselves, and "Opgeslagen" at the far end. */
+.wish-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-1) var(--space-4);
+  border-block-start: 1px solid var(--rule);
+}
+.wish-saved { margin-inline-start: auto; font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
+/* The other owners of a wish, each with what the viewer can do about them. */
+.wish-card-owners { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-block-start: 1px solid var(--rule); }
+.wish-card-error { margin: 0 var(--space-4) var(--space-4); }
 
-/* Candidate for Gesso: an amount set with the stepper, named in words beside it so it can't be
-   taken for the tick's stepper, and a switch for no limit. */
-.amount-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
-.amount-edit-label { font: var(--weight-bold) var(--step--1)/1.3 var(--font-body); color: var(--ink-muted); }
-.amount-edit > .stepper { inline-size: 7rem; }
-.amount-edit > .inline-field-error { flex: 1 0 100%; }
+/* Candidate for Gesso: an amount under its label: the stepper, and a switch for no limit. */
+.amount-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); }
+.amount-edit > :is(.wish-label, .inline-field-error) { flex: 1 0 100%; }
+/* The stepper's first button has a transparent edge: this lines its wash up with the label. */
+.amount-edit > .stepper { margin-inline-start: -0.25rem; }
+
+/* Candidate for Gesso: a switch. A real checkbox with the role of a switch, drawn as a track
+   with a knob that slides to the end when it is on. Its words are its label; what it means
+   sits right under it, small (.switch-hint). */
 .switch { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 2.75rem; cursor: pointer; }
-.switch input { inline-size: 1.25rem; block-size: 1.25rem; margin: 0; cursor: inherit; }
-/* Giving without your name, under who gives what. */
-.anonymous-choice { display: grid; gap: 0; margin-block-start: calc(-1 * var(--space-2)); }
-.anonymous-hint { font-size: var(--step--1); color: var(--ink-muted); }
+.switch input {
+  appearance: none;
+  flex: none;
+  position: relative;
+  inline-size: 2.5rem;
+  block-size: 1.5rem;
+  margin: 0;
+  border-radius: var(--radius-round);
+  background: var(--rule-strong);
+  cursor: inherit;
+}
+.switch input::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0.1875rem;
+  inset-inline-start: 0.1875rem;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  border-radius: 50%;
+  background: var(--surface-raised);
+}
+.switch input:checked { background: var(--accent); }
+.switch input:checked::before { translate: 1rem 0; }
+.switch input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.switch input[aria-busy="true"] { opacity: 0.6; }
+@media (prefers-reduced-motion: no-preference) {
+  .switch input { transition: background-color var(--dur-dab) var(--ease-brush); }
+  .switch input::before { transition: translate var(--dur-dab) var(--ease-brush); }
+}
+/* Without colours of its own the track would vanish: an edge, and the system's own colours. */
+@media (forced-colors: active) {
+  .switch input { border: 1px solid ButtonText; background: Canvas; }
+  .switch input::before { background: ButtonText; }
+  .switch input:checked { background: Highlight; }
+  .switch input:checked::before { background: HighlightText; }
+}
+.switch-field { display: grid; gap: 0; }
+.switch-hint { font-size: var(--step--1); color: var(--ink-muted); }
 
-/* Candidate for Gesso: a picture that is its own control. Activated, it opens the file
-   chooser; "Remove" sits on its corner. Without one, the painted study and its words. */
-.picture-edit { display: grid; gap: var(--space-2); justify-items: start; }
-.picture-edit-frame { position: relative; max-inline-size: 100%; }
+/* Candidate for Gesso: a photo that is its own control: a square tile that opens the file
+   chooser. Empty, it has a dashed edge and says what it is for. A photo of one's own has a
+   small "remove" on its corner; a cover taken from a link says where it came from. */
+.picture-edit { display: grid; gap: var(--space-1); justify-items: start; align-content: start; min-inline-size: 0; }
+.picture-edit-frame { position: relative; inline-size: 8rem; max-inline-size: 100%; }
 .picture-edit-choose {
   all: unset;
   box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  max-inline-size: 100%;
-  min-block-size: 2.75rem;
-  border-radius: var(--radius-canvas);
+  position: relative;
+  display: grid;
+  place-items: center;
+  place-content: center;
+  gap: var(--space-1);
+  inline-size: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  text-align: center;
   cursor: pointer;
 }
-.picture-edit-choose:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.picture-edit-choose img {
-  display: block;
-  max-inline-size: min(16rem, 100%);
-  max-block-size: 12rem;
-  object-fit: contain;
-  border-radius: var(--radius-canvas);
-  box-shadow: var(--shadow-card);
+.picture-edit-choose.empty {
+  padding: var(--space-2);
+  border: 2px dashed var(--rule-strong);
+  background: var(--accent-wash);
+  box-shadow: none;
+  color: var(--accent);
 }
-.picture-edit-choose[aria-busy="true"] img { opacity: 0.6; }
-.picture-edit-label { font-weight: var(--weight-medium); color: var(--accent); }
+.picture-edit-choose.empty .icon { inline-size: 1.5rem; block-size: 1.5rem; }
 .picture-edit-choose:hover .picture-edit-label { text-decoration: underline; }
-.picture-edit-remove { position: absolute; inset-block-start: var(--space-2); inset-inline-end: var(--space-2); }
-/* Under a picture that is a link's cover: which shop it came from, and a way to put up an own one. */
-.picture-edit-source { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--step--1); color: var(--ink-muted); }
+.picture-edit-choose:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+/* The photo fills the tile, whatever its own shape. */
+.picture-edit-choose img { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; object-fit: cover; }
+.picture-edit-choose[aria-busy="true"] img { opacity: 0.6; }
+.picture-edit-label { font: var(--weight-bold) var(--step--1)/1.2 var(--font-body); }
+/* On the picture's lower corner: which shop it came from. A tap on it still opens the chooser. */
+.picture-edit-source {
+  position: absolute;
+  inset-block-end: var(--space-1);
+  inset-inline-start: var(--space-1);
+  max-inline-size: calc(100% - 2 * var(--space-1));
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-radius: var(--radius-chip);
+  background: var(--surface-raised);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+/* The target is a finger's; what shows is a small round chip on the picture's corner. */
+.picture-edit-remove { position: absolute; inset-block-start: 0; inset-inline-end: 0; }
+.picture-edit-remove:hover { background: none; }
+.picture-edit-remove .icon {
+  box-sizing: content-box;
+  inline-size: 1rem;
+  block-size: 1rem;
+  padding: 0.3rem;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tape);
+}
 
 /* Candidate for Gesso: a tape that holds names. Tape keeps to one line; names can be long,
    so this one wraps, and the tags beside a title never take more than part of the row. */
-.wish-tags { max-inline-size: min(16rem, 45%); }
+.wish-head > .wish-tags { max-inline-size: min(16rem, 45%); }
 .wish-owner-tag { white-space: normal; overflow-wrap: anywhere; text-align: end; }
+.wish-card-heading .wish-owner-tag { text-align: start; }
 @media (width < 40rem) {
-  .wish-list:has(.wish-tick) .wish-tags { max-inline-size: none; }
+  .wish-list:has(.wish-tick) .wish-head > .wish-tags { max-inline-size: none; }
   .wish-list:has(.wish-tick) .wish-owner-tag { text-align: start; }
 }
 
-/* What the page says about one row, at the top of its details, in line with the title. */
+/* What the page says about one row, at the top of its card. */
 .wish-message {
   max-inline-size: none;
-  margin-inline-start: calc(var(--wish-tick-room) + var(--wish-thumb-room));
-  margin-block-start: var(--space-2);
+  margin: var(--space-4) var(--space-4) 0;
   padding-inline-start: var(--space-3);
   border-inline-start: 4px solid var(--success);
   font-weight: var(--weight-medium);
@@ -586,10 +895,8 @@ textarea.inline-edit { overflow: hidden; }
 /* Empty, it takes no room but stays rendered: a live region that was hidden may not be
    announced when its words arrive. */
 .wish-message:empty { margin: 0; padding: 0; border: 0; }
-@media (width < 40rem) { .wish-message { margin-inline-start: 0; } }
 
-/* The other owners of a wish, each with what the viewer can do about them. */
-.co-owners > li { flex-wrap: wrap; }
+.co-owners > li { flex-wrap: wrap; min-block-size: 2.25rem; }
 .co-owner-name { overflow-wrap: anywhere; min-inline-size: 0; }
 
 /* Candidate for Gesso: a choice among a few named things, all on view. Each is a chip with
@@ -619,11 +926,11 @@ textarea.inline-edit { overflow: hidden; }
 .list-chooser-new { font-weight: var(--weight-regular); color: var(--ink-muted); }
 .list-chooser-name { inline-size: 100%; max-inline-size: 24rem; min-block-size: 2.75rem; }
 
-/* "Op mijn lijst zetten" unfolded: the list, then each way with what it means beside it. */
-/* Apart from the notes above it, whose own button sits right there. */
-.add-to-list { display: grid; gap: var(--space-4); justify-items: start; inline-size: 100%; margin-block-start: var(--space-4); }
-.add-to-list-body { display: grid; gap: var(--space-4); inline-size: 100%; }
-.add-to-list-body[hidden] { display: none; }
+/* "Op mijn lijst", unfolded at the top of the card by the button in its head: the list, then
+   each way with what it means beside it. */
+.wish-card-add { padding: var(--space-4); border-block-end: 1px solid var(--rule); }
+.wish-card-add[hidden] { display: none; }
+.add-to-list { display: grid; gap: var(--space-4); justify-items: start; inline-size: 100%; }
 .add-to-list-ways { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
 .add-to-list-ways > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); max-inline-size: none; }
 .add-to-list-ways art-button { flex: none; min-inline-size: 7rem; }

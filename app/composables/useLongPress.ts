@@ -1,8 +1,9 @@
 /**
  * Holding a row of a list: `onPress` runs after `ms` without the pointer moving more than `slop`
  * pixels. It listens on the list itself, so rows that come and go need nothing of their own.
- * A press only counts on the row's head outside its own controls (the tick, the tags, a field,
- * the handle), so holding those does what they always do. A quick swipe scrolls as usual: moving,
+ * A press only counts on a folded row, outside its own controls (the tick, the tags, the
+ * handle), so holding those does what they always do. An opened card isn't held: its title is a
+ * field, and holding text selects it. A quick swipe scrolls as usual: moving,
  * scrolling or the browser taking over the touch (`pointercancel`) cancels the press.
  * `onPress` gets the `pointerdown` that started it, so a drag can carry on with the same pointer.
  */
