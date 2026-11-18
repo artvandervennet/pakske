@@ -1,0 +1,12 @@
+# Checks GitHub for a new commit every minute.
+#   ~/.config/systemd/user/pakske-deploy.timer
+[Unit]
+Description=Check for a new version of Pakske every minute
+
+[Timer]
+# a minute after the other sites' deploys, so the Pi doesn't build three sites at once after a boot
+OnBootSec=3min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target
