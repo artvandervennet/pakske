@@ -220,7 +220,6 @@ defineExpose({ settle })
           aria-expanded="true"
           :aria-controls="detailsId"
           :aria-label="t('wish.close', { title: wish.title })"
-          :title="t('wish.closeShort')"
           @click="toggle"
         >
           <AppIcon name="chevron" />

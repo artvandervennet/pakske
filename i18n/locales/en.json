@@ -100,8 +100,7 @@
     "with": "with {names}",
     "alsoYours": "also yours",
     "viewOn": "View on {host}",
-    "close": "Close {title}",
-    "closeShort": "Close"
+    "close": "Close {title}"
   },
   "joint": {
     "sharedWith": "Shared with",

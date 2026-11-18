@@ -78,8 +78,9 @@ const loginLink = computed(() => ({
 
       <template v-if="wish.role === 'buyer'">
         <div class="wish-give-block">
-          <!-- A wish that left the list can only be lowered: without a number there is nothing to do. -->
-          <WishGive v-if="!wish.removed || wish.mine > 0" :wish="wish" :tick="tick" />
+          <!-- Also on a wish that left the list, where it can only be lowered: it stays, unavailable,
+               after the last one was taken back, so the focus has somewhere to be. -->
+          <WishGive :wish="wish" :tick="tick" />
           <div v-if="!wish.removed" class="switch-field">
             <label class="switch">
               <input

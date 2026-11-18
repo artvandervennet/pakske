@@ -49,9 +49,11 @@ async function onTickChanged(wish: WishView, reason?: 'gone') {
   await refresh()
   // The list follows the fetched data through a watcher, which runs after this resolves.
   await nextTick()
-  if (reason === 'gone' && !list.value.wishes.some(other => other.id === wish.id)) {
-    goneNotice.value = t('tick.goneFromList', { title: wish.title })
-  }
+  if (list.value.wishes.some(other => other.id === wish.id)) return
+  if (reason === 'gone') goneNotice.value = t('tick.goneFromList', { title: wish.title })
+  // The row went, and the control that was pressed with it: taking back the last purchase on
+  // a wish that left the list does that too.
+  keepFocus(wish.id)
 }
 
 // After an owner's edit saved: the row stays as it is, and so does the focus. The list follows

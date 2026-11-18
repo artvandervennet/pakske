@@ -100,8 +100,7 @@
     "with": "met {names}",
     "alsoYours": "ook van jou",
     "viewOn": "Bekijk op {host}",
-    "close": "{title} sluiten",
-    "closeShort": "Sluiten"
+    "close": "{title} sluiten"
   },
   "joint": {
     "sharedWith": "Samen met",

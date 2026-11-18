@@ -13,9 +13,9 @@ const props = defineProps<{ wish: BuyerWish | OwnerWish, tick: WishTickState }>(
 
 const { t } = useI18n()
 const own = computed(() => props.wish.role === 'owner')
-// Others took all of it: the button can't be pressed, and says why under it. An owner never
+// Others took all of it: the control can't be used, and says why under it. An owner never
 // gets here (their control stays open), nor does a wish that left the list, which says so itself.
-const full = computed(() => props.tick.once && props.tick.unavailable && props.wish.role === 'buyer' && !props.wish.removed)
+const full = computed(() => props.tick.unavailable && props.wish.role === 'buyer' && !props.wish.removed)
 </script>
 
 <template>
