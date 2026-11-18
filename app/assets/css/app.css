@@ -760,10 +760,16 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 @media (max-width: 48rem) { .nav-mark-wide { display: none; } }
 @media (width > 48rem) { .nav-mark-narrow { display: none; } }
 
-/* "Doorgaan met Google" under the email form, as wide as its fields, after a rule with "of" in it. */
+/* The login and register forms: their button as wide as the fields, and so is Google's below. */
+.actions.wide { display: grid; }
+:is(.actions.wide, .google-login) art-button { display: block; }
+:is(.actions.wide, .google-login) art-button > :is(a, button) { inline-size: 100%; justify-content: center; }
+/* "Wachtwoord vergeten?" right under the password field, at its end. */
+.forgot-link { margin: calc(var(--space-4) * -1) 0 0; text-align: end; font-size: var(--step--1); }
+
+/* "Doorgaan met Google" under the email form, after a rule with "of" in it. */
 .google-login { display: grid; gap: var(--space-6); }
-.google-login art-button { display: block; }
-.google-login art-button > a { inline-size: 100%; justify-content: center; gap: var(--space-3); }
+.google-login art-button > a { gap: var(--space-3); }
 .google-mark { inline-size: 1.15em; block-size: 1.15em; flex: none; }
 .google-or { display: flex; align-items: center; gap: var(--space-4); margin: 0; font-size: var(--step--1); color: var(--ink-muted); }
 .google-or::before, .google-or::after { content: ""; flex: 1; border-block-start: 1px solid var(--rule); }

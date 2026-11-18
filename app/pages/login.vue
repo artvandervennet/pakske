@@ -55,11 +55,13 @@ const { form, pending, message, errors, run } = useForm(async () => {
             >
           </FormField>
           <PasswordField id="password" v-model="password" :label="t('auth.password')" autocomplete="current-password" :error="errors.password" />
-          <div class="actions">
+          <p class="forgot-link">
+            <NuxtLink :to="{ path: localePath('/forgot'), query: email ? { email } : {} }">{{ t('auth.forgotLink') }}</NuxtLink>
+          </p>
+          <div class="actions wide">
             <art-button>
               <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.login') }}</button>
             </art-button>
-            <NuxtLink class="actions-link" :to="{ path: localePath('/forgot'), query: email ? { email } : {} }">{{ t('auth.forgotLink') }}</NuxtLink>
           </div>
           <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')" />
           <p>
