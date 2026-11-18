@@ -151,10 +151,15 @@ export async function unlinkGoogle(db: Db, identity: Identity, userId: number, r
   db.update(users).set({ googleSub: null }).where(eq(users.id, userId)).run()
 }
 
-/** How the account logs in, for Settings. Without a Firebase login to ask, from what is known here. */
+/** How the account logs in, from what is known here: for a login without a Firebase token. */
+export function knownSignInMethods(user: User) {
+  return { hasPassword: user.googleSub === null || user.passwordHash !== null, google: user.googleSub !== null }
+}
+
+/** How the account logs in, for Settings: Firebase's answer when this login can ask it. */
 export async function signInMethods(db: Db, identity: Identity, user: User, refreshToken: string | undefined) {
   const current = user.firebaseUid && refreshToken ? await identity.refresh(refreshToken) : null
-  if (!current) return { hasPassword: user.googleSub === null || user.passwordHash !== null, google: user.googleSub !== null }
+  if (!current) return knownSignInMethods(user)
   const providers = await identity.providers(current.idToken)
   return { hasPassword: providers.includes('password'), google: providers.includes('google.com') }
 }
