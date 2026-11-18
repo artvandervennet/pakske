@@ -61,7 +61,9 @@ const loginLink = computed(() => ({
 </script>
 
 <template>
-  <div class="wish-card-body buyer" :class="{ pictured: wish.image }">
+  <!-- On a wide card a buyer's side has two columns: the wish and giving it, and beside them
+       what the buyers tell each other. A visitor has only the first, as text. -->
+  <div class="wish-card-body buyer" :class="{ pictured: wish.image, noted: wish.role === 'buyer' }">
     <img v-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
     <div class="wish-card-column">
       <p v-if="wish.role === 'buyer' && wish.removed" class="form-message">
@@ -108,14 +110,15 @@ const loginLink = computed(() => ({
           </ul>
           <p v-else class="muted">{{ t('purchase.nobody') }}</p>
         </div>
-
-        <WishNotes :wish="wish" :token="token" :hidden-from="hiddenFrom" @changed="emit('changed')" />
       </template>
 
       <p v-else-if="wish.role === 'anon'" class="muted">
         {{ t('wish.anonHint') }}
         <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
       </p>
+    </div>
+    <div v-if="wish.role === 'buyer'" class="wish-card-column">
+      <WishNotes :wish="wish" :token="token" :hidden-from="hiddenFrom" @changed="emit('changed')" />
     </div>
   </div>
 </template>

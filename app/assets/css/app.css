@@ -577,13 +577,20 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
 .wish-card-body { display: grid; gap: var(--space-4) var(--space-6); padding: var(--space-4); }
 .wish-card-column { display: grid; gap: var(--space-4); align-content: start; min-inline-size: 0; }
 .wish-card-column > * { max-inline-size: none; }
-/* Someone else's wish reads as text: no wider than a comfortable line. */
-.wish-card-body.buyer > .wish-card-column { max-inline-size: 36rem; }
+/* A visitor's side of a wish is only text: no wider than a comfortable line. */
+.wish-card-body.buyer:not(.noted) > .wish-card-column { max-inline-size: 36rem; }
 @container (inline-size >= 40rem) {
   /* An owner: the photo, the description with the amount, the links. */
   .wish-card-body.owner { grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1fr); }
-  /* Everyone else, when there is a photo: the photo beside the rest. */
+  /* A buyer: the wish and giving it, and the notes beside them, so the card is filled to its edge. */
+  .wish-card-body.buyer.noted { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  /* With a photo: the photo beside the rest, and the notes under the rest while three columns don't fit. */
   .wish-card-body.buyer.pictured { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); align-items: start; }
+  .wish-card-body.buyer.pictured.noted > .wish-card-column:last-child { grid-column: 2; }
+}
+@container (inline-size >= 56rem) {
+  .wish-card-body.buyer.pictured.noted { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 1fr); }
+  .wish-card-body.buyer.pictured.noted > .wish-card-column:last-child { grid-column: auto; }
 }
 /* The small bold name above each part of a card. */
 .wish-label {
