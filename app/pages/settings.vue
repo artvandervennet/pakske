@@ -159,7 +159,7 @@ function openDelete() {
             <h2 id="profile-title" class="settings-heading">{{ t('settings.profileTitle') }}</h2>
             <form :ref="profile.form" class="form" method="post" novalidate :aria-label="t('settings.displayName')" @submit.prevent="profile.run">
               <p v-if="profile.message.value" class="form-message" role="alert">{{ profile.message.value }}</p>
-              <FormField id="name" v-slot="field" :label="t('settings.displayName')" :hint="t('settings.displayNameHint')" :error="profile.errors.value.displayName">
+              <FormField id="name" v-slot="field" :label="t('settings.displayName')" :error="profile.errors.value.displayName">
                 <input
                   id="name"
                   v-model="displayName"
