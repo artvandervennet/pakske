@@ -140,16 +140,16 @@
   "purchase": {
     "title": "Wie koopt dit?",
     "you": "Jij",
-    "gives": "{name} geeft {n}",
+    "gives": "{name} geeft er {n}",
     "givesThis": "{name} geeft dit",
-    "youGive": "Jij geeft {n}",
+    "youGive": "Jij geeft er {n}",
     "youGiveThis": "Jij geeft dit",
     "youAnonymous": "Jij (anoniem)",
-    "someone": "Iemand",
-    "someoneGives": "Iemand geeft {n}",
-    "someoneGivesThis": "Iemand geeft dit",
+    "someone": "Iemand anders",
+    "someoneGives": "Iemand anders geeft er {n}",
+    "someoneGivesThis": "Iemand anders geeft dit",
     "anonymous": "Anoniem geven",
-    "anonymousHint": "De andere kopers zien „Iemand” in plaats van je naam. De eigenaars zien sowieso niet wie wat geeft."
+    "anonymousHint": "De andere kopers zien „Iemand anders” in plaats van je naam. De eigenaars zien sowieso niet wie wat geeft."
   },
   "tick": {
     "box": "Ik koop {title}",

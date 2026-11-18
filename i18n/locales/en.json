@@ -145,11 +145,11 @@
     "youGive": "You're giving {n}",
     "youGiveThis": "You're giving this",
     "youAnonymous": "You (anonymous)",
-    "someone": "Someone",
-    "someoneGives": "Someone is giving {n}",
-    "someoneGivesThis": "Someone is giving this",
+    "someone": "Someone else",
+    "someoneGives": "Someone else is giving {n}",
+    "someoneGivesThis": "Someone else is giving this",
     "anonymous": "Give anonymously",
-    "anonymousHint": "The other buyers see “Someone” instead of your name. The owners never see who gives what anyway."
+    "anonymousHint": "The other buyers see “Someone else” instead of your name. The owners never see who gives what anyway."
   },
   "tick": {
     "box": "I'm getting {title}",

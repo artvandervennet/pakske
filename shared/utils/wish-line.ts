@@ -32,7 +32,7 @@ export function wishLine(wish: WishView, t: Translate): string {
   return text ? text.slice(0, 160) : (hostOf(wish.url) ?? '')
 }
 
-/** "Jij geeft 2 · Moeke geeft 1 · Iemand geeft 1", or "Moeke geeft dit" for a wish asked for once. */
+/** "Jij geeft er 2 · Moeke geeft er 1 · Iemand anders geeft er 1", or "Moeke geeft dit" for a wish asked for once. */
 function buyers(wish: BuyerWish, t: Translate): string {
   const parts = wish.purchases.map((purchase) => {
     // With one asked for, a number after every name says nothing.

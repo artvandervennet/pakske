@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnonWish, BuyerWish, OwnerWish } from '../shared/schemas/list'
-import { canRaise, needsWarning, tickCeiling, tickRefusal, tickState } from '../shared/utils/wish-tick'
+import { canRaise, isCheckedOff, needsWarning, tickCeiling, tickRefusal, tickState } from '../shared/utils/wish-tick'
 
 const base = {
   id: 1,
@@ -133,5 +133,36 @@ describe('the number after the slash in the stepper', () => {
   it('has no number for an unlimited wish', () => {
     expect(tickCeiling(buyer(null, 3, 1))).toBeNull()
     expect(tickCeiling(owner(null, 0))).toBeNull()
+  })
+})
+
+describe('when a row shows as checked off', () => {
+  it('checks it off for a buyer once everything asked for is taken, by anyone', () => {
+    expect(isCheckedOff(buyer(1, 1, 0))).toBe(true)
+    expect(isCheckedOff(buyer(1, 1, 1))).toBe(true)
+    expect(isCheckedOff(buyer(3, 3, 1))).toBe(true)
+    expect(isCheckedOff(buyer(2, 4, 0))).toBe(true)
+  })
+
+  it('leaves it open for a buyer while some are left, or when there is no limit', () => {
+    expect(isCheckedOff(buyer(1, 0, 0))).toBe(false)
+    expect(isCheckedOff(buyer(3, 2, 2))).toBe(false)
+    expect(isCheckedOff(buyer(null, 9, 1))).toBe(false)
+  })
+
+  it('leaves a wish taken off the list to its own tag', () => {
+    expect(isCheckedOff(buyer(1, 1, 1, { removed: true }))).toBe(false)
+  })
+
+  it('checks it off for an owner only by what they ticked themselves', () => {
+    expect(isCheckedOff(owner(1, 1))).toBe(true)
+    expect(isCheckedOff(owner(3, 3))).toBe(true)
+    expect(isCheckedOff(owner(3, 2))).toBe(false)
+    expect(isCheckedOff(owner(1, 0))).toBe(false)
+    expect(isCheckedOff(owner(null, 4))).toBe(false)
+  })
+
+  it('never checks it off for a visitor who is not logged in', () => {
+    expect(isCheckedOff(anon)).toBe(false)
   })
 })

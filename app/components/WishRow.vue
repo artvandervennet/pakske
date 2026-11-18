@@ -33,6 +33,8 @@ const detailsId = computed(() => `wish-${props.wish.id}-details`)
 const line = computed(() => secondLine(props.wish))
 const amount = computed(() => amountTag(props.wish))
 const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed)
+// Everything asked for is taken: the row greys out and its title is crossed (isCheckedOff).
+const done = computed(() => isCheckedOff(props.wish))
 const ownerTag = computed(() => {
   const tag = wishOwnerTag(props.wish, props.viewerOwnsList)
   if (!tag) return null
@@ -90,7 +92,7 @@ defineExpose({ settle })
 </script>
 
 <template>
-  <li :id="`wish-${wish.id}`" ref="row" class="wish-row" :class="{ open, removed, editing, 'edit-mode': editMode }">
+  <li :id="`wish-${wish.id}`" ref="row" class="wish-row" :class="{ open, removed, editing, 'edit-mode': editMode, done }">
     <div class="wish-head">
       <!-- The tick and its message (WishTick). The message wraps onto a line of its own. -->
       <slot name="tick" />

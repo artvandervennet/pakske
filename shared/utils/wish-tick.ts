@@ -27,6 +27,17 @@ export function tickCeiling(wish: WishView): number | null {
   return Math.max(wish.mine, wish.quantity - (wish.bought - wish.mine))
 }
 
+/**
+ * Is the row checked off: greyed out and its title crossed? For a buyer, when everything asked
+ * for is taken. An owner only by their own ticks: anything else would tell them what buyers did.
+ * A wish taken off the list has its own tag instead, and an unlimited one is never done.
+ */
+export function isCheckedOff(wish: WishView): boolean {
+  if (wish.quantity === null || wish.role === 'anon') return false
+  if (wish.role === 'owner') return wish.mine >= wish.quantity
+  return !wish.removed && wish.bought >= wish.quantity
+}
+
 /** Does going from `from` to `to` need the owner's warning first? Only an owner's increase. */
 export function needsWarning(wish: WishView, from: number, to: number): boolean {
   return wish.role === 'owner' && to > from

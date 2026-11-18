@@ -347,6 +347,15 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 }
 .wish-tags { flex: none; display: flex; flex-direction: column; align-items: end; gap: var(--space-1); }
 .wish-row.removed .wish-title { color: var(--ink-muted); }
+/* Checked off: everything asked for is taken. The title is crossed and greyed, but the tick
+   keeps its colour, so the check itself stays easy to see and to undo. */
+.wish-row.done .wish-title {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+/* Only the picture fades: it sits under the row's button, so it doesn't change what a tap hits. */
+.wish-row.done:not(.open) .wish-head > .wish-thumb { opacity: 0.5; filter: grayscale(1); }
 
 /* Candidate for Gesso: a tick box with a target as big as a finger, and a stepper: two
    buttons around a count. A control that can't be used now is aria-disabled rather than

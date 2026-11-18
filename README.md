@@ -39,7 +39,7 @@ The server decides this per wish, not per list. A wish's owners are in `wish_own
 
 - A visitor gets the wishes from `server/domain/public-wishes.ts`. That file only reads wishes and the list they are on.
 - An owner gets the same wishes and their own purchase. The purchases table is read for the viewer's own rows only.
-- Anyone who owns neither the wish nor the list gets every purchase with name and number ("someone" instead of the name when that buyer chose to give anonymously; the name never leaves the server), the notes, and the wishes that left the list after someone bought them.
+- Anyone who owns neither the wish nor the list gets every purchase with name and number ("someone else" instead of the name when that buyer chose to give anonymously; the name never leaves the server), the notes, and the wishes that left the list after someone bought them.
 
 Every viewer sees who else a wish belongs to: a row on Art's list that he shares with Lotte says "with Lotte". An owner also sees the other owners in the unfolded row, under "Shared with".
 
