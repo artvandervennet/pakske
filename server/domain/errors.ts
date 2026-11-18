@@ -3,6 +3,7 @@ export type DomainErrorCode
     | 'forbidden'
     | 'validation'
     | 'email_taken'
+    | 'email_same'
     | 'registration_closed'
     | 'list_limit'
     | 'list_limit_ever'

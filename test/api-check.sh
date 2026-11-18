@@ -63,6 +63,10 @@ req anon POST /api/auth/register '{"email":"art@example.test","displayName":"X",
 check "a second account with the same email is refused" 409; has "… with the code email_taken" email_taken
 req anon POST /api/auth/register '{"email":"nope","displayName":"","password":"short"}'
 check "a bad registration is refused" 422; has "… naming the fields" '"email":"invalid_email"'
+req anon POST /api/auth/register '{"email":"short@example.test","displayName":"Kort","password":"1234567"}'
+check "a password of 7 characters is refused" 422; has "… as too short" '"password":"password_short"'
+req short POST /api/auth/register '{"email":"short@example.test","displayName":"Kort","password":"12345678"}'
+check "… and one of 8 is enough" 201
 req anon POST /api/auth/login '{"email":"art@example.test","password":"wrong wrong wrong"}'
 check "a wrong password is refused" 401; has "… without saying which part was wrong" invalid_credentials
 req anon GET /api/me; check "the account endpoint needs a login" 401
@@ -70,6 +74,26 @@ req art GET /api/me; check "art reads the account" 200; has "… with the email"
 req art PATCH /api/me '{"displayName":"Arthur"}'; check "art changes the display name" 200; has "… and gets it back" '"displayName":"Arthur"'
 req art PATCH /api/me '{"displayName":"Art"}'; check "… and changes it back" 200
 req art GET /api/_auth/session; check "the page asks who is logged in" 200; has "… and it is art" '"displayName":"Art"'
+req art GET /api/me/lists; has "art starts with one list, named in Dutch" '"title":"Verlanglijst"'
+req eng POST /api/auth/register '{"email":"eng@example.test","displayName":"Eng","password":"correct horse battery","locale":"en"}'; check "someone registers on the English page" 201
+req eng GET /api/me/lists; has "… and starts with a list named in English" '"title":"Wishlist"'
+
+echo "── giving without a name by default"
+req art GET /api/me; has "art gives with his name to begin with" '"anonymousDefault":false'
+req art PATCH /api/me '{"anonymousDefault":true}'; check "art turns it on" 200; has "… and gets it back" '"anonymousDefault":true'; has "… with his name as it was" '"displayName":"Art"'
+req art GET /api/_auth/session; has "the page hears of it" '"anonymousDefault":true'
+req art PATCH /api/me '{}'; check "a change with nothing in it is refused" 422
+req art PATCH /api/me '{"anonymousDefault":false}'; check "art turns it off again" 200
+
+echo "── another address"
+req anon POST /api/me/email '{"email":"x@example.test"}'; check "asking for another address needs a login" 401
+req art POST /api/me/email '{"email":"nope","currentPassword":"correct horse battery"}'; check "something that is no address is refused" 422; has "… naming the field" '"email":"invalid_email"'
+req art POST /api/me/email '{"email":"mom@example.test","currentPassword":"correct horse battery"}'; check "art cannot take mom's address" 409; has "… with the code email_taken" email_taken
+req art POST /api/me/email '{"email":"art@example.test","currentPassword":"correct horse battery"}'; check "… nor ask for the one he has" 409; has "… with the code email_same" email_same
+req art POST /api/me/email '{"email":"art@new.test","currentPassword":"wrong wrong wrong"}'; check "a wrong password is refused" 403; has "… as wrong" wrong_password
+req art POST /api/me/email '{"email":"art@new.test"}'; check "… and so is leaving it out" 403
+req art POST /api/me/email '{"email":"art@new.test","currentPassword":"correct horse battery"}'; check "with his password, the mail goes out" 204
+req art GET /api/me; has "… and his address stays until he clicks the link in it" '"email":"art@example.test"'
 
 echo "── lists"
 req art POST /api/lists '{"title":"Verjaardag"}'; check "art makes a list" 201; TOKEN=$(json .token)
@@ -498,6 +522,29 @@ req mom GET "/api/lists/$TOKEN"; check "mom, who bought from it, still gets it" 
 req mom PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":2}'; check "mom cannot buy more on it" 409; has "… because it was removed" wish_removed
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/purchase"; check "mom can still take back her purchase" 204
 req art GET /api/lists; lacks "art's lists no longer have it, own or visited" "$TOKEN"
+
+echo "── deleting an account"
+register weg Wendy; check "wendy registers" 201
+req weg GET /api/me/lists; WEGLIST=$(json ".lists[0].token")
+req weg POST "/api/lists/$WEGLIST/wishes" '{"title":"Fiets"}'; check "wendy puts a wish on her first list" 201; BIKE=$(json .id)
+req mom PUT "/api/lists/$WEGLIST/wishes/$BIKE/purchase" '{"quantity":1}'; check "mom buys it" 204
+req mom POST "/api/lists/$MOMLIST/wishes" '{"title":"Thee"}'; check "mom adds a wish to her own list" 201; TEA=$(json .id)
+req weg PATCH /api/me '{"anonymousDefault":true}'; check "wendy gives without her name by default" 200
+req weg PUT "/api/lists/$MOMLIST/wishes/$TEA/purchase" '{"quantity":1}'; check "wendy buys mom's tea, saying nothing about her name" 204
+req sis GET "/api/lists/$MOMLIST"; same "sis sees that someone has it" ".wishes.find(w=>w.id===$TEA).bought" 1
+same "… and not who" ".wishes.find(w=>w.id===$TEA).purchases[0].name" null
+req anon DELETE /api/me; check "deleting an account needs a login" 401
+req weg DELETE /api/me '{"currentPassword":"wrong wrong wrong"}'; check "a wrong password deletes nothing" 403; has "… and is called wrong" wrong_password
+req weg DELETE /api/me '{}'; check "… and neither does leaving it out" 403
+req weg GET /api/me; check "wendy is still there" 200
+req weg DELETE /api/me '{"currentPassword":"correct horse battery"}'; check "with her password, wendy deletes her account" 204
+req weg GET /api/me; check "her login went with it" 401
+login weg2 weg; check "… and nobody logs into it again" 401
+req anon GET "/api/lists/$WEGLIST"; check "a visitor no longer gets her list" 404
+req mom GET "/api/lists/$WEGLIST"; check "mom, who bought from it, still gets it" 200; has "… marked as deleted" '"deleted":true'
+same "… with what she bought" ".wishes.find(w=>w.id===$BIKE).mine" 1
+req sis GET "/api/lists/$MOMLIST"; same "what wendy was getting from mom's list is free again" ".wishes.find(w=>w.id===$TEA).bought" 0
+req mom GET "/api/lists/$MOMLIST"; same "… and mom's own page says what it said" ".wishes.find(w=>w.id===$TEA).mine" 0
 
 echo "── guard rails"
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -X POST -b "$TMP/mom.jar" -H 'Origin: https://evil.example' -H 'Content-Type: application/json' --data '{"title":"x"}' "$BASE/api/lists"); check "a request from another site is refused" 403

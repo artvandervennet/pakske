@@ -101,7 +101,9 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 /* ── Forms ────────────────────────────────────────────────────────────────*/
 .form { display: grid; gap: var(--space-6); max-inline-size: 34rem; }
 .field { display: grid; gap: var(--space-2); }
-.field > .hint { font-size: var(--step--1); color: var(--ink-muted); }
+/* A hint is part of its label, on a line of its own under the label's words: it is read
+   before the field, and the field sits right above its error. */
+.field > label > .hint { display: block; font-size: var(--step--1); font-weight: var(--weight-regular); color: var(--ink-muted); }
 .form > .actions { margin-block-start: var(--space-2); }
 
 /* Candidate for Gesso: a field that failed validation. The message under it says how to fix

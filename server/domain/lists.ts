@@ -24,7 +24,7 @@ export function assertListRoom(db: Db, userId: number): void {
 }
 
 /** Makes the list and its owner. Runs in the caller's transaction, after `assertListRoom`. */
-function insertList(db: Db, userId: number, title: string): { id: number, token: string, title: string } {
+export function insertList(db: Db, userId: number, title: string): { id: number, token: string, title: string } {
   const list = db.insert(lists).values({ token: newListToken(), title }).returning().get()
   db.insert(listOwners).values({ listId: list.id, userId }).run()
   return { id: list.id, token: list.token, title: list.title }

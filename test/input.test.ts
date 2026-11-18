@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { acceptInput, fieldErrors, inviteInput, listInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
+import { acceptInput, accountDeleteInput, emailChangeInput, fieldErrors, inviteInput, listInput, profileInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
 const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', url: '', quantity: 1, ...over })
 
@@ -129,6 +129,17 @@ describe('a registration someone submits', () => {
     expect(registerInput.parse(valid)).toMatchObject({ email: 'art@example.test', displayName: 'Art' })
   })
 
+  it('takes a password from 8 characters', () => {
+    expect(registerInput.safeParse({ ...valid, password: '12345678' }).success).toBe(true)
+    expect(fieldErrors(registerInput.safeParse({ ...valid, password: '1234567' }).error!)).toEqual({ password: 'password_short' })
+  })
+
+  it('carries the language of the page, Dutch when it says nothing', () => {
+    expect(registerInput.parse(valid).locale).toBe('nl')
+    expect(registerInput.parse({ ...valid, locale: 'en' }).locale).toBe('en')
+    expect(registerInput.safeParse({ ...valid, locale: 'fr' }).success).toBe(false)
+  })
+
   it('names each field that is wrong', () => {
     const result = registerInput.safeParse({ email: 'nope', displayName: '', password: 'short' })
     expect(fieldErrors(result.error!)).toEqual({
@@ -136,5 +147,33 @@ describe('a registration someone submits', () => {
       displayName: 'required',
       password: 'password_short',
     })
+  })
+})
+
+describe('a change to the profile someone submits', () => {
+  it('holds only what was sent', () => {
+    expect(profileInput.parse({ displayName: ' Art ' })).toEqual({ displayName: 'Art' })
+    expect(profileInput.parse({ anonymousDefault: true })).toEqual({ anonymousDefault: true })
+    expect(profileInput.parse({ displayName: 'Art', anonymousDefault: false })).toEqual({ displayName: 'Art', anonymousDefault: false })
+  })
+
+  it('needs something, a name that is one, and a yes or no', () => {
+    expect(profileInput.safeParse({}).success).toBe(false)
+    expect(fieldErrors(profileInput.safeParse({ displayName: '  ' }).error!)).toEqual({ displayName: 'required' })
+    expect(fieldErrors(profileInput.safeParse({ anonymousDefault: 'yes' }).error!)).toEqual({ anonymousDefault: 'invalid' })
+  })
+})
+
+describe('what Settings asks before a change to the account itself', () => {
+  it('takes a new address, with the current password when there is one', () => {
+    expect(emailChangeInput.parse({ email: ' Art@New.Test ' })).toEqual({ email: 'art@new.test', locale: 'nl' })
+    expect(emailChangeInput.parse({ email: 'art@new.test', currentPassword: 'correct horse', locale: 'en' })).toEqual({ email: 'art@new.test', currentPassword: 'correct horse', locale: 'en' })
+    expect(fieldErrors(emailChangeInput.safeParse({ email: 'nope', currentPassword: '' }).error!)).toEqual({ email: 'invalid_email', currentPassword: 'required' })
+  })
+
+  it('deletes the account on the current password, or on nothing for an account without one', () => {
+    expect(accountDeleteInput.parse({})).toEqual({})
+    expect(accountDeleteInput.parse({ currentPassword: 'correct horse' })).toEqual({ currentPassword: 'correct horse' })
+    expect(fieldErrors(accountDeleteInput.safeParse({ currentPassword: '' }).error!)).toEqual({ currentPassword: 'required' })
   })
 })

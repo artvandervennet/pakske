@@ -1,7 +1,12 @@
 import type { H3Event } from 'h3'
 
+/** The login page in a language, as an address for the button in a mail from Firebase. */
+export function loginPageUrl(event: H3Event, locale: 'nl' | 'en'): string {
+  const origin = getRequestURL(event, { xForwardedHost: useRuntimeConfig().trustProxy === true }).origin
+  return `${origin}${locale === 'en' ? '/en' : ''}/login`
+}
+
 /** Asks Firebase to mail a link for a new password, in the page's language, back to its login page. */
 export async function sendResetMail(event: H3Event, email: string, locale: 'nl' | 'en') {
-  const origin = getRequestURL(event, { xForwardedHost: useRuntimeConfig().trustProxy === true }).origin
-  await useIdentity().sendPasswordReset(email, { locale, continueUrl: `${origin}${locale === 'en' ? '/en' : ''}/login` })
+  await useIdentity().sendPasswordReset(email, { locale, continueUrl: loginPageUrl(event, locale) })
 }

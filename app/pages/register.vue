@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const { user } = useUserSession()
@@ -26,7 +26,8 @@ const password = useFieldValue('new-password')
 const { form, pending, message, errors, run } = useForm(async () => {
   await $fetch('/api/auth/register', {
     method: 'POST',
-    body: { displayName: displayName.value, email: email.value, password: password.value },
+    // The language names the account's first list: "Verlanglijst" or "Wishlist".
+    body: { displayName: displayName.value, email: email.value, password: password.value, locale: locale.value },
   })
   // A full page load: everything on screen is then rendered for the person who just registered.
   window.location.assign(next.value ?? localePath('/'))
@@ -41,7 +42,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
         <form ref="form" class="form" method="post" novalidate @submit.prevent="run">
           <p v-if="googleMessage" class="form-message" role="alert">{{ googleMessage }}</p>
           <p v-if="message" class="form-message" role="alert">{{ message }}</p>
-          <FormField id="name" v-slot="field" :label="t('auth.displayName')" :hint="t('auth.displayNameHint')" :error="errors.displayName">
+          <FormField id="name" v-slot="field" :label="t('auth.displayName')" :error="errors.displayName">
             <input
               id="name"
               v-model="displayName"
@@ -69,7 +70,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
               :aria-invalid="field.invalid"
             >
           </FormField>
-          <PasswordField id="new-password" v-model="password" :label="t('auth.password')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="10" :error="errors.password" />
+          <PasswordField id="new-password" v-model="password" :label="t('auth.password')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="8" :error="errors.password" />
           <div class="actions wide">
             <art-button>
               <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.register') }}</button>

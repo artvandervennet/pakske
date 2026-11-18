@@ -6,6 +6,8 @@ interface Account {
   password: string | null
   emailVerified: boolean
   googleSub: string | null
+  // Firebase ended the logins from before a change of address: their tokens no longer refresh.
+  ended?: boolean
 }
 
 /**
@@ -15,10 +17,15 @@ interface Account {
  * then Google takes the account over and the password is dropped.
  * A Google credential is written `google:<sub>:<email>`; `refreshToken` and `idToken` are `rt:<uid>`
  * and `id:<uid>`.
+ * A new address waits in `changes` until `confirm` plays the person clicking the mailed link.
+ * `tooOld` holds the ids of accounts whose login is too long ago for Firebase to change the
+ * address or delete the account on its word.
  */
 export function fakeIdentity() {
   const accounts: Account[] = []
   const sent: string[] = []
+  const changes: { uid: string, email: string, locale?: string, continueUrl?: string }[] = []
+  const tooOld = new Set<string>()
   let next = 1
 
   const loginOf = (account: Account): FirebaseLogin =>
@@ -28,7 +35,9 @@ export function fakeIdentity() {
   const identity: Identity = {
     async signIn(email, password) {
       const account = accounts.find(a => a.email === email)
-      return account && account.password !== null && account.password === password ? loginOf(account) : null
+      if (!account || account.password === null || account.password !== password) return null
+      account.ended = false
+      return loginOf(account)
     },
     async signUp(email, password) {
       if (accounts.some(a => a.email === email)) return 'email_exists'
@@ -46,7 +55,11 @@ export function fakeIdentity() {
         me.googleSub = sub
         return { kind: 'ok', login: loginOf(me), googleSub: sub, name: 'From Google', emailVerified: true }
       }
-      if (linked) return { kind: 'ok', login: loginOf(linked), googleSub: sub, name: 'From Google', emailVerified: true }
+      if (linked) {
+        linked.ended = false
+        // Google's answer names the address at Google, whatever the account's own address is by now.
+        return { kind: 'ok', login: { ...loginOf(linked), email }, googleSub: sub, name: 'From Google', emailVerified: true }
+      }
       const same = accounts.find(a => a.email === email)
       if (same && same.emailVerified) return { kind: 'needs_password', email }
       if (same) {
@@ -64,22 +77,48 @@ export function fakeIdentity() {
     },
     async refresh(refreshToken) {
       const account = byToken(refreshToken, 'rt')
-      return account ? loginOf(account) : null
+      return account && !account.ended ? loginOf(account) : null
     },
     async changePassword(idToken, password) {
       const account = byToken(idToken, 'id')!
       account.password = password
       return loginOf(account)
     },
-    async providers(idToken) {
+    async account(idToken) {
       const account = byToken(idToken, 'id')!
-      return [...(account.password !== null ? ['password'] : []), ...(account.googleSub ? ['google.com'] : [])]
+      return { email: account.email, providers: [...(account.password !== null ? ['password'] : []), ...(account.googleSub ? ['google.com'] : [])] }
+    },
+    async requestEmailChange(idToken, newEmail, options = {}) {
+      const account = byToken(idToken, 'id')
+      if (!account || tooOld.has(account.uid)) return 'reauth_needed'
+      if (accounts.some(a => a.email === newEmail)) return 'email_exists'
+      changes.push({ uid: account.uid, email: newEmail, ...options })
+      return 'sent'
+    },
+    async deleteAccount(idToken) {
+      const account = byToken(idToken, 'id')
+      if (!account) return 'deleted'
+      if (tooOld.has(account.uid)) return 'reauth_needed'
+      accounts.splice(accounts.indexOf(account), 1)
+      return 'deleted'
     },
     async unlinkGoogle(idToken) {
       byToken(idToken, 'id')!.googleSub = null
     },
   }
-  return { identity, accounts, sent }
+
+  /** The person clicks the link Firebase mailed to their new address. */
+  function confirm(email: string): void {
+    const change = changes.find(c => c.email === email)
+    const account = accounts.find(a => a.uid === change?.uid)
+    if (!change || !account) throw new Error(`no mail went to ${email}`)
+    changes.splice(changes.indexOf(change), 1)
+    account.email = email
+    account.emailVerified = true
+    account.ended = true
+  }
+
+  return { identity, accounts, sent, changes, tooOld, confirm }
 }
 
 export const googleCredential = (sub: string, email: string): GoogleCredential =>

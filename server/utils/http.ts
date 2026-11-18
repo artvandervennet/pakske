@@ -11,6 +11,7 @@ const STATUS: Record<DomainErrorCode, number> = {
   forbidden: 403,
   validation: 422,
   email_taken: 409,
+  email_same: 409,
   registration_closed: 403,
   list_limit: 409,
   list_limit_ever: 409,
@@ -86,7 +87,7 @@ export function tokenParam(event: H3Event, name = 'token'): string {
  * Logs the browser into an account: its cookie, with Firebase's token kept on the server side
  * of it. The lists opened while logged out move into the account, so their cookie can go.
  */
-export async function startSession(event: H3Event, user: { id: number, displayName: string, createdAt: Date }, login: { refreshToken: string }) {
+export async function startSession(event: H3Event, user: SessionAccount, login: { refreshToken: string }) {
   await replaceUserSession(event, { user: sessionUserOf(user), secure: { firebaseRefreshToken: login.refreshToken } })
   mergeVisits(useDb(), user.id, readOpened(event))
   clearOpened(event)
@@ -97,9 +98,11 @@ export async function firebaseRefreshToken(event: H3Event): Promise<string | und
   return (await getUserSession(event)).secure?.firebaseRefreshToken
 }
 
+type SessionAccount = { id: number, displayName: string, anonymousDefault: boolean, createdAt: Date }
+
 /** What the login cookie holds about an account. */
-export function sessionUserOf(user: { id: number, displayName: string, createdAt: Date }) {
-  return { id: user.id, displayName: user.displayName, createdAt: user.createdAt.getTime() }
+export function sessionUserOf(user: SessionAccount) {
+  return { id: user.id, displayName: user.displayName, anonymousDefault: user.anonymousDefault, createdAt: user.createdAt.getTime() }
 }
 
 /**

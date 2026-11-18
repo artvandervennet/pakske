@@ -15,13 +15,17 @@ function isHttpUrl(value: string) {
 }
 
 const email = z.string('required').trim().toLowerCase().min(1, 'required').max(254, 'too_long').pipe(z.email('invalid_email'))
-const newPassword = z.string('required').min(10, 'password_short').max(128, 'too_long')
+const newPassword = z.string('required').min(8, 'password_short').max(128, 'too_long')
 const amount = z.number('invalid_amount').int('invalid_amount').min(1, 'invalid_amount').max(999, 'invalid_amount')
+
+/** The page's language: for what Firebase mails, and for the name of a new account's first list. */
+export const mailLocale = z.enum(['nl', 'en']).default('nl')
 
 export const registerInput = z.object({
   email,
   displayName: requiredText(60),
   password: newPassword,
+  locale: mailLocale,
 })
 
 export const loginInput = z.object({
@@ -29,22 +33,30 @@ export const loginInput = z.object({
   password: z.string('required').min(1, 'required').max(128, 'too_long'),
 })
 
-/** The page's language, for what Firebase mails. */
-export const mailLocale = z.enum(['nl', 'en']).default('nl')
-
 /** "Wachtwoord vergeten": the address, and the page's language for the mail. */
 export const forgotInput = z.object({ email, locale: mailLocale })
 
 export const passwordMailInput = z.object({ locale: mailLocale })
 
+/** A change to the profile: only what is sent changes. */
 export const profileInput = z.object({
-  displayName: requiredText(60),
-})
+  displayName: requiredText(60).optional(),
+  // "Standaard anoniem geven": a new purchase of theirs is without their name.
+  anonymousDefault: z.boolean('invalid').optional(),
+}).refine(change => Object.values(change).some(value => value !== undefined), 'required')
 
-export const passwordInput = z.object({
-  currentPassword: z.string('required').min(1, 'required').max(128, 'too_long'),
-  newPassword,
-})
+const currentPassword = z.string('required').min(1, 'required').max(128, 'too_long')
+
+export const passwordInput = z.object({ currentPassword, newPassword })
+
+/**
+ * Another address for the account, and the page's language for the mail that confirms it. The
+ * current password comes along for an account that has one.
+ */
+export const emailChangeInput = z.object({ email, currentPassword: currentPassword.optional(), locale: mailLocale })
+
+/** Deleting the account: the current password, for an account that has one. */
+export const accountDeleteInput = z.object({ currentPassword: currentPassword.optional() })
 
 export const listInput = z.object({ title: requiredText(80) })
 
