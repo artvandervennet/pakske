@@ -120,18 +120,29 @@ export interface MyLists {
 }
 
 /**
- * A link that works once, as the person who opened it gets it. It never holds the token of the
- * list it came from, so the link can't be used to reach that list later.
+ * A link that shares wishes or a list, as the person who opened it gets it. It never holds the
+ * token of the list it came from, so the link can't be used to reach that list later.
  */
 export interface InviteView {
   kind: 'wishes' | 'list'
-  /** `own` for the person who made it; `closed` once it can't be used any more. */
-  state: 'open' | 'closed' | 'own'
+  /**
+   * `linked`: whoever opens it becomes an owner, and it works once. `copy`: they get copies of
+   * their own, and it works once per account until it expires. A link to a list is always linked.
+   */
+  mode: 'linked' | 'copy'
+  /**
+   * `closed` once nobody can use it any more, `expired` for a copy link past its time, `own` for
+   * the person who made it, `used` for someone who took its copies already.
+   */
+  state: 'open' | 'closed' | 'expired' | 'own' | 'used'
   /** The display name of the person who made it. */
   from: string
   listTitle: string
-  /** The wishes it would make joint that are still on the list; empty unless it is open. */
-  wishes: { id: number, title: string, image: string | null }[]
+  /**
+   * The wishes it shares that are still on the list, in the list's order; empty unless it is
+   * open. `owned` says the opener is an owner of that wish already.
+   */
+  wishes: { id: number, title: string, image: string | null, owned: boolean }[]
   /** The opener's own lists, to choose where the wishes go. */
   mine: MyLists
 }

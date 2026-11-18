@@ -8,8 +8,9 @@ import { addNotice } from './notices'
 import { assertRoom, onListNow, ownedWishOnList, ownsWish, putOnList, standing, takeOffList, wishOnList } from './placement'
 
 // "Add to my list": a wish from someone else's list put on one of your own, linked or as a copy,
-// and unlinking someone from a joint wish. Nothing here reads what buyers did, so these answer
-// the same way whatever was bought, and an already bought wish can be linked like any other.
+// and unlinking someone from a joint wish. Every copy of a wish is made here, also the ones a
+// share link gives. Nothing here reads what buyers did, so these answer the same way whatever
+// was bought, and an already bought wish can be linked like any other.
 
 type Landed = { token: string, title: string, wishId: number }
 
@@ -50,16 +51,28 @@ export function copyWish(db: Db, userId: number, token: string, wishId: number, 
     const wish = wishToAdd(tx, userId, token, wishId)
     const list = targetListId(tx, userId, target)
     assertRoom(tx, list.id)
-    const copy = tx.insert(wishes).values({
-      title: wish.title,
-      description: wish.description,
-      url: wish.url,
-      imageFile: wish.imageFile,
-      quantity: wish.quantity,
-    }).returning({ id: wishes.id }).get()
-    putOnList(tx, list.id, copy.id)
-    return { token: list.token, title: list.title, wishId: copy.id }
+    return { token: list.token, title: list.title, wishId: copyWishOnto(tx, wish, list.id) }
   }, { behavior: 'immediate' })
+}
+
+/**
+ * Makes a new wish with the same title, text, link, picture and amount, and puts it on the list,
+ * whose owners own it. The copy shares nothing else with the original: no owners, no link to
+ * undo, and nobody is told. It goes to the bottom of the list as a wish made now, unless `like`
+ * gives it the place and the age of the wish it stands in for. Returns the copy's id. Runs in the
+ * caller's transaction; the caller checks that the list has room.
+ */
+export function copyWishOnto(db: Db, wish: typeof wishes.$inferSelect, listId: number, like?: { position: number, createdAt: Date }): number {
+  const copy = db.insert(wishes).values({
+    title: wish.title,
+    description: wish.description,
+    url: wish.url,
+    imageFile: wish.imageFile,
+    quantity: wish.quantity,
+    createdAt: like?.createdAt,
+  }).returning({ id: wishes.id }).get()
+  putOnList(db, listId, copy.id, like?.position)
+  return copy.id
 }
 
 /** The lists of this person's that show the wish now, with when the wish came to each. */
@@ -98,17 +111,8 @@ export function unlink(db: Db, actorId: number, wishId: number, targetId: number
   const stopped = new Set<number>()
   for (const { listId, position } of theirPlacements(db, wishId, targetId)) {
     for (const userId of takeOffList(db, listId, wishId)) stopped.add(userId)
-    const copy = db.insert(wishes).values({
-      title: wish.title,
-      description: wish.description,
-      url: wish.url,
-      imageFile: wish.imageFile,
-      quantity: wish.quantity,
-      // The original's age and its place on the list, so the copy stays where the wish was.
-      createdAt: wish.createdAt,
-    }).returning({ id: wishes.id }).get()
-    putOnList(db, listId, copy.id, position)
-    copies.set(listId, copy.id)
+    // The original's age and its place on the list, so the copy stays where the wish was.
+    copies.set(listId, copyWishOnto(db, wish, listId, { position, createdAt: wish.createdAt }))
   }
   for (const userId of stopped) {
     // Someone stopped owning the wish only because one of these lists is theirs.
