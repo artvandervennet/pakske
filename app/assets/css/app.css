@@ -57,19 +57,24 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 .page-head .actions { margin-block-start: var(--space-6); }
 
 /* Candidate for Gesso: a page's title that is the control to rename it. At rest it reads as
-   the heading, with the cue of editable text (see .inline-edit); activated, it turns into
-   that field, in the heading's own type. */
+   the heading, with the cue of editable text (see .inline-edit): a line under the words, which
+   under the pointer becomes the well of a field. Activated, it turns into that field, in the
+   heading's own type. A title that wraps gets the line, and the well, on each of its lines. */
 .title-edit {
   all: unset;
   cursor: text;
-  padding: 0 0.15em;
-  margin: 0 -0.15em;
+  padding: 0.05em 0.18em 0;
+  margin: 0 -0.18em;
   border-radius: var(--radius-chip);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  box-shadow: inset 0 -2px 0 var(--rule);
+  background: linear-gradient(var(--rule), var(--rule)) no-repeat 0.18em 100% / calc(100% - 0.36em) 2px;
+  transition: background-color 120ms ease-out;
 }
-.title-edit:hover { box-shadow: inset 0 -2px 0 var(--accent); color: var(--ink); }
+@media (hover: hover) {
+  /* Half the sunken paint: at this size the full well is a block, heavier than the title in it. */
+  .title-edit:hover { background-color: color-mix(in oklab, var(--surface-sunken) 50%, transparent); background-size: 0 0; color: var(--ink); }
+}
 .title-edit:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .title-edit-field .inline-edit {
   inline-size: calc(100% + 0.3em);
@@ -710,9 +715,11 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
 
 /* Candidate for Gesso: text edited where it is read. A real field without a field's edge or
    fill, in the type of the text it holds. The cue that it is editable is quiet: a line under
-   it in the rule colour, which darkens on hover, and the text cursor. Focused, it has the focus
-   ring every field has and no fill: a field that changes colour reads as an error. The padding
-   gives that ring room and is taken back by the margin, so the text sits where it was read. */
+   the words in the rule colour, and the text cursor. The line is a background, not a shadow:
+   a shadow follows the rounded corners and turns up at both ends. Under the pointer the line
+   makes way for the well of a field, in the sunken paint, which is no colour an error has.
+   Focused, it has the focus ring every field has and neither line nor well. The padding gives
+   that ring room and is taken back by the margin, so the text sits where it was read. */
 .inline-field { display: grid; gap: var(--space-1); min-inline-size: 0; }
 .inline-field-line { display: flex; align-items: baseline; min-inline-size: 0; }
 .inline-edit {
@@ -724,18 +731,22 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
   margin: -0.125em -0.25em;
   border: 0;
   border-radius: var(--radius-chip);
-  background: transparent;
-  box-shadow: inset 0 -1px 0 var(--rule);
+  --edit-line: var(--rule);
+  background: linear-gradient(var(--edit-line), var(--edit-line)) no-repeat 0.25em 100% / calc(100% - 0.5em) 1px;
+  transition: background-color 120ms ease-out;
   letter-spacing: inherit;
   cursor: text;
   resize: none;
   field-sizing: content;
 }
 textarea.inline-edit { overflow: hidden; }
-.inline-edit:hover { box-shadow: inset 0 -1px 0 var(--rule-strong); }
-.inline-edit:focus { box-shadow: none; }
+@media (hover: hover) {
+  .inline-edit:hover { background-color: var(--surface-sunken); background-size: 0 0; }
+}
+.inline-edit:focus { background-color: transparent; background-size: 0 0; }
 .inline-edit::placeholder { color: var(--ink-muted); opacity: 1; }
-.inline-edit[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--danger); }
+/* What is wrong with a field stays marked under the pointer and while it is being put right. */
+.inline-edit[aria-invalid="true"] { --edit-line: var(--danger); background-size: calc(100% - 0.5em) 2px; }
 /* A text keeps the width of the column and grows with its lines. */
 .inline-edit:is(.text, [type="url"]) { flex: 1 1 auto; inline-size: calc(100% + 0.5em); }
 .inline-edit.text { white-space: pre-wrap; overflow-wrap: anywhere; }
