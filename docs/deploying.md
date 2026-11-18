@@ -93,6 +93,30 @@ docker compose run --rm -u root pakske sh -c 'rm -f /data/pakske.db* /data/wishl
 docker compose up -d --build
 ```
 
+## Without Docker: auto-deploy on the Pi
+
+pakske.vandervennet.art runs this way, beside two other sites on the same Pi. A systemd timer runs `deploy/deploy.sh` every minute. When `main` has a new commit, it pulls, builds, and switches the site over once the new build answers on `/api/health`. The site keeps running from the old build until then, and a build that fails or doesn't answer leaves it there. A commit that failed is not tried again until the next commit, or `deploy/deploy.sh --force`.
+
+The script installs its own Node, at the version and checksum in `deploy/node-version`, under `~/.local/share/pakske/node/`, so the Pi's own Node can stay at what its other sites need. pm2 runs the server from `~/.local/share/pakske/current`, a link to the live build in `releases/`; the three newest builds stay there.
+
+Setting it up, once, as your own user (not root):
+
+```sh
+git clone https://github.com/artvandervennet/pakske.git ~/pakske
+cp ~/pakske/deploy/env.example ~/.config/pakske.env && chmod 600 ~/.config/pakske.env
+# fill it in; openssl rand -base64 32 makes NUXT_APP_SECRET
+mkdir -p ~/.config/systemd/user ~/.local/share/pakske
+cp ~/pakske/deploy/pakske-deploy.{service,timer} ~/.config/systemd/user/
+~/pakske/deploy/deploy.sh --force
+systemctl --user daemon-reload && systemctl --user enable --now pakske-deploy.timer
+```
+
+pm2 must already start at boot (`pm2 startup`), and the user needs lingering (`loginctl enable-linger`) for the timer to run without anyone logged in. Then point a Cloudflare Tunnel hostname at `http://localhost:3030`.
+
+`tail ~/.local/share/pakske/deploy.log` shows what each deploy did. To go back to an older build by hand: `ln -sfn ~/.local/share/pakske/releases/<commit> ~/.local/share/pakske/current && pm2 reload pakske`.
+
+Backing up and restoring work as below, with `NUXT_DATA_DIR` from `~/.config/pakske.env` in place of the volume, and `pm2 stop pakske` and `pm2 start pakske` in place of `docker compose down` and `up`.
+
 ## Back up
 
 Everything is in the volume: `pakske.db` and the `uploads/` folder. This copies both into `backup/` while the site keeps running:
