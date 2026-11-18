@@ -262,7 +262,8 @@
     "backToLogin": "Back to logging in",
     "agree": "By making an account you agree to the {terms}. The {privacy} says what the site keeps about you.",
     "agreeTerms": "terms",
-    "agreePrivacy": "privacy page"
+    "agreePrivacy": "privacy page",
+    "agreeGoogle": "The first time you continue with Google, you get an account and agree to the {terms}. The {privacy} says what the site keeps about you."
   },
   "settings": {
     "title": "Settings",

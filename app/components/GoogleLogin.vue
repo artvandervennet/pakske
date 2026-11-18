@@ -4,6 +4,7 @@
 // when it doesn't work; `next` where to go after logging in; `link` asks to link Google to the
 // logged-in account instead (Settings).
 // `or` is the line above it that sets it apart from the form before it, if there is one.
+// The slot is for a sentence to read before pressing the button; it only shows when the button does.
 const props = defineProps<{ from: string, next?: string | null, link?: boolean, label: string, or?: string }>()
 
 const { data } = await useFetch('/api/auth/options', { key: 'auth-options' })
@@ -19,6 +20,7 @@ const href = computed(() => {
 <template>
   <div v-if="data?.google" class="google-login">
   <p v-if="or" class="google-or">{{ or }}</p>
+  <slot />
   <art-button variant="secondary">
     <a :href="href">
       <svg viewBox="0 0 48 48" aria-hidden="true" class="google-mark">

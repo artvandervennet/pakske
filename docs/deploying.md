@@ -66,7 +66,7 @@ The server expects exactly one proxy in front and takes the visitor's address fr
 
 ## The privacy page and the terms
 
-The site has a privacy page at `/privacy` and terms at `/terms`, linked from every page's footer and from the form that makes an account. They describe what Pakske does with people's data, which is the same wherever it runs, and they name you as the one who runs it. Before you let people in:
+The site has a privacy page at `/privacy` and terms at `/terms`, linked from every page's footer, from the form that makes an account, and from the login page when it offers Google. They describe what Pakske does with people's data, which is the same wherever it runs, and they name you as the one who runs it. Before you let people in:
 
 - set `NUXT_PUBLIC_OPERATOR_NAME` and `NUXT_PUBLIC_OPERATOR_EMAIL`. Under the GDPR people must be able to tell who keeps their data and where to ask for it;
 - set `NUXT_PUBLIC_OPERATOR_NETWORK` if a company's tunnel or proxy sits in front, since it sees every visitor's address;
