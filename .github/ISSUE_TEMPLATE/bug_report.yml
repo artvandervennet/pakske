@@ -1,0 +1,51 @@
+name: Bug report
+description: Something on the site doesn't do what it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: A security problem doesn't belong here. See SECURITY.md for how to report it in private.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+      placeholder: "I opened a wish on someone else's list and pressed “Op mijn lijst zetten”. I expected to choose a list; the card folded instead."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to see it
+      placeholder: |
+        1. Log in and open a list you don't own
+        2. Open a wish
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who were you on that page
+      options:
+        - An owner of the list or the wish
+        - Someone else, logged in
+        - Not logged in
+        - It doesn't depend on that
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Safari on an iPhone 15, Firefox 142 on Windows
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The commit your site runs (`git rev-parse --short HEAD`), if you run it yourself.
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: A screenshot, or the error from the browser's console or the server's log. Leave out names, addresses and list links you don't want public.

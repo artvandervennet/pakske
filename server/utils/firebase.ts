@@ -22,7 +22,7 @@ interface Session {
 
 /** Firebase's answers of a person's credentials: these mean "no", not "something broke". */
 const WRONG = ['EMAIL_NOT_FOUND', 'INVALID_PASSWORD', 'INVALID_LOGIN_CREDENTIALS', 'USER_DISABLED', 'MISSING_PASSWORD']
-// Firebase's own floor of six characters, or the project's password policy (see the README).
+// Firebase's own floor of six characters, or the project's password policy (see docs/deploying.md).
 const WEAK = ['WEAK_PASSWORD', 'PASSWORD_DOES_NOT_MEET_REQUIREMENTS']
 // Firebase wants a login from the last few minutes before it changes an address or deletes an
 // account, and these are its ways of saying this one won't do.

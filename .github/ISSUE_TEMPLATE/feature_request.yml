@@ -1,0 +1,22 @@
+name: Idea
+description: Something Pakske could do, or do differently
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: "The situation, before the solution. Who is it for: someone making a list, someone giving, or whoever runs the site?"
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+    validations:
+      required: true
+  - type: textarea
+    id: owners
+    attributes:
+      label: What would an owner of a wish see
+      description: Owners must never learn what was bought. If your idea shows them anything new, say what.

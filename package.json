@@ -1,6 +1,13 @@
 {
   "name": "pakske",
+  "description": "A wishlist site for family and friends, where the owners of a wish never see what was bought",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artvandervennet/pakske.git"
+  },
+  "bugs": "https://github.com/artvandervennet/pakske/issues",
   "type": "module",
   "packageManager": "pnpm@10.34.5",
   "scripts": {
