@@ -9,7 +9,11 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
-  passwordHash: text('password_hash').notNull(),
+  // Null for an account made with Google that never set a password.
+  passwordHash: text('password_hash'),
+  // Google's id for the person ("sub"), once they log in with Google. Their email at Google can
+  // change; this doesn't.
+  googleSub: text('google_sub').unique(),
   createdAt: createdAt(),
 })
 

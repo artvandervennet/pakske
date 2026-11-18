@@ -207,7 +207,9 @@
     "noAccount": "Nog geen account?",
     "haveAccount": "Al een account?",
     "busy": "Even geduld",
-    "showPassword": "Toon wachtwoord"
+    "showPassword": "Toon wachtwoord",
+    "google": "Doorgaan met Google",
+    "or": "of met je e-mailadres"
   },
   "settings": {
     "title": "Instellingen",
@@ -221,7 +223,18 @@
     "currentPassword": "Huidig wachtwoord",
     "newPassword": "Nieuw wachtwoord",
     "changePassword": "Wachtwoord wijzigen",
-    "passwordSaved": "Je wachtwoord is gewijzigd."
+    "passwordSaved": "Je wachtwoord is gewijzigd.",
+    "googleTitle": "Google",
+    "googleIntro": "Log in met je Google-account in plaats van met je wachtwoord.",
+    "googleOn": "Je kunt inloggen met Google.",
+    "googleLink": "Google koppelen",
+    "googleUnlink": "Google ontkoppelen",
+    "googleLinked": "Google is gekoppeld. Je kunt er voortaan mee inloggen.",
+    "googleUnlinked": "Google is ontkoppeld.",
+    "passwordSetTitle": "Wachtwoord instellen",
+    "passwordSetIntro": "Je logt nu in met Google. Met een wachtwoord kun je ook zonder Google inloggen.",
+    "setPassword": "Wachtwoord instellen",
+    "passwordSet": "Je wachtwoord is ingesteld."
   },
   "error": {
     "notFoundTitle": "Deze pagina bestaat niet",
@@ -251,7 +264,12 @@
     "bad_origin": "Dit verzoek kwam van een andere site en is geweigerd.",
     "list_shared": "Deze lijst is ook van iemand anders. Verlaat hem; wie als laatste overblijft, kan hem verwijderen.",
     "last_owner": "Je bent de laatste eigenaar van deze lijst. Verwijder hem in plaats van hem te verlaten.",
-    "invite_closed": "Deze link werkt niet meer. Vraag om een nieuwe."
+    "invite_closed": "Deze link werkt niet meer. Vraag om een nieuwe.",
+    "google_failed": "Inloggen met Google lukte niet. Probeer het opnieuw.",
+    "google_unverified": "Google heeft dit e-mailadres niet bevestigd. Bevestig het eerst bij Google.",
+    "google_email_taken": "Er bestaat al een account met dit e-mailadres. Log hieronder in met je wachtwoord en koppel Google daarna bij Instellingen.",
+    "google_taken": "Dat Google-account hoort al bij een ander account hier.",
+    "password_needed": "Stel eerst een wachtwoord in, anders kun je niet meer inloggen."
   },
   "fields": {
     "required": "Vul dit in.",

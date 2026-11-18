@@ -9,7 +9,9 @@ export default defineEventHandler(async (event) => {
   if (isLimited(key, 5)) fail(429, 'rate_limited')
 
   const input = await readInput(event, passwordInput)
-  if (!(await verifyPassword(user.passwordHash, input.currentPassword))) {
+  // An account made with Google has no password yet: it sets one without the old one. Being
+  // logged in is the proof here, as it was for making the account.
+  if (user.passwordHash && !(await verifyPassword(user.passwordHash, input.currentPassword ?? ''))) {
     countHit(key, WINDOW)
     fail(403, 'wrong_password')
   }

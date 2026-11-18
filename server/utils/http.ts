@@ -21,6 +21,10 @@ const STATUS: Record<DomainErrorCode, number> = {
   list_shared: 409,
   last_owner: 409,
   invite_closed: 409,
+  google_unverified: 403,
+  google_email_taken: 409,
+  google_taken: 409,
+  password_needed: 409,
 }
 
 /** Ends the request with a status and an error code the client can translate. */

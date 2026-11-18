@@ -34,7 +34,8 @@ export const profileInput = z.object({
 })
 
 export const passwordInput = z.object({
-  currentPassword: z.string('required').min(1, 'required').max(128, 'too_long'),
+  // Left out by an account made with Google, which has no password yet.
+  currentPassword: z.string('required').max(128, 'too_long').optional(),
   newPassword,
 })
 

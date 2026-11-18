@@ -14,6 +14,10 @@ export type DomainErrorCode
     | 'list_shared'
     | 'last_owner'
     | 'invite_closed'
+    | 'google_unverified'
+    | 'google_email_taken'
+    | 'google_taken'
+    | 'password_needed'
 
 /** A rule of the wishlist said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {

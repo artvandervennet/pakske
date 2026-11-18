@@ -6,7 +6,12 @@ const { fetch: refreshSession } = useUserSession()
 
 useHead({ title: () => t('settings.title') })
 
-const { data: me } = await useFetch('/api/me')
+const { data: me, refresh: refreshMe } = await useFetch('/api/me')
+// Google's section only where the site offers it, or for an account that already uses it.
+const { data: options } = await useFetch('/api/auth/options', { key: 'auth-options' })
+const route = useRoute()
+const { te } = useI18n()
+const { parse } = useApiError()
 
 const displayName = ref(me.value?.displayName ?? '')
 const profileSaved = ref('')
@@ -22,13 +27,45 @@ const currentPassword = ref('')
 const newPassword = ref('')
 const passwordSaved = ref('')
 
+// An account made with Google has no password yet; it sets one without an old one.
+const hasPassword = computed(() => me.value?.hasPassword !== false)
+
 const password = useForm(async () => {
   passwordSaved.value = ''
-  await $fetch('/api/me/password', { method: 'PUT', body: { currentPassword: currentPassword.value, newPassword: newPassword.value } })
+  const setting = !hasPassword.value
+  await $fetch('/api/me/password', {
+    method: 'PUT',
+    body: setting ? { newPassword: newPassword.value } : { currentPassword: currentPassword.value, newPassword: newPassword.value },
+  })
   currentPassword.value = ''
   newPassword.value = ''
-  passwordSaved.value = t('settings.passwordSaved')
+  await refreshMe()
+  passwordSaved.value = t(setting ? 'settings.passwordSet' : 'settings.passwordSaved')
 })
+
+// Back from Google after linking: that it worked, or why not (server/routes/auth/google.get.ts).
+const googleBack = route.query.google
+const googleSaved = ref(googleBack === 'linked' ? t('settings.googleLinked') : '')
+const googleMessage = ref(typeof googleBack === 'string' && googleBack !== 'linked' && te(`errors.${googleBack}`) ? t(`errors.${googleBack}`) : '')
+const unlinking = ref(false)
+
+async function unlinkGoogle() {
+  if (unlinking.value) return
+  unlinking.value = true
+  googleSaved.value = ''
+  googleMessage.value = ''
+  try {
+    await $fetch('/api/me/google', { method: 'DELETE' })
+    await refreshMe()
+    googleSaved.value = t('settings.googleUnlinked')
+  }
+  catch (error) {
+    googleMessage.value = parse(error).message
+  }
+  finally {
+    unlinking.value = false
+  }
+}
 </script>
 
 <template>
@@ -68,22 +105,42 @@ const password = useForm(async () => {
       </div>
     </section>
 
-    <section class="band section" data-paint="2" aria-labelledby="password-title">
+    <section v-if="options?.google || me?.google" class="band section" data-paint="2" aria-labelledby="google-title">
       <div class="inner">
         <div class="section-head">
-          <h2 id="password-title" class="section-title">{{ t('settings.passwordTitle') }}</h2>
-          <p class="intro">{{ t('settings.passwordIntro') }}</p>
+          <h2 id="google-title" class="section-title">{{ t('settings.googleTitle') }}</h2>
+          <p class="intro">{{ t('settings.googleIntro') }}</p>
+        </div>
+        <div class="section-body google-settings">
+          <p v-if="googleMessage" class="form-message" role="alert">{{ googleMessage }}</p>
+          <template v-if="me?.google">
+            <p>{{ t('settings.googleOn') }}</p>
+            <art-button v-if="me.hasPassword" variant="secondary">
+              <button type="button" :disabled="unlinking" @click="unlinkGoogle">{{ t('settings.googleUnlink') }}</button>
+            </art-button>
+          </template>
+          <GoogleLogin v-else :from="route.path" link :label="t('settings.googleLink')" />
+          <p class="form-message" role="status">{{ googleSaved }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band section" data-paint="1" aria-labelledby="password-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="password-title" class="section-title">{{ hasPassword ? t('settings.passwordTitle') : t('settings.passwordSetTitle') }}</h2>
+          <p class="intro">{{ hasPassword ? t('settings.passwordIntro') : t('settings.passwordSetIntro') }}</p>
         </div>
         <div class="section-body">
           <form :ref="password.form" class="form" method="post" novalidate aria-labelledby="password-title" @submit.prevent="password.run">
             <p v-if="password.message.value" class="form-message" role="alert">{{ password.message.value }}</p>
             <!-- Lets a password manager tie the new password to the right account. -->
             <input type="email" name="email" autocomplete="username" :value="me?.email" hidden readonly>
-            <PasswordField id="current-password" v-model="currentPassword" :label="t('settings.currentPassword')" autocomplete="current-password" :error="password.errors.value.currentPassword" />
+            <PasswordField v-if="hasPassword" id="current-password" v-model="currentPassword" :label="t('settings.currentPassword')" autocomplete="current-password" :error="password.errors.value.currentPassword" />
             <PasswordField id="new-password" v-model="newPassword" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="10" :error="password.errors.value.newPassword" />
             <div class="actions">
               <art-button>
-                <button type="submit" :disabled="password.pending.value">{{ t('settings.changePassword') }}</button>
+                <button type="submit" :disabled="password.pending.value">{{ hasPassword ? t('settings.changePassword') : t('settings.setPassword') }}</button>
               </art-button>
             </div>
             <p class="form-message" role="status">{{ passwordSaved }}</p>

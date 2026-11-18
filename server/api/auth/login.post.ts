@@ -12,8 +12,8 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
   const user = findUserByEmail(db, input.email)
-  // One answer for "no such account" and "wrong password".
-  if (!user || !(await verifyPassword(user.passwordHash, input.password))) {
+  // One answer for "no such account", "wrong password" and "this account logs in with Google".
+  if (!user?.passwordHash || !(await verifyPassword(user.passwordHash, input.password))) {
     countHit(accountKey, WINDOW)
     countHit(ipKey, WINDOW)
     fail(401, 'invalid_credentials')

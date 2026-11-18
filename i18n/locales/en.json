@@ -207,7 +207,9 @@
     "noAccount": "No account yet?",
     "haveAccount": "Already have an account?",
     "busy": "One moment",
-    "showPassword": "Show password"
+    "showPassword": "Show password",
+    "google": "Continue with Google",
+    "or": "or with your email address"
   },
   "settings": {
     "title": "Settings",
@@ -221,7 +223,18 @@
     "currentPassword": "Current password",
     "newPassword": "New password",
     "changePassword": "Change password",
-    "passwordSaved": "Your password is changed."
+    "passwordSaved": "Your password is changed.",
+    "googleTitle": "Google",
+    "googleIntro": "Log in with your Google account instead of your password.",
+    "googleOn": "You can log in with Google.",
+    "googleLink": "Link Google",
+    "googleUnlink": "Unlink Google",
+    "googleLinked": "Google is linked. You can log in with it from now on.",
+    "googleUnlinked": "Google is unlinked.",
+    "passwordSetTitle": "Set a password",
+    "passwordSetIntro": "You log in with Google now. With a password you can also log in without Google.",
+    "setPassword": "Set password",
+    "passwordSet": "Your password is set."
   },
   "error": {
     "notFoundTitle": "This page doesn't exist",
@@ -251,7 +264,12 @@
     "bad_origin": "This request came from another site and was refused.",
     "list_shared": "Someone else owns this list too. Leave it instead; the last owner can delete it.",
     "last_owner": "You are the last owner of this list. Delete it instead of leaving it.",
-    "invite_closed": "This link no longer works. Ask for a new one."
+    "invite_closed": "This link no longer works. Ask for a new one.",
+    "google_failed": "Logging in with Google didn't work. Try again.",
+    "google_unverified": "Google hasn't confirmed this email address. Confirm it at Google first.",
+    "google_email_taken": "An account with this email address already exists. Log in below with your password, then link Google under Settings.",
+    "google_taken": "That Google account already belongs to another account here.",
+    "password_needed": "Set a password first, or you won't be able to log in any more."
   },
   "fields": {
     "required": "Fill this in.",

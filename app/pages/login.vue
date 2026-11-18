@@ -12,6 +12,13 @@ const next = computed(() => safeNextPath(route.query.next, origin))
 
 if (user.value) await navigateTo(next.value ?? localePath('/'))
 
+// Back from Google with a reason it didn't work (server/routes/auth/google.get.ts).
+const { te } = useI18n()
+const googleMessage = computed(() => {
+  const code = route.query.google
+  return typeof code === 'string' && te(`errors.${code}`) ? t(`errors.${code}`) : ''
+})
+
 const email = useFieldValue('email')
 const password = useFieldValue('password')
 
@@ -31,6 +38,8 @@ const { form, pending, message, errors, run } = useForm(async () => {
     <section class="band wide" data-paint="1">
       <div class="inner">
         <form ref="form" class="form" method="post" novalidate @submit.prevent="run">
+          <p v-if="googleMessage" class="form-message" role="alert">{{ googleMessage }}</p>
+          <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')" />
           <p v-if="message" class="form-message" role="alert">{{ message }}</p>
           <FormField id="email" v-slot="field" :label="t('auth.email')" :error="errors.email">
             <input

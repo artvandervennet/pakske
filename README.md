@@ -93,7 +93,18 @@ The site listens on port 3000. Data lives in the Docker volume `wishlist-data`.
 | `NUXT_SESSION_COOKIE_SECURE` | `true` | The login cookie is only sent over HTTPS. Set `false` only when you open the site as plain `http://` on your home network; otherwise logging in silently fails there. |
 | `NUXT_TRUST_PROXY` | `false` | Set `true` behind a tunnel or reverse proxy, so the rate limits see each visitor's own address. Leave `false` when the port is reached directly. |
 | `NUXT_MAX_USERS` | `200` | Registration closes at this many accounts. |
+| `NUXT_OAUTH_GOOGLE_CLIENT_ID` | empty | With the two below: offers "Doorgaan met Google". Empty: email and password only. |
+| `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` | empty | The secret of that OAuth client. |
+| `NUXT_OAUTH_GOOGLE_REDIRECT_URL` | empty | The site's address followed by `/auth/google`, the same as the authorised redirect URI at Google. |
 | `PORT` | `3000` | The port on the host. |
+
+### Logging in with Google
+
+1. At https://console.cloud.google.com, make a project, set up the OAuth consent screen (type External, the app's name, your email), and publish it. With only the `email`, `profile` and `openid` scopes Google doesn't need to review it.
+2. Under APIs & Services → Credentials, make an OAuth client ID of type Web application. Add `https://<your address>/auth/google` as an authorised redirect URI.
+3. Put its client ID and secret in `.env`, with that same URI as `NUXT_OAUTH_GOOGLE_REDIRECT_URL`, and run `docker compose up -d`.
+
+Someone who logs in with Google for the first time gets an account without a password, named as at Google. They can set a password under Settings. An account that already has their address is not entered that way: anyone can make an account here with any address, so it could be someone else's. Its owner logs in with the password once and links Google under Settings. After that, the Google account is the key, even if its address changes.
 
 To reach the site from outside your home, put HTTPS in front of it: a Cloudflare Tunnel, Tailscale Funnel, or Caddy with a port forward. In that case:
 
@@ -146,7 +157,7 @@ The two `rm`'d files are SQLite's journal. Left in place after a power cut, they
 
 ### Someone forgot their password
 
-The site sends no email. Give the account a new password by hand:
+The site sends no email. Someone with Google linked can simply keep logging in with Google. Otherwise, give the account a new password by hand:
 
 ```sh
 docker compose exec wishlist node scripts/reset-password.mjs mom@example.com
@@ -208,7 +219,7 @@ Things to know when changing the UI:
 
 ## Not included
 
-- Email: no verification and no reset mail. Notices stay inside the site.
+- Email: no verification and no reset mail. Notices stay inside the site. Logging in with Google is the way around a forgotten password.
 - Fetching a title or picture from a pasted shop link.
 - Prices, restoring a deleted wish.
 - Seeing who opened your list, or taking a list away from someone who has the link.
