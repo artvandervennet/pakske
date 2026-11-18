@@ -1,8 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Pakske: a present, in the hero's deep red and the yellow of its buttons -->
-  <rect width="32" height="32" rx="7" fill="#722329"/>
-  <path d="M16 11.5C14.6 7.6 10.6 6.1 9.6 8.3S12.4 11.7 16 11.5ZM16 11.5C17.4 7.6 21.4 6.1 22.4 8.3S19.6 11.7 16 11.5Z" fill="#eadd8e"/>
-  <rect x="5.5" y="11.5" width="21" height="5" rx="1.2" fill="#eadd8e"/>
-  <rect x="7" y="17.75" width="18" height="9" rx="1.2" fill="#eadd8e"/>
-  <rect x="14.6" y="11.5" width="2.8" height="15.25" fill="#722329"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="pakske-logo-title">
+  <title id="pakske-logo-title">Pakske</title>
+  <!-- Pakske: a parcel in the hero's deep red, tied with one ribbon that folds into a p.
+       The ribbon is the nickel yellow of the buttons; the darker yellow is its shaded side. -->
+  <rect width="512" height="512" rx="116" fill="#722329"/>
+  <!-- The ribbon: up from under the parcel, folded over at the top, round the bowl, back under the stem -->
+  <path fill="#eadd8e" fill-rule="evenodd" d="M146 196 216 126H260A108 108 0 0 1 260 342H216V512H146ZM216 196V272H260A38 38 0 0 0 260 196Z"/>
+  <!-- The fold at the top of the stem -->
+  <path fill="#c5a84d" d="M146 196 216 126V196Z"/>
+  <!-- Where the ribbon slips back under the stem -->
+  <path fill="#c5a84d" d="M216 272H252L216 308Z"/>
 </svg>
