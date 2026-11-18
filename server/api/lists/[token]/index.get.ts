@@ -10,8 +10,9 @@ export default defineEventHandler(async (event) => {
   const view = getListView(db, token, viewerId)
   if (!view) fail(404, 'not_found')
 
-  // Opening someone's list puts it on your home page: in the account, or in a cookie when logged out.
+  // Opening a list is remembered: in the account, or in a cookie when logged out. Someone else's
+  // list goes on your visited lists; a list of your own moves to the front of your own.
   if (viewerId === null) writeOpened(event, withOpened(readOpened(event), token))
-  else if (!view.viewerOwnsList) rememberList(db, viewerId, token)
+  else rememberList(db, viewerId, token)
   return view
 })

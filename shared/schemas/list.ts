@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
-/** One row on a person's home page: a list they own. */
-export interface HomeList {
+/** A list the person owns, as a row on the home page and the lists page. */
+export interface OwnedList {
   token: string
   title: string
   /** Live wishes only. */
   wishes: number
-  /** The display names of the list's other owners, in the order they joined. */
+  /** The display names of all the list's owners, the person included, in the order they joined. */
+  owners: string[]
+  /** The same without the person: who the row says the list is shared with. */
   sharedWith: string[]
 }
 
@@ -158,10 +160,29 @@ export interface NoticeView {
   createdAt: string
 }
 
-/** What the home page shows: the lists a person owns, the ones they opened, and their notices. */
+/** How many lists of each kind the home page shows. The lists page has them all. */
+export const HOME_LISTS = 5
+
+/**
+ * What the home page shows: the few lists of each kind the person had to do with last, how many
+ * there are in all, and their notices.
+ */
 export interface HomeView {
-  owned: HomeList[]
+  /** The most recently opened or joined first. */
+  owned: OwnedList[]
+  ownedTotal: number
+  /** The most recently opened first. */
   opened: OpenedList[]
+  openedTotal: number
   /** Newest first; empty when logged out. */
   notices: NoticeView[]
+}
+
+/**
+ * What the lists page shows: every list the person owns and every list of someone else's that
+ * they opened, in the home page's order. Nobody gets a list here that they don't own and never opened.
+ */
+export interface ListsView {
+  owned: OwnedList[]
+  opened: OpenedList[]
 }

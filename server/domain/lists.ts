@@ -1,8 +1,8 @@
-import { and, asc, count, desc, eq, isNull, max } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNull, max, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listOwners, lists, listWishes, users, wishes } from '../db/schema'
+import { listOwners, lists, listVisits, listWishes, users, wishes } from '../db/schema'
 import type { ListTarget } from '../../shared/schemas/input'
-import type { HomeList, MyLists } from '../../shared/schemas/list'
+import type { MyLists, OwnedList } from '../../shared/schemas/list'
 import { DomainError } from './errors'
 import { onListNow, settleOwners, takeOffList } from './placement'
 import { newListToken } from './tokens'
@@ -111,11 +111,20 @@ export function leaveList(db: Db, userId: number, token: string): void {
   }, { behavior: 'immediate' })
 }
 
-export function listOwnedLists(db: Db, userId: number): HomeList[] {
+/**
+ * The person's live lists, the one they had to do with last first: by when they last opened it,
+ * or by when they became an owner when that is later or they never opened it. Two lists with
+ * the same moment: the newer list, so the answer doesn't vary.
+ */
+export function listOwnedLists(db: Db, userId: number): OwnedList[] {
+  // A visit from before the person owned the list must not hold a list they just joined back.
+  const lastTouched = sql`max(${listOwners.addedAt}, coalesce(${listVisits.openedAt}, 0))`
   return db.select({ id: lists.id, token: lists.token, title: lists.title }).from(lists)
     .innerJoin(listOwners, eq(listOwners.listId, lists.id))
+    // Only the person's own visits: who else opened a list is nobody's business.
+    .leftJoin(listVisits, and(eq(listVisits.listId, lists.id), eq(listVisits.userId, userId)))
     .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
-    .orderBy(lists.id)
+    .orderBy(desc(lastTouched), desc(lists.id))
     .all()
     .map(({ id, token, title }) => {
       const { total } = db.select({ total: count() }).from(listWishes)
@@ -123,8 +132,15 @@ export function listOwnedLists(db: Db, userId: number): HomeList[] {
         .innerJoin(lists, eq(lists.id, listWishes.listId))
         .where(and(eq(listWishes.listId, id), onListNow))
         .get()!
-      const sharedWith = ownersOfList(db, id).filter(owner => owner.userId !== userId).map(owner => owner.name)
-      return { token, title, wishes: total, sharedWith }
+      const owners = ownersOfList(db, id)
+      return {
+        token,
+        title,
+        wishes: total,
+        owners: owners.map(owner => owner.name),
+        // By id, not by name: a co-owner with the person's own name is still someone else.
+        sharedWith: owners.filter(owner => owner.userId !== userId).map(owner => owner.name),
+      }
     })
 }
 
