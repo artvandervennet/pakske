@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Pakske: a present, in the hero's deep red and the yellow of its buttons -->
+  <rect width="32" height="32" rx="7" fill="#722329"/>
+  <path d="M16 11.5C14.6 7.6 10.6 6.1 9.6 8.3S12.4 11.7 16 11.5ZM16 11.5C17.4 7.6 21.4 6.1 22.4 8.3S19.6 11.7 16 11.5Z" fill="#eadd8e"/>
+  <rect x="5.5" y="11.5" width="21" height="5" rx="1.2" fill="#eadd8e"/>
+  <rect x="7" y="17.75" width="18" height="9" rx="1.2" fill="#eadd8e"/>
+  <rect x="14.6" y="11.5" width="2.8" height="15.25" fill="#722329"/>
+</svg>

@@ -99,6 +99,9 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 
 /* Sections on app pages sit closer together than on a portfolio page. */
 .section > .inner { padding-block: var(--space-12) var(--space-16); }
+/* The hero's drips hang 4.5rem (Gesso's --art-drip-height) into the band under it, over its top
+   padding: that band's content starts under the longest drip. */
+.hero + .band > .inner { padding-block-start: calc(4.5rem + var(--space-6)); }
 .section-head > .actions { margin-block-start: var(--space-6); }
 
 /* On a short page the footer sits at the bottom of the screen; a long page scrolls as usual.

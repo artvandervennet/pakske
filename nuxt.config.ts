@@ -26,6 +26,12 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'robots', content: 'noindex, nofollow' },
       ],
+      // A present in the hero's red and yellow. The .ico is for browsers without SVG icons.
+      link: [
+        { rel: 'icon', href: '/favicon.ico', sizes: '32x32 48x48' },
+        { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      ],
       script: [{ innerHTML: schemeScript, tagPosition: 'head' }],
     },
   },
