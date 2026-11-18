@@ -249,11 +249,11 @@ req art POST "/api/lists/$XMAS/wishes" '{"title":"Lamp"}'; check "art adds a lam
 upload art "/api/lists/$XMAS/wishes/$LAMP/image" "$TMP/pic.png"; check "… with a picture" 200; LAMPIMG=$(json .image)
 req art POST "/api/lists/$XMAS/wishes" '{"title":"Vaas"}'; check "art adds a vase" 201; VASE=$(json .id)
 upload art "/api/lists/$XMAS/wishes/$VASE/image" "$TMP/pic.png"; check "… with a picture" 200; VASEIMG=$(json .image)
-req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"wishIds\":[$TRAIN]}"; check "art makes a link for the train" 201; INVITE=$(json .invite)
+req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$TRAIN]}"; check "art makes a link for the train" 201; INVITE=$(json .invite)
 if [ "${#INVITE}" = 22 ]; then ok "… its token has 22 characters"; else bad "the link's token is \"$INVITE\""; fi
 if [ "$INVITE" != "$XMAS" ]; then ok "… and is not the list's token"; else bad "the link hands out the list's token"; fi
-req mom POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"wishIds\":[$TRAIN]}"; check "mom cannot make a link on art's list" 404
-req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"wishIds\":[$TRAIN,$BOOK]}"; check "a link with a wish of another list is not found" 404
+req mom POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$TRAIN]}"; check "mom cannot make a link on art's list" 404
+req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$TRAIN,$BOOK]}"; check "a link with a wish of another list is not found" 404
 req art POST "/api/lists/$XMAS/invites" '{"kind":"wishes","wishIds":[]}'; check "a link for no wishes is refused" 422
 req anon POST "/api/lists/$XMAS/invites" '{"kind":"list"}'; check "making a link needs a login" 401
 
@@ -262,7 +262,7 @@ req anon GET "/api/invites/$INVITE"; check "a visitor who isn't logged in gets 4
 req lot GET "/api/invites/$UNKNOWN"; check "a well-formed token no link has is not found" 404
 req lot GET "/api/invites/not-a-token"; check "a malformed one too" 404
 req lot GET "/api/invites/$INVITE"; check "lot opens it" 200
-has "… and it is open" '"state":"open"'; has "… from Art" '"from":"Art"'; has "… with the train" '"title":"Speelgoedtrein"'
+has "… and it is open" '"state":"open"'; has "… from Art" '"from":"Art"'; has "… with the train" '"title":"Speelgoedtrein"'; has "… which she doesn't own yet" '"owned":false'; has "… to share, not to copy" '"mode":"linked"'
 has "… and her own lists to choose from" "\"token\":\"$LOTLIST\""; lacks "… and no trace of art's list token" "$XMAS"
 req art GET "/api/invites/$INVITE"; check "art opens his own link" 200; has "… and is told it is his" '"state":"own"'
 req art POST "/api/invites/$INVITE/accept" '{"newList":"Van mezelf"}'; check "art cannot use his own link" 403
@@ -285,7 +285,7 @@ req anon GET /api/home; has "a visitor's home page has no notices" '"notices":[]
 echo "── two people use one link at the same moment"
 req art POST /api/lists '{"title":"Ruimte"}'; RACELIST=$(json .token)
 req art POST "/api/lists/$RACELIST/wishes" '{"title":"Raket"}'; ROCKET=$(json .id)
-req art POST "/api/lists/$RACELIST/invites" "{\"kind\":\"wishes\",\"wishIds\":[$ROCKET]}"; RACEINVITE=$(json .invite)
+req art POST "/api/lists/$RACELIST/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$ROCKET]}"; RACEINVITE=$(json .invite)
 for who in lot mom; do
   curl -s -o /dev/null -w '%{http_code}' -X POST -b "$TMP/$who.jar" -H 'Content-Type: application/json' \
     --data "{\"newList\":\"Raket voor $who\"}" "$BASE/api/invites/$RACEINVITE/accept" > "$TMP/race-$who" &
@@ -295,6 +295,29 @@ RACE=$(printf '%s\n%s\n' "$(cat "$TMP/race-lot")" "$(cat "$TMP/race-mom")" | sor
 if [ "$RACE" = "200 409 " ]; then ok "exactly one of them gets it"; else bad "racing for the link gave: $RACE"; fi
 req mom GET "/api/invites/$RACEINVITE"; has "… and afterwards the link says it is closed" '"state":"closed"'
 req art POST /api/notices/seen
+
+echo "── a link that gives copies"
+req art POST /api/lists '{"title":"Kopieën"}'; COPYLIST=$(json .token)
+req art POST "/api/lists/$COPYLIST/wishes" '{"title":"Puzzel"}'; PUZZLE=$(json .id)
+req art POST "/api/lists/$COPYLIST/wishes" '{"title":"Kaars"}'; CANDLE=$(json .id)
+req art POST "/api/lists/$COPYLIST/invites" "{\"kind\":\"wishes\",\"wishIds\":[$PUZZLE,$CANDLE]}"; check "art makes a link without saying how" 201; COPYINVITE=$(json .invite)
+req art POST "/api/lists/$COPYLIST/invites" "{\"kind\":\"wishes\",\"mode\":\"both\",\"wishIds\":[$PUZZLE]}"; check "a way of sharing that doesn't exist is refused" 422
+req art POST "/api/lists/$COPYLIST/invites" '{"kind":"list","mode":"copy"}'; check "a list can't be shared as a copy" 422
+req guest GET "/api/invites/$COPYINVITE"; check "oma opens it" 200; has "… and it gives copies" '"mode":"copy"'; has "… of the puzzle, which isn't hers" '"title":"Puzzel","image":null,"owned":false'; has "… and of the candle" Kaars; lacks "… without the list's token" "$COPYLIST"
+req art GET "/api/invites/$COPYINVITE"; has "art is told it is his" '"state":"own"'
+req art POST "/api/invites/$COPYINVITE/accept" '{"newList":"Van mezelf"}'; check "… and cannot use it" 403
+req guest POST "/api/invites/$COPYINVITE/accept" "{\"newList\":\"Van oma\",\"wishIds\":[$PUZZLE,$LAMP]}"; check "a wish the link isn't for is not found" 404
+req guest POST "/api/invites/$COPYINVITE/accept" '{"newList":"Van oma","wishIds":[]}'; check "choosing nothing is refused" 422
+req guest POST "/api/invites/$COPYINVITE/accept" "{\"newList\":\"Van oma\",\"wishIds\":[$PUZZLE,$PUZZLE]}"; check "… and so is choosing a wish twice" 422
+req guest GET /api/me/lists; lacks "none of that made the new list" "Van oma"
+req guest POST "/api/invites/$COPYINVITE/accept" "{\"newList\":\"Van oma\",\"wishIds\":[$PUZZLE]}"; check "oma takes the puzzle only" 200; OMALIST=$(json .token)
+req guest GET "/api/lists/$OMALIST"; has "… and has a puzzle" '"title":"Puzzel"'; has "… as its owner" '"role":"owner"'; lacks "… which is not art's wish" "\"id\":$PUZZLE,"; lacks "… and no candle" Kaars
+req guest GET "/api/lists/$COPYLIST"; has "oma still sees art's puzzle" "\"id\":$PUZZLE,"; lacks "… as a buyer, not an owner" '"role":"owner"'
+req guest POST "/api/invites/$COPYINVITE/accept" "{\"list\":\"$OMALIST\"}"; check "the link works once for her" 409; has "… with the code invite_closed" invite_closed
+req guest GET "/api/invites/$COPYINVITE"; has "… and says she used it" '"state":"used"'; lacks "… showing no wishes" Kaars
+req opa POST "/api/invites/$COPYINVITE/accept" '{"newList":"Van opa"}'; check "opa can still use it, for both wishes" 200; OPALIST=$(json .token)
+req opa GET "/api/lists/$OPALIST"; has "… and gets the puzzle" Puzzel; has "… and the candle" Kaars
+req art GET /api/notices/unseen; has "art is not told about any of it" '"unseen":0'
 
 echo "── a joint wish, bought through both lists"
 req art GET "/api/lists/$XMAS"; cp "$BODY" "$TMP/xmas-art-before"
