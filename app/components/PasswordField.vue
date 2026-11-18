@@ -1,6 +1,5 @@
 <script setup lang="ts">
 // A password field with Gesso's eye at its end, which shows what was typed (<art-password>).
-// The `aside` slot goes on the label's line, at its end: "Wachtwoord vergeten?".
 defineProps<{
   id: string
   label: string
@@ -15,9 +14,6 @@ const { t } = useI18n()
 
 <template>
   <FormField :id="id" :label="label" :hint="hint" :error="error">
-    <template v-if="$slots.aside" #aside>
-      <slot name="aside" />
-    </template>
     <template #default="field">
       <art-password :label="t('auth.showPassword')">
         <input

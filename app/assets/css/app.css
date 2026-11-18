@@ -113,9 +113,6 @@ art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-b
 /* ── Forms ────────────────────────────────────────────────────────────────*/
 .form { display: grid; gap: var(--space-6); max-inline-size: 34rem; }
 .field { display: grid; gap: var(--space-2); }
-/* A label with something at the end of its line, such as "Wachtwoord vergeten?". */
-.field-label { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-1) var(--space-4); }
-.field-aside { font-size: var(--step--1); }
 .field > .hint { font-size: var(--step--1); color: var(--ink-muted); }
 .form > .actions { margin-block-start: var(--space-2); }
 
@@ -762,6 +759,15 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 }
 @media (max-width: 48rem) { .nav-mark-wide { display: none; } }
 @media (width > 48rem) { .nav-mark-narrow { display: none; } }
+
+/* The login form's password and button. "Wachtwoord vergeten?" comes after the button, so Tab goes
+   from the email to the password, but it shows at the end of the password's label line: it
+   shares the field's grid cell, at the top right. The label is short, so they never meet. */
+.password-then-login { display: grid; gap: var(--space-6); }
+.password-then-login > * { grid-column: 1; }
+.password-then-login > .field { grid-row: 1; }
+.password-then-login > .actions { grid-row: 2; margin-block-start: var(--space-2); }
+.password-then-login > .forgot-link { grid-row: 1; justify-self: end; align-self: start; font-size: var(--step--1); line-height: calc(var(--step-0) * 1.6); /* the label's line box, so the two share a baseline */ }
 
 /* The login and register forms: their button as wide as the fields, and so is Google's below. */
 .actions.wide { display: grid; }
