@@ -13,12 +13,20 @@ export function makeDb(): Db {
   return openDb(':memory:')
 }
 
+/**
+ * An account without the first list every real one starts with (`createUser` makes it), so a
+ * test holds only the lists it makes itself. The row goes from the tables, as if it never was:
+ * a deleted list would still count toward how many lists a person ever made.
+ */
 export function addUser(db: Db, name: string) {
-  return createUser(db, {
+  const user = createUser(db, {
     email: `${name}@example.test`,
     displayName: name[0]!.toUpperCase() + name.slice(1),
     passwordHash: 'not-a-real-hash',
   })
+  const first = db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, user.id)).all()
+  for (const { listId } of first) db.delete(lists).where(eq(lists.id, listId)).run()
+  return user
 }
 
 /** The code of the DomainError a function throws, or undefined when it doesn't throw. */

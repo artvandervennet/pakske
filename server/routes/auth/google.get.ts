@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { linkGoogle, logInWithGoogle, type GoogleCredential } from '../../domain/accounts'
 import { DomainError } from '../../domain/errors'
+import { localeOfPath } from '../../domain/users'
 
 // Logging in with Google, and linking Google to an account from Settings. A page sends the
 // browser here with `?from=` (the page to come back to with a problem) and `?next=` (where to go
@@ -39,7 +40,8 @@ const google = (event: H3Event) => defineOAuthGoogleEventHandler({
         await setUserSession(event, { secure: { firebaseRefreshToken: login.refreshToken } })
         return sendRedirect(event, withQuery(flow.from, { google: 'linked' }))
       }
-      const { user, login } = await logInWithGoogle(db, identity, credential, { maxUsers: Number(useRuntimeConfig().maxUsers) })
+      // A new account's first list is named in the language of the page the person came from.
+      const { user, login } = await logInWithGoogle(db, identity, credential, { maxUsers: Number(useRuntimeConfig().maxUsers), locale: localeOfPath(flow.from) })
       await startSession(event, user, login)
       return sendRedirect(event, flow.next ?? '/')
     }

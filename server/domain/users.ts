@@ -2,6 +2,7 @@ import { count, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { users } from '../db/schema'
 import { DomainError } from './errors'
+import { insertList } from './lists'
 
 export interface NewUser {
   email: string
@@ -12,14 +13,29 @@ export interface NewUser {
   googleSub?: string | null
 }
 
-export function createUser(db: Db, input: NewUser, options: { maxUsers?: number } = {}) {
+/** The language an account is made in: the page's, for what the site names on the person's behalf. */
+export type AccountLocale = 'nl' | 'en'
+
+/** The language of a page on this site, from its path: English lives under /en, Dutch has no prefix. */
+export function localeOfPath(path: string): AccountLocale {
+  return /^\/en(?:[/?#]|$)/.test(path) ? 'en' : 'nl'
+}
+
+// Nobody should land on an empty home page and have to work out that a list comes first.
+const FIRST_LIST_TITLE: Record<AccountLocale, string> = { nl: 'Verlanglijst', en: 'Wishlist' }
+
+/** Makes the account and its first list, named in the language the account is made in. */
+export function createUser(db: Db, input: NewUser, options: { maxUsers?: number, locale?: AccountLocale } = {}) {
   return db.transaction((tx) => {
     if (options.maxUsers !== undefined) {
       const { total } = tx.select({ total: count() }).from(users).get()!
       if (total >= options.maxUsers) throw new DomainError('registration_closed')
     }
     if (tx.select({ id: users.id }).from(users).where(eq(users.email, input.email)).get()) throw new DomainError('email_taken')
-    return tx.insert(users).values(input).returning().get()
+    const user = tx.insert(users).values(input).returning().get()
+    // A new account has no lists, so there is room for this one without asking.
+    insertList(tx, user.id, FIRST_LIST_TITLE[options.locale ?? 'nl'])
+    return user
   }, { behavior: 'immediate' })
 }
 

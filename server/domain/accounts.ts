@@ -2,7 +2,7 @@ import { count, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { users } from '../db/schema'
 import { DomainError } from './errors'
-import { createUser, findUserByEmail } from './users'
+import { createUser, findUserByEmail, type AccountLocale } from './users'
 
 // Logging in. Firebase Authentication holds the passwords and the Google logins and sends the
 // emails (a forgotten password); this site keeps its own account for everything else, tied to
@@ -57,7 +57,10 @@ function findByUid(db: Db, uid: string) {
   return db.select().from(users).where(eq(users.firebaseUid, uid)).get()
 }
 
-/** The account here for a Firebase login: by its id, or the one with its address that has none yet. */
+/**
+ * The account here for a Firebase login: by its id, or the one with its address that has none
+ * yet. One made here starts like every account, with a first list.
+ */
 function accountOf(db: Db, login: FirebaseLogin): User {
   const known = findByUid(db, login.uid)
   if (known) return known
@@ -89,7 +92,7 @@ export async function logIn(db: Db, identity: Identity, email: string, password:
 export async function register(
   db: Db,
   identity: Identity,
-  input: { email: string, displayName: string, password: string },
+  input: { email: string, displayName: string, password: string, locale?: AccountLocale },
   options: { maxUsers?: number } = {},
 ) {
   // What can be answered here is answered before Firebase gets an account it would keep.
@@ -97,7 +100,7 @@ export async function register(
   if (findUserByEmail(db, input.email)) throw new DomainError('email_taken')
   const login = await identity.signUp(input.email, input.password)
   if (login === 'email_exists') throw new DomainError('email_taken')
-  const user = createUser(db, { email: input.email, displayName: input.displayName, passwordHash: null, firebaseUid: login.uid }, options)
+  const user = createUser(db, { email: input.email, displayName: input.displayName, passwordHash: null, firebaseUid: login.uid }, { ...options, locale: input.locale })
   return { user, login }
 }
 
@@ -107,7 +110,7 @@ export async function register(
  * Settings. Firebase asks for that itself; an account from before Firebase is asked here, since
  * Firebase doesn't know it yet.
  */
-export async function logInWithGoogle(db: Db, identity: Identity, credential: GoogleCredential, options: { maxUsers?: number } = {}) {
+export async function logInWithGoogle(db: Db, identity: Identity, credential: GoogleCredential, options: { maxUsers?: number, locale?: AccountLocale } = {}) {
   // Asked before Firebase hears of it: Firebase would make an account for the address, and that
   // account would then stand in the way of the old password moving there.
   const legacy = credential.email ? findUserByEmail(db, credential.email.trim().toLowerCase()) : undefined

@@ -110,6 +110,12 @@ describe('a registration someone submits', () => {
     expect(registerInput.parse(valid)).toMatchObject({ email: 'art@example.test', displayName: 'Art' })
   })
 
+  it('carries the language of the page, Dutch when it says nothing', () => {
+    expect(registerInput.parse(valid).locale).toBe('nl')
+    expect(registerInput.parse({ ...valid, locale: 'en' }).locale).toBe('en')
+    expect(registerInput.safeParse({ ...valid, locale: 'fr' }).success).toBe(false)
+  })
+
   it('names each field that is wrong', () => {
     const result = registerInput.safeParse({ email: 'nope', displayName: '', password: 'short' })
     expect(fieldErrors(result.error!)).toEqual({

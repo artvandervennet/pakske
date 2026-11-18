@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const { user } = useUserSession()
@@ -26,7 +26,8 @@ const password = useFieldValue('new-password')
 const { form, pending, message, errors, run } = useForm(async () => {
   await $fetch('/api/auth/register', {
     method: 'POST',
-    body: { displayName: displayName.value, email: email.value, password: password.value },
+    // The language names the account's first list: "Verlanglijst" or "Wishlist".
+    body: { displayName: displayName.value, email: email.value, password: password.value, locale: locale.value },
   })
   // A full page load: everything on screen is then rendered for the person who just registered.
   window.location.assign(next.value ?? localePath('/'))

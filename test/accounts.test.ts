@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { changePassword, linkGoogle, logIn, logInWithGoogle, register, signInMethods, unlinkGoogle } from '../server/domain/accounts'
+import { listMyLists } from '../server/domain/lists'
 import { createUser, findUserByEmail, findUserById } from '../server/domain/users'
 import { fakeIdentity, googleCredential } from './fake-identity'
 import { addUser, makeDb } from './helpers'
 
 // A password from before Firebase, as the local table held it. Checked by a stand-in for scrypt.
 const legacyCheck = async (hash: string, password: string) => hash === `hash:${password}`
+
+const listTitles = (db: ReturnType<typeof makeDb>, userId: number) => listMyLists(db, userId).lists.map(list => list.title)
 
 async function rejection(promise: Promise<unknown>): Promise<string | undefined> {
   try {
@@ -24,6 +27,18 @@ describe('making an account', () => {
     const { user, login } = await register(db, identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
     expect(accounts).toHaveLength(1)
     expect(user).toMatchObject({ email: 'art@example.test', displayName: 'Art', firebaseUid: login.uid, passwordHash: null })
+  })
+
+  it('gives the new account one list, named in the language of the page', async () => {
+    const db = makeDb()
+    const { identity } = fakeIdentity()
+    const art = await register(db, identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
+    expect(listTitles(db, art.user.id)).toEqual(['Verlanglijst'])
+    const sis = await register(db, identity, { email: 'sis@example.test', displayName: 'Sis', password: 'correct horse', locale: 'en' })
+    expect(listTitles(db, sis.user.id)).toEqual(['Wishlist'])
+    // Logging in afterwards finds the account and makes nothing more.
+    await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)
+    expect(listTitles(db, art.user.id)).toEqual(['Verlanglijst'])
   })
 
   it('refuses an address that has an account, here or at Firebase', async () => {
@@ -66,6 +81,15 @@ describe('logging in with a password', () => {
     expect((await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck))?.user.id).toBe(art.id)
   })
 
+  it('makes the account here, with its list, when only the half at Firebase exists', async () => {
+    const db = makeDb()
+    const { identity } = fakeIdentity()
+    await identity.signUp('art@example.test', 'correct horse')
+    const result = await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)
+    expect(result?.user).toMatchObject({ email: 'art@example.test', displayName: 'art' })
+    expect(listTitles(db, result!.user.id)).toEqual(['Verlanglijst'])
+  })
+
   it("doesn't move an account over with a wrong password", async () => {
     const db = makeDb()
     const { identity, accounts } = fakeIdentity()
@@ -83,6 +107,16 @@ describe('logging in with Google', () => {
     expect(first.user).toMatchObject({ email: 'lotte@gmail.test', displayName: 'Lotte Peeters', googleSub: 'g-1', passwordHash: null })
     const again = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
     expect(again.user.id).toBe(first.user.id)
+  })
+
+  it('gives a new account one list, in the language of the page it came from', async () => {
+    const db = makeDb()
+    const { identity } = fakeIdentity()
+    const lotte = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    expect(listTitles(db, lotte.user.id)).toEqual(['Verlanglijst'])
+    const tom = await logInWithGoogle(db, identity, googleCredential('g-2', 'tom@gmail.test'), { locale: 'en' })
+    expect(listTitles(db, tom.user.id)).toEqual(['Wishlist'])
   })
 
   it('asks for the password of an account at Firebase with that address', async () => {
