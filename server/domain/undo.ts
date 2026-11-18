@@ -11,11 +11,20 @@ import { mayUnlink, unlink } from './sharing'
 // then on the changes are simply the wish. Nothing here reads what buyers did, so undo answers
 // the same way whatever was bought.
 
-export type LinkField = 'title' | 'description' | 'url' | 'quantity' | 'imageFile'
+export type LinkField = 'title' | 'description' | 'urls' | 'quantity' | 'imageFile' | 'imageFromLink'
 type WishRow = typeof wishes.$inferSelect
 
-const LINK_FIELDS: readonly LinkField[] = ['title', 'description', 'url', 'quantity', 'imageFile']
+const LINK_FIELDS: readonly LinkField[] = ['title', 'description', 'urls', 'quantity', 'imageFile', 'imageFromLink']
 const isLinkField = (field: string): field is LinkField => (LINK_FIELDS as readonly string[]).includes(field)
+
+/**
+ * What a field of the wish holds. A wish from before it could have several links may hold no
+ * list at all, which is an empty one.
+ */
+const held = (wish: WishRow, field: LinkField) => field === 'urls' ? wish.urls ?? [] : wish[field]
+
+/** Whether two values of a field are the same. Links are a list, so they are compared by what they hold. */
+const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
 
 /**
  * Remembers what a linker is about to change, before they change it. Someone else's change to a
@@ -29,11 +38,18 @@ export function recordChanges(db: Db, wishId: number, userId: number, before: Wi
   const own = links.find(link => link.userId === userId)
   const others = links.filter(link => link.userId !== userId).map(link => link.id)
   const forgotten: string[] = []
+  const pictureChanged = after.imageFile !== undefined && after.imageFile !== before.imageFile
   for (const field of LINK_FIELDS) {
-    if (after[field] === undefined || after[field] === before[field]) continue
+    // Where a picture came from (a link's cover, or the owner's own photo) goes with the picture:
+    // remembered and forgotten together, also when one cover replaces another. Otherwise an undo
+    // could put back "an own photo" beside a newer cover, which a new link then wouldn't replace.
+    const changed = field === 'imageFromLink'
+      ? pictureChanged
+      : after[field] !== undefined && !same(after[field], held(before, field))
+    if (!changed) continue
     if (own) {
       // Only the first change counts: undo goes back to the wish as it was before the linker came.
-      db.insert(linkChanges).values({ linkId: own.id, field, before: JSON.stringify(before[field]) }).onConflictDoNothing().run()
+      db.insert(linkChanges).values({ linkId: own.id, field, before: JSON.stringify(held(before, field)) }).onConflictDoNothing().run()
     }
     if (others.length > 0) {
       const gone = db.delete(linkChanges).where(and(inArray(linkChanges.linkId, others), eq(linkChanges.field, field)))
@@ -89,7 +105,11 @@ export function undoLink(db: Db, userId: number, token: string, wishId: number, 
       for (const row of remembered) {
         if (isLinkField(row.field)) Object.assign(back, { [row.field]: JSON.parse(row.before) })
       }
-      if ('imageFile' in back) replaced.push(wish.imageFile)
+      if ('imageFile' in back) {
+        replaced.push(wish.imageFile)
+        // A picture remembered before covers existed says nothing about where it came from. It was a photo.
+        back.imageFromLink ??= false
+      }
       if (Object.keys(back).length > 0) {
         tx.update(wishes).set({ ...back, updatedAt: new Date() }).where(eq(wishes.id, wishId)).run()
       }

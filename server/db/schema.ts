@@ -45,7 +45,6 @@ export const wishes = sqliteTable('wishes', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   description: text('description'),
-  url: text('url'),
   // The wish's links, in the order the owner put them; the first one may give the wish its picture.
   urls: text('urls', { mode: 'json' }).$type<string[]>(),
   imageFile: text('image_file'),

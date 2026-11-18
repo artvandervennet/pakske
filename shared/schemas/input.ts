@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_LINKS } from '../utils/wish-edit'
 
 // What people submit. Every message is a code; the client translates `fields.<code>`.
 
@@ -84,11 +85,23 @@ export const acceptInput = z.union([
   z.strictObject({ list: z.never().optional(), newList: z.never().optional() }).transform(() => null),
 ])
 
+/**
+ * A wish's links, in the owner's order. Every refusal is reported on the list itself and not on
+ * the entry, so the page finds it under `urls`, the one field it sent.
+ */
+const links = z.array(z.string('invalid').trim(), 'invalid').superRefine((list, ctx) => {
+  const refuse = (message: string) => ctx.addIssue({ code: 'custom', message })
+  if (list.length > MAX_LINKS) return refuse('too_many_links')
+  if (list.some(link => link.length > 2000)) return refuse('too_long')
+  // http and https only: anything else (javascript:, data:) would run when someone clicks it.
+  if (!list.every(isHttpUrl)) return refuse('invalid_url')
+  if (new Set(list).size !== list.length) refuse('duplicate_link')
+})
+
 const wishFields = {
   title: requiredText(120),
   description: optionalText(2000),
-  // http and https only: anything else (javascript:, data:) would run when someone clicks it.
-  url: optionalText(2000).refine(v => v === null || isHttpUrl(v), 'invalid_url'),
+  urls: links,
   // null means unlimited
   quantity: amount.nullable(),
 }
@@ -97,18 +110,19 @@ const wishFields = {
 export const wishInput = z.object({
   title: wishFields.title,
   description: wishFields.description.default(null),
-  url: wishFields.url.default(null),
+  urls: wishFields.urls.default([]),
   quantity: wishFields.quantity.default(1),
 })
 
 /**
  * A change to a wish: only the fields that are sent change. Nothing has a default, or a change
- * to the title alone would reset the amount, the text and the link.
+ * to the title alone would reset the amount, the text and the links. `urls` replaces the whole
+ * list; an empty one clears it.
  */
 export const wishPatchInput = z.object({
   title: wishFields.title.optional(),
   description: wishFields.description.optional(),
-  url: wishFields.url.optional(),
+  urls: wishFields.urls.optional(),
   quantity: wishFields.quantity.optional(),
 }).refine(change => Object.values(change).some(value => value !== undefined), 'required')
 

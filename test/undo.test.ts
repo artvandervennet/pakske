@@ -7,7 +7,7 @@ import { ownedListId } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { copyWish, linkWish } from '../server/domain/sharing'
 import { dismissNotice, undoLink, unusedImages } from '../server/domain/undo'
-import { deleteWish, setWishImage, updateWish } from '../server/domain/wishes'
+import { deleteWish, setWishCover, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishPatchInput } from '../shared/schemas/input'
 import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, wishIn } from './helpers'
 
@@ -32,8 +32,8 @@ describe('undoing a link', () => {
     const { db, art, lot, A, game, L } = setup()
     linkWish(db, lot.id, A, game.id, { list: L })
     updateWish(db, lot.id, L, game.id, change({ title: 'Ander spel', quantity: 2 }))
-    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toEqual({ unused: [] }) // old.png is kept for the undo
-    expect(undoLink(db, art.id, A, game.id, lot.id)).toEqual({ unused: ['new.png'] })
+    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toMatchObject({ unused: [] }) // old.png is kept for the undo
+    expect(undoLink(db, art.id, A, game.id, lot.id)).toMatchObject({ unused: ['new.png'] })
 
     expect(wishIn(getListView(db, A, art.id), game.id)).toMatchObject({ title: 'Bordspel', quantity: 1, image: '/uploads/old.png' })
     expect(ownerIds(db, game.id)).toEqual([art.id])
@@ -78,19 +78,112 @@ describe('undoing a link', () => {
     const { db, art, lot, A, L } = setup()
     const puzzles = addWishTo(db, art.id, A, 'Puzzels', null)
     linkWish(db, lot.id, A, puzzles.id, { list: L })
-    updateWish(db, lot.id, L, puzzles.id, change({ quantity: 2, url: 'https://example.test/puzzel' }))
+    updateWish(db, lot.id, L, puzzles.id, change({ quantity: 2, urls: ['https://example.test/puzzel'] }))
     setWishImage(db, lot.id, L, puzzles.id, 'puzzel.png')
-    expect(undoLink(db, art.id, A, puzzles.id, lot.id)).toEqual({ unused: ['puzzel.png'] })
-    expect(wishIn(getListView(db, A, art.id), puzzles.id)).toMatchObject({ quantity: null, url: null, image: null })
+    expect(undoLink(db, art.id, A, puzzles.id, lot.id)).toMatchObject({ unused: ['puzzel.png'] })
+    expect(wishIn(getListView(db, A, art.id), puzzles.id)).toMatchObject({ quantity: null, urls: [], image: null })
+  })
+
+  it('puts the links back as the list they were, in their order', () => {
+    const { db, art, lot, A, game, L } = setup()
+    const shop = 'https://example.test/spel'
+    const other = 'https://example.org/spel'
+    updateWish(db, art.id, A, game.id, change({ urls: [shop, other] }))
+    linkWish(db, lot.id, A, game.id, { list: L })
+    updateWish(db, lot.id, L, game.id, change({ urls: [other] }))
+    updateWish(db, lot.id, L, game.id, change({ urls: [] }))
+    expect(db.select({ field: linkChanges.field, before: linkChanges.before }).from(linkChanges).all())
+      .toEqual([{ field: 'urls', before: JSON.stringify([shop, other]) }])
+    undoLink(db, art.id, A, game.id, lot.id)
+    expect(wishIn(getListView(db, A, art.id), game.id)).toMatchObject({ urls: [shop, other] })
+  })
+
+  it('remembers nothing for the same links sent again, and nothing for no links on a wish that had none', () => {
+    const { db, art, lot, A, game, L } = setup()
+    const shop = 'https://example.test/spel'
+    linkWish(db, lot.id, A, game.id, { list: L })
+    // The wish was made without links, so its column may hold nothing at all.
+    db.update(wishes).set({ urls: null }).where(eq(wishes.id, game.id)).run()
+    updateWish(db, lot.id, L, game.id, change({ urls: [] }))
+    expect(rememberedRows(db)).toBe(0)
+    updateWish(db, art.id, A, game.id, change({ urls: [shop] }))
+    updateWish(db, lot.id, L, game.id, change({ urls: [shop] }))
+    expect(rememberedRows(db)).toBe(0)
+  })
+
+  it('takes back a link the linker put on, together with its cover', () => {
+    const { db, art, lot, A, L } = setup()
+    const lamp = addWishTo(db, art.id, A, 'Lamp')
+    linkWish(db, lot.id, A, lamp.id, { list: L })
+    const shop = 'https://example.test/lamp'
+    updateWish(db, lot.id, L, lamp.id, change({ urls: [shop] }))
+    setWishCover(db, lot.id, L, lamp.id, shop, 'cover.jpg')
+    expect(wishIn(getListView(db, A, art.id), lamp.id)).toMatchObject({ image: '/uploads/cover.jpg', imageFromLink: true })
+    expect(undoLink(db, art.id, A, lamp.id, lot.id)).toMatchObject({ unused: ['cover.jpg'] })
+    expect(wishIn(getListView(db, A, art.id), lamp.id)).toMatchObject({ urls: [], image: null, imageFromLink: false })
+  })
+
+  it('puts a cover back as a cover, and a photo as a photo', () => {
+    const { db, art, lot, A, game, L } = setup()
+    const shop = 'https://example.test/spel'
+    // Art's wish has a link with its cover; the linker puts up a photo of their own.
+    const lamp = addWishTo(db, art.id, A, 'Lamp')
+    updateWish(db, art.id, A, lamp.id, change({ urls: [shop] }))
+    setWishCover(db, art.id, A, lamp.id, shop, 'cover.jpg')
+    linkWish(db, lot.id, A, lamp.id, { list: L })
+    expect(setWishImage(db, lot.id, L, lamp.id, 'photo.jpg')).toMatchObject({ unused: [] }) // the cover is kept for the undo
+    expect(wishRow(db, lamp.id)).toMatchObject({ imageFile: 'photo.jpg', imageFromLink: false })
+    expect(undoLink(db, art.id, A, lamp.id, lot.id)).toMatchObject({ unused: ['photo.jpg'] })
+    expect(wishRow(db, lamp.id)).toMatchObject({ imageFile: 'cover.jpg', imageFromLink: true })
+
+    // The other way round: the linker takes Art's photo off the game, and their link gives it a cover.
+    linkWish(db, lot.id, A, game.id, { list: L })
+    setWishImage(db, lot.id, L, game.id, null)
+    updateWish(db, lot.id, L, game.id, change({ urls: [shop] }))
+    setWishCover(db, lot.id, L, game.id, shop, 'spel.jpg')
+    expect(wishRow(db, game.id)).toMatchObject({ imageFile: 'spel.jpg', imageFromLink: true })
+    expect(undoLink(db, art.id, A, game.id, lot.id)).toMatchObject({ unused: ['spel.jpg'] })
+    expect(wishRow(db, game.id)).toMatchObject({ imageFile: 'old.png', imageFromLink: false })
+  })
+
+  it('forgets where a picture came from together with the picture', () => {
+    const { db, art, lot, A, L } = setup()
+    const first = 'https://example.test/lamp'
+    const second = 'https://example.org/lamp'
+    const lamp = addWishTo(db, art.id, A, 'Lamp')
+    setWishImage(db, art.id, A, lamp.id, 'photo.jpg')
+    linkWish(db, lot.id, A, lamp.id, { list: L })
+    // The linker swaps Art's photo for the cover of a link; Art then changes the link himself.
+    setWishImage(db, lot.id, L, lamp.id, null)
+    updateWish(db, lot.id, L, lamp.id, change({ urls: [first] }))
+    setWishCover(db, lot.id, L, lamp.id, first, 'first.jpg')
+    updateWish(db, art.id, A, lamp.id, change({ urls: [second] }))
+    setWishCover(db, art.id, A, lamp.id, second, 'second.jpg')
+    // Art's link and its cover are newer than anything the linker did, so undo keeps both.
+    undoLink(db, art.id, A, lamp.id, lot.id)
+    expect(wishRow(db, lamp.id)).toMatchObject({ urls: [second], imageFile: 'second.jpg', imageFromLink: true })
+  })
+
+  it('treats a picture remembered from before covers existed as a photo', () => {
+    const { db, art, lot, A, game, L } = setup()
+    const shop = 'https://example.test/spel'
+    linkWish(db, lot.id, A, game.id, { list: L })
+    setWishImage(db, lot.id, L, game.id, null)
+    updateWish(db, lot.id, L, game.id, change({ urls: [shop] }))
+    setWishCover(db, lot.id, L, game.id, shop, 'cover.jpg')
+    // As an older version of the site left it: the picture's file, and not where it came from.
+    db.delete(linkChanges).where(eq(linkChanges.field, 'imageFromLink')).run()
+    undoLink(db, art.id, A, game.id, lot.id)
+    expect(wishRow(db, game.id)).toMatchObject({ imageFile: 'old.png', imageFromLink: false })
   })
 
   it('stops remembering when the notice is dismissed', () => {
     const { db, art, lot, A, game, L } = setup()
     linkWish(db, lot.id, A, game.id, { list: L })
     updateWish(db, lot.id, L, game.id, change({ title: 'Ander spel' }))
-    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toEqual({ unused: [] })
+    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toMatchObject({ unused: [] })
     const [notice] = listNotices(db, art.id)
-    expect(dismissNotice(db, art.id, notice!.id)).toEqual({ unused: ['old.png'] })
+    expect(dismissNotice(db, art.id, notice!.id)).toMatchObject({ unused: ['old.png'] })
 
     expect(listNotices(db, art.id)).toEqual([])
     expect(db.select().from(wishLinks).all()).toEqual([])
@@ -105,11 +198,11 @@ describe('undoing a link', () => {
     const sis = addUser(db, 'sis')
     addOwner(db, A, sis.id)
     linkWish(db, lot.id, A, game.id, { list: L })
-    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toEqual({ unused: [] })
+    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toMatchObject({ unused: [] })
 
-    expect(dismissNotice(db, art.id, listNotices(db, art.id)[0]!.id)).toEqual({ unused: [] })
+    expect(dismissNotice(db, art.id, listNotices(db, art.id)[0]!.id)).toMatchObject({ unused: [] })
     expect(listNotices(db, sis.id)).toMatchObject([{ kind: 'wish_linked', canUndo: true }])
-    expect(dismissNotice(db, sis.id, listNotices(db, sis.id)[0]!.id)).toEqual({ unused: ['old.png'] })
+    expect(dismissNotice(db, sis.id, listNotices(db, sis.id)[0]!.id)).toMatchObject({ unused: ['old.png'] })
     expect(db.select().from(wishLinks).all()).toEqual([])
   })
 
@@ -120,7 +213,7 @@ describe('undoing a link', () => {
     linkWish(db, lot.id, A, game.id, { list: L })
     updateWish(db, lot.id, L, game.id, change({ title: 'Ander spel' }))
     dismissNotice(db, art.id, listNotices(db, art.id)[0]!.id)
-    expect(undoLink(db, sis.id, A, game.id, lot.id)).toEqual({ unused: [] })
+    expect(undoLink(db, sis.id, A, game.id, lot.id)).toMatchObject({ unused: [] })
     expect(wishIn(getListView(db, A, sis.id), game.id)).toMatchObject({ title: 'Bordspel' })
     expect(ownerIds(db, game.id)).toEqual([art.id, sis.id])
     expect(listNotices(db, sis.id)).toEqual([])
@@ -141,7 +234,7 @@ describe('undoing a link', () => {
     expect(codeOf(() => undoLink(db, art.id, A, game.id, mom.id))).toBe('not_found')
     expect(ownerIds(db, game.id)).toEqual([art.id, lot.id, sis.id])
 
-    expect(undoLink(db, art.id, A, game.id, lot.id)).toEqual({ unused: [] })
+    expect(undoLink(db, art.id, A, game.id, lot.id)).toMatchObject({ unused: [] })
     expect(codeOf(() => undoLink(db, art.id, A, game.id, lot.id))).toBe('not_found')
     expect(listNotices(db, lot.id)).toHaveLength(1)
     expectOwnersSettled(db)
@@ -152,7 +245,7 @@ describe('undoing a link', () => {
     linkWish(db, lot.id, A, game.id, { list: L })
     updateWish(db, lot.id, L, game.id, change({ title: 'Ander spel' }))
     deleteWish(db, lot.id, L, game.id)
-    expect(undoLink(db, art.id, A, game.id, lot.id)).toEqual({ unused: [] })
+    expect(undoLink(db, art.id, A, game.id, lot.id)).toMatchObject({ unused: [] })
     expect(wishIn(getListView(db, A, art.id), game.id)).toMatchObject({ title: 'Bordspel' })
     expect(getListView(db, L, lot.id)!.wishes).toEqual([])
     expect(listNotices(db, lot.id)).toEqual([])
@@ -168,7 +261,7 @@ describe('undoing a link', () => {
       db.insert(listWishes).values({ listId: lId, wishId: id, removedAt: new Date() }).run()
     }
     linkWish(db, lot.id, A, game.id, { list: L })
-    expect(undoLink(db, art.id, A, game.id, lot.id)).toEqual({ unused: [] })
+    expect(undoLink(db, art.id, A, game.id, lot.id)).toMatchObject({ unused: [] })
     expect(getListView(db, L, lot.id)!.wishes).toMatchObject([{ title: 'Bordspel', role: 'owner' }])
     expectOwnersSettled(db)
   })
@@ -194,7 +287,7 @@ describe('dismissing a notice', () => {
     const lamp = addWishTo(db, art.id, other, 'Lamp')
     linkWish(db, lot.id, other, lamp.id, { list: L })
     const lampNotice = listNotices(db, art.id).find(notice => notice.wishId === lamp.id)!
-    expect(dismissNotice(db, art.id, lampNotice.id)).toEqual({ unused: [] })
+    expect(dismissNotice(db, art.id, lampNotice.id)).toMatchObject({ unused: [] })
     expect(listNotices(db, art.id)).toMatchObject([{ wishId: game.id, canUndo: true }])
     undoLink(db, art.id, A, game.id, lot.id)
     expect(wishIn(getListView(db, A, art.id), game.id)).toMatchObject({ title: 'Bordspel' })
@@ -213,17 +306,17 @@ describe('pictures', () => {
     const lamp = addWishTo(db, art.id, A, 'Lamp')
     setWishImage(db, art.id, A, lamp.id, 'lamp.png')
     linkWish(db, lot.id, A, lamp.id, { list: L })
-    expect(setWishImage(db, lot.id, L, lamp.id, null)).toEqual({ unused: [] })
+    expect(setWishImage(db, lot.id, L, lamp.id, null)).toMatchObject({ unused: [] })
     expect(unusedImages(db, ['lamp.png'])).toEqual([])
   })
 
   it('forgets a picture the linker set once an earlier owner replaces it', () => {
     const { db, art, lot, A, game, L } = setup()
     linkWish(db, lot.id, A, game.id, { list: L })
-    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toEqual({ unused: [] })
+    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toMatchObject({ unused: [] })
     // Art's own picture wins; the one from before the link is no longer needed for an undo.
-    expect(setWishImage(db, art.id, A, game.id, 'art.png')).toEqual({ unused: ['new.png', 'old.png'] })
-    expect(undoLink(db, art.id, A, game.id, lot.id)).toEqual({ unused: [] })
+    expect(setWishImage(db, art.id, A, game.id, 'art.png')).toMatchObject({ unused: ['new.png', 'old.png'] })
+    expect(undoLink(db, art.id, A, game.id, lot.id)).toMatchObject({ unused: [] })
     expect(wishIn(getListView(db, A, art.id), game.id)).toMatchObject({ image: '/uploads/art.png' })
   })
 })

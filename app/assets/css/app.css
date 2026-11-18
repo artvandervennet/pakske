@@ -533,7 +533,12 @@ textarea.inline-edit { overflow: hidden; }
 /* An owner's unfolded row, the wish's parts each editable in place. */
 .wish-edit > .wish-text-edit { justify-self: stretch; }
 .wish-link-edit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); justify-self: stretch; }
-.wish-link-edit > .inline-field { flex: 1 1 100%; }
+/* A wish's links: side by side for a buyer, one per line with its buttons for an owner. */
+.wish-links { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
+.wish-links > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-inline-size: none; }
+.wish-link-edit > :is(.wish-links, .inline-field-error) { flex: 1 1 100%; }
+.wish-link-edit > .wish-links { flex-direction: column; }
+.wish-link-edit .wish-links .inline-field { flex: 1 1 100%; }
 .wish-edit-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
 .wish-saved { font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
 
@@ -577,6 +582,8 @@ textarea.inline-edit { overflow: hidden; }
 .picture-edit-label { font-weight: var(--weight-medium); color: var(--accent); }
 .picture-edit-choose:hover .picture-edit-label { text-decoration: underline; }
 .picture-edit-remove { position: absolute; inset-block-start: var(--space-2); inset-inline-end: var(--space-2); }
+/* Under a picture that is a link's cover: which shop it came from, and a way to put up an own one. */
+.picture-edit-source { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--step--1); color: var(--ink-muted); }
 
 /* Candidate for Gesso: a tape that holds names. Tape keeps to one line; names can be long,
    so this one wraps, and the tags beside a title never take more than part of the row. */

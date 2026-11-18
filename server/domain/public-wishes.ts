@@ -12,8 +12,10 @@ export function toPublicWish(row: typeof wishes.$inferSelect): PublicWish {
     id: row.id,
     title: row.title,
     description: row.description,
-    url: row.url,
+    // A wish from before it could have several links may hold nothing here.
+    urls: row.urls ?? [],
     image: row.imageFile ? `/uploads/${row.imageFile}` : null,
+    imageFromLink: row.imageFromLink,
     quantity: row.quantity,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

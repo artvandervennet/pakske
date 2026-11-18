@@ -5,8 +5,9 @@ import { removedLast } from '../shared/utils/wish-order'
 const base = {
   title: 'Boek',
   description: null,
-  url: null,
+  urls: [],
   image: null,
+  imageFromLink: false,
   quantity: 1,
   createdAt: '2026-11-17T10:00:00.000Z',
   updatedAt: '2026-11-17T10:00:00.000Z',

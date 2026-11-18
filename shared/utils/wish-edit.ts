@@ -4,8 +4,11 @@ import type { PublicWish } from '../schemas/list'
 // its own, with only that field in the PATCH, so a save never overwrites another field with
 // what the row happened to hold.
 
-export type WishTextField = 'title' | 'description' | 'url'
-export type WishChange = Partial<Pick<PublicWish, WishTextField | 'quantity'>>
+export type WishTextField = 'title' | 'description'
+export type WishChange = Partial<Pick<PublicWish, WishTextField | 'quantity' | 'urls'>>
+
+/** How many links a wish can have. */
+export const MAX_LINKS = 5
 
 /** The saved text a field shows, and what Escape puts back. */
 export function savedText(wish: Pick<PublicWish, WishTextField>, field: WishTextField): string {
@@ -47,13 +50,33 @@ export function commitAction(
 /**
  * The PATCH body for what a field holds, or null when it says what is saved already (spaces
  * around it don't count, as the server trims them). `saved` is the field's saved text. An
- * emptied text or link is cleared; an emptied title is sent, so the server's "fill this in"
- * shows beside it.
+ * emptied text is cleared; an emptied title is sent, so the server's "fill this in" shows
+ * beside it.
  */
 export function fieldChange(field: WishTextField, text: string, saved: string): WishChange | null {
   const value = cleanText(text, field === 'title' ? 'line' : 'text')
   if (value === saved) return null
   return field === 'title' ? { title: value } : { [field]: value || null }
+}
+
+/**
+ * The PATCH body for what the field of one link holds, or null when it says what is saved
+ * already. The links save as one list, so the body is the whole list with this one changed.
+ * `index` is the link's place, or the list's length for a new one. An emptied field takes its
+ * link off the list, and an empty new one adds nothing.
+ */
+export function linkChange(saved: readonly string[], index: number, text: string): { urls: string[] } | null {
+  const value = cleanText(text, 'url')
+  if (value === (saved[index] ?? '')) return null
+  const urls = [...saved]
+  if (value) urls[index] = value
+  else urls.splice(index, 1)
+  return { urls }
+}
+
+/** The PATCH body that takes one link off the list. */
+export function linkRemoval(saved: readonly string[], index: number): { urls: string[] } {
+  return { urls: saved.filter((_, at) => at !== index) }
 }
 
 /** The PATCH body for an amount (null: no limit), or null when it is the saved one. */

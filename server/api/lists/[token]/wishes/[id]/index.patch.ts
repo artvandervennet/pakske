@@ -6,5 +6,8 @@ export default defineEventHandler(async (event) => {
   const token = tokenParam(event)
   const id = idParam(event)
   const input = await readInput(event, wishPatchInput)
-  return domain(() => updateWish(useDb(), user.id, token, id, input))
+  const { wish, unused } = domain(() => updateWish(useDb(), user.id, token, id, input))
+  // The change is saved. Failing to clean up a cover it dropped must not undo that.
+  await removeUploads(unused)
+  return wish
 })

@@ -53,8 +53,9 @@ export function copyWish(db: Db, userId: number, token: string, wishId: number, 
     const copy = tx.insert(wishes).values({
       title: wish.title,
       description: wish.description,
-      url: wish.url,
+      urls: wish.urls,
       imageFile: wish.imageFile,
+      imageFromLink: wish.imageFromLink,
       quantity: wish.quantity,
     }).returning({ id: wishes.id }).get()
     putOnList(tx, list.id, copy.id)
@@ -101,8 +102,9 @@ export function unlink(db: Db, actorId: number, wishId: number, targetId: number
     const copy = db.insert(wishes).values({
       title: wish.title,
       description: wish.description,
-      url: wish.url,
+      urls: wish.urls,
       imageFile: wish.imageFile,
+      imageFromLink: wish.imageFromLink,
       quantity: wish.quantity,
       // The original's age and its place on the list, so the copy stays where the wish was.
       createdAt: wish.createdAt,

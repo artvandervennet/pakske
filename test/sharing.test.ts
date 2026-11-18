@@ -83,7 +83,7 @@ describe('linking a wish', () => {
 describe('copying a wish', () => {
   it('copies a wish into a separate one and tells nobody', () => {
     const { db, art, lot, mom, A, L } = setup()
-    const vase = addWish(db, art.id, A, wishInput.parse({ title: 'Vaas', description: 'Blauw', url: 'https://example.test/vaas', quantity: 3 }))
+    const vase = addWish(db, art.id, A, wishInput.parse({ title: 'Vaas', description: 'Blauw', urls: ['https://example.test/vaas'], quantity: 3 }))
     setWishImage(db, art.id, A, vase.id, 'vaas.png')
     setPurchase(db, A, vase.id, mom.id, 2)
 
@@ -91,7 +91,7 @@ describe('copying a wish', () => {
     expect(landed).toMatchObject({ token: L, title: 'Lijst van Lotte' })
     expect(landed.wishId).not.toBe(vase.id)
     const copy = db.select().from(wishes).where(eq(wishes.id, landed.wishId)).get()!
-    expect(copy).toMatchObject({ title: 'Vaas', description: 'Blauw', url: 'https://example.test/vaas', imageFile: 'vaas.png', quantity: 3, deletedAt: null })
+    expect(copy).toMatchObject({ title: 'Vaas', description: 'Blauw', urls: ['https://example.test/vaas'], imageFile: 'vaas.png', quantity: 3, deletedAt: null })
     expect(ownerIds(db, copy.id)).toEqual([lot.id])
     expect(ownerIds(db, vase.id)).toEqual([art.id])
     expect(purchaseRows(db, copy.id)).toEqual([])

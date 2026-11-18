@@ -15,9 +15,12 @@ export const publicWishSchema = z.strictObject({
   id: z.number().int(),
   title: z.string(),
   description: z.string().nullable(),
-  url: z.string().nullable(),
+  /** The links, in the owner's order; empty when there are none. */
+  urls: z.array(z.string()),
   /** `/uploads/<file>`, or null. */
   image: z.string().nullable(),
+  /** The picture is the cover of the first link, which the server fetched, and not a photo the owner put up. */
+  imageFromLink: z.boolean(),
   /** null means unlimited. */
   quantity: z.number().int().nullable(),
   createdAt: z.string(),

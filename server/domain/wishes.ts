@@ -25,14 +25,35 @@ export function addWish(db: Db, userId: number, token: string, input: WishInput)
   }, { behavior: 'immediate' })
 }
 
-/** Changes the fields that are given and leaves the others as they are. */
-export function updateWish(db: Db, userId: number, token: string, wishId: number, change: WishPatchInput): PublicWish {
+/** The wish's links. A wish from before it could have several may hold no list at all. */
+const linksOf = (wish: typeof wishes.$inferSelect): string[] => wish.urls ?? []
+
+/** Whether the wish's picture is a photo its owner put up, which no link ever replaces or removes. */
+const hasOwnPhoto = (wish: typeof wishes.$inferSelect): boolean => wish.imageFile !== null && !wish.imageFromLink
+
+/**
+ * Changes the fields that are given and leaves the others as they are.
+ *
+ * A picture that is the cover of the first link goes when that link changes or goes, in the same
+ * step, so a wish never shows one shop's picture beside another shop's link. `coverOf` is then
+ * the new first link, for the caller to fetch its cover: only when the first link changed and
+ * the wish has no photo of its owner's. `unused` are the files nothing points at any more.
+ */
+export function updateWish(db: Db, userId: number, token: string, wishId: number, change: WishPatchInput): { wish: PublicWish, unused: string[], coverOf: string | null } {
   const given = Object.fromEntries(Object.entries(change).filter(([, value]) => value !== undefined)) as WishPatchInput
   return db.transaction((tx) => {
     const current = ownedWishOnList(tx, userId, token, wishId)
-    // What it returns are forgotten pictures, and a change without a picture can't forget one.
-    recordChanges(tx, wishId, userId, current, given)
-    return toPublicWish(tx.update(wishes).set({ ...given, updatedAt: new Date() }).where(eq(wishes.id, wishId)).returning().get())
+    const first = given.urls?.[0] ?? null
+    const firstChanged = given.urls !== undefined && first !== (linksOf(current)[0] ?? null)
+    const dropCover = firstChanged && current.imageFromLink
+    const set = dropCover ? { ...given, imageFile: null, imageFromLink: false } : given
+    const forgotten = recordChanges(tx, wishId, userId, current, set)
+    const wish = tx.update(wishes).set({ ...set, updatedAt: new Date() }).where(eq(wishes.id, wishId)).returning().get()
+    return {
+      wish: toPublicWish(wish),
+      unused: unusedImages(tx, [...(dropCover ? [current.imageFile] : []), ...forgotten]),
+      coverOf: firstChanged && !hasOwnPhoto(current) ? first : null,
+    }
   }, { behavior: 'immediate' })
 }
 
@@ -91,15 +112,36 @@ function liveIdsInOrder(db: Db, listId: number): number[] {
 }
 
 /**
- * Sets or clears the image. Returns the files nothing points at any more, so the caller can
- * remove them from disk: the one replaced, unless a copy or an undo still needs it, and any
- * earlier picture a link stopped remembering.
+ * Sets or clears the photo an owner put up themselves; it replaces a link's cover too. Returns
+ * the files nothing points at any more, so the caller can remove them from disk: the one
+ * replaced, unless a copy or an undo still needs it, and any earlier picture a link stopped
+ * remembering. `coverOf` is the first link when an own photo was removed, for the caller to
+ * fetch its cover again. Removing a cover asks for nothing: the owner didn't want that picture.
  */
-export function setWishImage(db: Db, userId: number, token: string, wishId: number, imageFile: string | null): { unused: string[] } {
+export function setWishImage(db: Db, userId: number, token: string, wishId: number, imageFile: string | null): { unused: string[], coverOf: string | null } {
   return db.transaction((tx) => {
     const current = ownedWishOnList(tx, userId, token, wishId)
-    const forgotten = recordChanges(tx, wishId, userId, current, { imageFile })
-    tx.update(wishes).set({ imageFile, updatedAt: new Date() }).where(eq(wishes.id, wishId)).run()
-    return { unused: unusedImages(tx, [current.imageFile, ...forgotten]) }
+    const forgotten = recordChanges(tx, wishId, userId, current, { imageFile, imageFromLink: false })
+    tx.update(wishes).set({ imageFile, imageFromLink: false, updatedAt: new Date() }).where(eq(wishes.id, wishId)).run()
+    return {
+      unused: unusedImages(tx, [current.imageFile, ...forgotten]),
+      coverOf: imageFile === null && hasOwnPhoto(current) ? linksOf(current)[0] ?? null : null,
+    }
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * Makes the cover that was fetched for `address` the wish's picture. The fetch took a while, so
+ * the wish may have moved on: when `address` is no longer its first link, or its owner put up a
+ * photo meanwhile, nothing changes, `wish` is null and the new file is among `unused`. Otherwise
+ * `unused` holds the cover it replaced, like `setWishImage`.
+ */
+export function setWishCover(db: Db, userId: number, token: string, wishId: number, address: string, imageFile: string): { wish: PublicWish | null, unused: string[] } {
+  return db.transaction((tx) => {
+    const current = ownedWishOnList(tx, userId, token, wishId)
+    if (linksOf(current)[0] !== address || hasOwnPhoto(current)) return { wish: null, unused: unusedImages(tx, [imageFile]) }
+    const forgotten = recordChanges(tx, wishId, userId, current, { imageFile, imageFromLink: true })
+    const wish = tx.update(wishes).set({ imageFile, imageFromLink: true, updatedAt: new Date() }).where(eq(wishes.id, wishId)).returning().get()
+    return { wish: toPublicWish(wish), unused: unusedImages(tx, [current.imageFile, ...forgotten]) }
   }, { behavior: 'immediate' })
 }

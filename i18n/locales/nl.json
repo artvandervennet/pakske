@@ -180,7 +180,9 @@
     "descriptionEmpty": "Voeg een beschrijving toe",
     "link": "Link",
     "linkChange": "Wijzigen",
-    "linkChangeLabel": "Link wijzigen",
+    "linkChangeLabel": "Link naar {host} wijzigen",
+    "linkRemove": "Weghalen",
+    "linkRemoveLabel": "Link naar {host} weghalen",
     "linkAdd": "Link toevoegen",
     "amount": "Gevraagd",
     "amountLess": "Eén minder vragen",
@@ -190,6 +192,7 @@
     "pictureChange": "Andere afbeelding kiezen",
     "pictureRemove": "Weghalen",
     "pictureRemoveLabel": "Afbeelding weghalen",
+    "pictureFromLink": "van {host}",
     "saved": "Opgeslagen"
   },
   "auth": {
@@ -285,6 +288,8 @@
     "invalid_email": "Dat is geen geldig e-mailadres.",
     "password_short": "Kies een wachtwoord van minstens 10 tekens.",
     "invalid_url": "Begin de link met http:// of https://.",
+    "too_many_links": "Een wens kan vijf links hebben. Haal er eerst een weg.",
+    "duplicate_link": "Deze link staat er al.",
     "invalid_amount": "Kies een heel getal van 1 of meer.",
     "invalid": "Dat klopt niet."
   }

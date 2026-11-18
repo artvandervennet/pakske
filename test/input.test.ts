@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { acceptInput, fieldErrors, inviteInput, listInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
-const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', url: '', quantity: 1, ...over })
+const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', urls: [], quantity: 1, ...over })
 
 describe('a wish someone submits', () => {
   it('turns empty optional text into null and trims the title', () => {
-    expect(wish({ title: '  Boek  ' }).data).toEqual({ title: 'Boek', description: null, url: null, quantity: 1 })
+    expect(wish({ title: '  Boek  ' }).data).toEqual({ title: 'Boek', description: null, urls: [], quantity: 1 })
   })
 
   it('needs only a title, and fills in the rest', () => {
-    expect(wishInput.parse({ title: '  Boek ' })).toEqual({ title: 'Boek', description: null, url: null, quantity: 1 })
+    expect(wishInput.parse({ title: '  Boek ' })).toEqual({ title: 'Boek', description: null, urls: [], quantity: 1 })
   })
 
   it('keeps null as "no limit"', () => {
@@ -21,9 +21,31 @@ describe('a wish someone submits', () => {
   })
 
   it('accepts http and https links only', () => {
-    expect(wish({ url: 'https://example.test/x' }).success).toBe(true)
-    expect(fieldErrors(wish({ url: 'javascript:alert(1)' }).error!)).toEqual({ url: 'invalid_url' })
-    expect(fieldErrors(wish({ url: 'example.test' }).error!)).toEqual({ url: 'invalid_url' })
+    expect(wish({ urls: ['https://example.test/x', 'http://example.test/y'] }).success).toBe(true)
+    for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'example.test', '', '   ']) {
+      expect(fieldErrors(wish({ urls: ['https://example.test/x', bad] }).error!), bad).toEqual({ urls: 'invalid_url' })
+    }
+  })
+
+  it('keeps the links in their order, without the spaces around them', () => {
+    expect(wish({ urls: [' https://b.example.test/ ', 'https://a.example.test/'] }).data!.urls)
+      .toEqual(['https://b.example.test/', 'https://a.example.test/'])
+  })
+
+  it('takes at most five links, each at most 2000 characters, each once', () => {
+    const link = (n: number) => `https://example.test/${n}`
+    expect(wish({ urls: [1, 2, 3, 4, 5].map(link) }).success).toBe(true)
+    expect(fieldErrors(wish({ urls: [1, 2, 3, 4, 5, 6].map(link) }).error!)).toEqual({ urls: 'too_many_links' })
+    const longest = `https://example.test/${'x'.repeat(2000 - 'https://example.test/'.length)}`
+    expect(wish({ urls: [longest] }).success).toBe(true)
+    expect(fieldErrors(wish({ urls: [`${longest}x`] }).error!)).toEqual({ urls: 'too_long' })
+    expect(fieldErrors(wish({ urls: [link(1), link(2), ` ${link(1)} `] }).error!)).toEqual({ urls: 'duplicate_link' })
+  })
+
+  it('refuses links that are not a list of texts', () => {
+    expect(wish({ urls: 'https://example.test/x' }).success).toBe(false)
+    expect(wish({ urls: [7] }).success).toBe(false)
+    expect(wish({ urls: null }).success).toBe(false)
   })
 
   it('refuses zero and fractions as an amount', () => {
@@ -39,12 +61,17 @@ describe('a change to a wish someone submits', () => {
   })
 
   it('still turns empty text into null', () => {
-    expect(wishPatchInput.parse({ description: '', url: '' })).toEqual({ description: null, url: null })
+    expect(wishPatchInput.parse({ description: '' })).toEqual({ description: null })
+  })
+
+  it('replaces the links with the list that was sent, and clears them with an empty one', () => {
+    expect(wishPatchInput.parse({ urls: ['https://example.test/x'] })).toEqual({ urls: ['https://example.test/x'] })
+    expect(wishPatchInput.parse({ urls: [] })).toEqual({ urls: [] })
   })
 
   it('checks the fields that were sent like a new wish', () => {
     expect(fieldErrors(wishPatchInput.safeParse({ title: '  ' }).error!)).toEqual({ title: 'required' })
-    expect(fieldErrors(wishPatchInput.safeParse({ url: 'javascript:alert(1)' }).error!)).toEqual({ url: 'invalid_url' })
+    expect(fieldErrors(wishPatchInput.safeParse({ urls: ['javascript:alert(1)'] }).error!)).toEqual({ urls: 'invalid_url' })
     expect(fieldErrors(wishPatchInput.safeParse({ quantity: 0 }).error!)).toEqual({ quantity: 'invalid_amount' })
   })
 
