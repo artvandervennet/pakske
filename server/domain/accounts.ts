@@ -2,7 +2,7 @@ import { count, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { users } from '../db/schema'
 import { DomainError } from './errors'
-import { createUser, findUserByEmail, type AccountLocale } from './users'
+import { createUser, deleteUser, findUserByEmail, type AccountLocale } from './users'
 
 // Logging in. Firebase Authentication holds the passwords and the Google logins and sends the
 // emails (a forgotten password, a new address); this site keeps its own account for everything else, tied to
@@ -53,6 +53,8 @@ export interface Identity {
    * clicks it. 'reauth_needed' when Firebase wants a fresher login before it does that.
    */
   requestEmailChange: (idToken: string, newEmail: string, options?: { locale?: string, continueUrl?: string }) => Promise<'sent' | 'email_exists' | 'reauth_needed'>
+  /** Deletes the account at Firebase; one that is already gone counts as deleted. */
+  deleteAccount: (idToken: string) => Promise<'deleted' | 'reauth_needed'>
 }
 
 type User = typeof users.$inferSelect
@@ -246,4 +248,29 @@ export async function requestEmailChange(
   if (answer === 'email_exists') throw new DomainError('email_taken')
   if (answer === 'reauth_needed') throw new DomainError('reauth_needed')
   return login
+}
+
+/**
+ * Deletes the account for good, after making sure the person themselves asks. Firebase goes
+ * first: were it the other way round and Firebase failed, the next login would find a Firebase
+ * account without one here and make an empty one. An account from before Firebase that never
+ * moved there has its password checked here, and Firebase has nothing to delete. Returns the
+ * pictures nothing points at any more.
+ */
+export async function deleteAccount(
+  db: Db,
+  identity: Identity,
+  user: User,
+  refreshToken: string | undefined,
+  currentPassword: string | undefined,
+  checkLegacy: CheckLegacy,
+): Promise<{ unused: string[] }> {
+  if (user.firebaseUid === null && user.passwordHash !== null) {
+    if (currentPassword === undefined || !(await checkLegacy(user.passwordHash, currentPassword))) throw new DomainError('wrong_password')
+  }
+  else {
+    const login = await reauthenticate(db, identity, user, refreshToken, currentPassword, checkLegacy)
+    if ((await identity.deleteAccount(login.idToken)) === 'reauth_needed') throw new DomainError('reauth_needed')
+  }
+  return deleteUser(db, user.id)
 }

@@ -1,8 +1,9 @@
-import { count, eq } from 'drizzle-orm'
+import { and, count, eq, isNull } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { users } from '../db/schema'
+import { linkChanges, listOwners, lists, notices, users, wishLinks } from '../db/schema'
 import { DomainError } from './errors'
-import { insertList } from './lists'
+import { deleteList, insertList, leaveList, ownersOfList } from './lists'
+import { dismissNotice, unusedImages } from './undo'
 
 export interface NewUser {
   email: string
@@ -67,4 +68,40 @@ export function updateDisplayName(db: Db, userId: number, displayName: string): 
 
 export function setPasswordHash(db: Db, userId: number, passwordHash: string) {
   db.update(users).set({ passwordHash }).where(eq(users.id, userId)).run()
+}
+
+/**
+ * Removes an account and everything that was only its own. Its lists go the way they do by
+ * hand, so every wish ends up with the owners it should have: a list it shares is left to the
+ * others, with its wishes; a list it owns alone is deleted, and a wish on it that is on nobody
+ * else's list with it. Then the account's row goes, and the database takes along whatever hangs
+ * on that row. Returns the pictures nothing points at any more, for the caller to remove.
+ */
+export function deleteUser(db: Db, userId: number): { unused: string[] } {
+  return db.transaction((tx) => {
+    const unused: string[] = []
+    // Their notices go as if they closed each one: a link that nobody can undo any more stops
+    // remembering, and the picture it kept may be free.
+    for (const notice of tx.select({ id: notices.id }).from(notices).where(eq(notices.userId, userId)).all()) {
+      unused.push(...dismissNotice(tx, userId, notice.id).unused)
+    }
+
+    const mine = tx.select({ id: lists.id, token: lists.token }).from(lists)
+      .innerJoin(listOwners, eq(listOwners.listId, lists.id))
+      .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
+      .all()
+    for (const list of mine) {
+      if (ownersOfList(tx, list.id).length > 1) leaveList(tx, userId, list.token)
+      else deleteList(tx, userId, list.token)
+    }
+
+    // The links they made go with their row, and so does what those remembered for an undo.
+    const kept = tx.select({ before: linkChanges.before }).from(linkChanges)
+      .innerJoin(wishLinks, eq(wishLinks.id, linkChanges.linkId))
+      .where(and(eq(wishLinks.userId, userId), eq(linkChanges.field, 'imageFile')))
+      .all()
+      .map(row => JSON.parse(row.before) as string | null)
+    tx.delete(users).where(eq(users.id, userId)).run()
+    return { unused: [...unused, ...unusedImages(tx, kept)] }
+  }, { behavior: 'immediate' })
 }

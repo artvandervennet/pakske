@@ -52,6 +52,9 @@ export const passwordInput = z.object({ currentPassword, newPassword })
  */
 export const emailChangeInput = z.object({ email, currentPassword: currentPassword.optional(), locale: mailLocale })
 
+/** Deleting the account: the current password, for an account that has one. */
+export const accountDeleteInput = z.object({ currentPassword: currentPassword.optional() })
+
 export const listInput = z.object({ title: requiredText(80) })
 
 /** Where a wish from someone else's list should land: one of the person's lists, or a new one. */

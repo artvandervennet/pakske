@@ -201,6 +201,20 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
       }
       return send(options.continueUrl)
     },
+
+    async deleteAccount(idToken) {
+      try {
+        await accounts('accounts:delete', { idToken })
+        return 'deleted'
+      }
+      catch (error) {
+        if (!(error instanceof FirebaseError)) throw error
+        // Already gone there: what is left is the account here.
+        if (error.reason === 'USER_NOT_FOUND') return 'deleted'
+        if (REAUTH.includes(error.reason)) return 'reauth_needed'
+        throw error
+      }
+    },
   }
 }
 

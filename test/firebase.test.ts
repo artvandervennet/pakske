@@ -97,3 +97,24 @@ describe('what Firebase holds about an account', () => {
     expect(calls[0]!.url).toContain('/v1/accounts:lookup?key=key')
   })
 })
+
+describe('deleting an account at Firebase', () => {
+  it('deletes the account the token is for', async () => {
+    const { identity, calls } = firebase({})
+    expect(await identity.deleteAccount('id')).toBe('deleted')
+    expect(calls[0]!.url).toContain('/v1/accounts:delete?key=key')
+    expect(calls[0]!.body).toEqual({ idToken: 'id' })
+  })
+
+  it('counts an account that is already gone as deleted', async () => {
+    expect(await firebase({ error: 'USER_NOT_FOUND' }).identity.deleteAccount('id')).toBe('deleted')
+  })
+
+  it.each(['CREDENTIAL_TOO_OLD_LOGIN_AGAIN', 'TOKEN_EXPIRED', 'INVALID_ID_TOKEN'])('asks to log in again on %s', async (error) => {
+    expect(await firebase({ error }).identity.deleteAccount('id')).toBe('reauth_needed')
+  })
+
+  it('still breaks on an answer nobody expected', async () => {
+    await expect(firebase({ error: 'OPERATION_NOT_ALLOWED' }).identity.deleteAccount('id')).rejects.toThrow('OPERATION_NOT_ALLOWED')
+  })
+})
