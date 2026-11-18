@@ -44,36 +44,13 @@ art-button[variant="quiet"]:not(:defined) > :is(a, button) {
   text-decoration: underline;
 }
 art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-ratio: 1; }
-art-scheme:not(:defined) { display: inline-block; min-inline-size: 4.5rem; min-block-size: 2.25rem; }
-
-/* ── Header ───────────────────────────────────────────────────────────────
-   On a phone the header's actions don't fit beside the menu, and the page scrolls sideways.
-   Gesso's remedy: the colour-scheme switch keeps its dab and drops its word. */
-@media (width < 40rem) {
-  art-scheme::part(name) { display: none; }
-  art-scheme:not(:defined) { min-inline-size: 2.25rem; }
-  /* Without its word the switch still leaves "Uitloggen" and "Menu" a few pixels short
-     beside a desktop browser's scrollbar; a tighter gap between the groups gives them back.
-     The header draws its bar twice (the second copy shows during the repaint between bands)
-     and only the first has a part, so the gap is set through the token both copies read.
-     The header's own children, buttons among them, get the token's real value back. */
-  art-header { --space-6: var(--space-3); }
-  art-header > * { --space-6: var(--space-6-page); }
-}
-:root { --space-6-page: var(--space-6); }
-/* Interim remedy, until Gesso's header handles it: on the narrowest phones (below about
-   372px) the wordmark, the switch, Log in or Log out and Menu still don't fit, and the page
-   scrolls sideways. The switch goes; the colour scheme then follows the system. */
-@media (width < 24rem) {
-  art-header art-scheme { display: none; }
-}
-/* A long word in a big title (a list's own name, say) is wider
-   than a phone. Hyphenate where the language allows, and break it anyway where it doesn't. */
-:is(.hero, .page-head) h1 { hyphens: auto; overflow-wrap: break-word; }
 
 /* ── Page head ────────────────────────────────────────────────────────────
    Every page opens with a band in the deep paint. On the home page that is Gesso's hero;
    on the other pages it is this quieter title band. */
+/* A long word in a big title (a list's own name, say) is wider
+   than a phone. Hyphenate where the language allows, and break it anyway where it doesn't. */
+:is(.hero, .page-head) h1 { hyphens: auto; overflow-wrap: break-word; }
 .page-head .inner { padding-block: var(--space-12) var(--space-8); }
 .page-head h1 { font-size: var(--step-4); line-height: var(--leading-tight); text-wrap: balance; }
 .page-head .lead { margin-block-start: var(--space-4); }
@@ -759,8 +736,8 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 
 /* Candidate for Gesso: a small mark on a header link that says there is something new there.
    It is a dot in the accent; its words are an aria-label, since <art-header> copies the links'
-   text into its repaint. The links fold under "Menu" on small screens (Gesso's 48rem), so there
-   the mark moves to the wordmark, which leads to the same page. */
+   text into its repaint. It sits on the wordmark, which leads to the home page with the notices
+   and stays in view when the other links fold under "Menu". */
 .nav-mark {
   display: inline-block;
   inline-size: 0.5rem;
@@ -770,8 +747,6 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
   background: var(--accent);
   vertical-align: super;
 }
-@media (max-width: 48rem) { .nav-mark-wide { display: none; } }
-@media (width > 48rem) { .nav-mark-narrow { display: none; } }
 
 /* The login form's password and button. "Wachtwoord vergeten?" comes after the button, so Tab goes
    from the email to the password, but it shows at the end of the password's label line: it
