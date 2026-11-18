@@ -1,1 +1,52 @@
 /* Sharing wishes: the dialog on a list, and the page a share link opens. Written against Gesso's role tokens, like app.css. */
+
+/* ── The dialog ───────────────────────────────────────────────────────────
+   Two ways of sharing, each a row with its round button, its name and one line that says what
+   it means. The chosen one takes the accent's wash, like the chosen list in the list chooser. */
+.share-modes { display: grid; gap: var(--space-2); min-inline-size: 0; margin-inline: 0; padding: 0; border: 0; }
+:is(.share-modes-legend, .invite-pick-legend) {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  font: var(--weight-bold) var(--step--1)/1.3 var(--font-body);
+  color: var(--ink-muted);
+}
+.share-mode {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-chip);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  /* Only the name is in the label's weight; the line under it reads as plain text. */
+  font-weight: var(--weight-regular);
+  cursor: pointer;
+}
+/* The round button stands beside the name, on the name's line. */
+.share-mode input {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  margin: 0;
+  margin-block-start: 0.2em;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+.share-mode-name { font-weight: var(--weight-medium); }
+.share-mode-hint { grid-column: 2; font-size: var(--step--1); color: var(--ink-muted); }
+.share-mode:hover { background: var(--accent-wash); }
+.share-mode:has(input:checked) { background: var(--accent-wash); box-shadow: inset 0 0 0 2px var(--accent); }
+.share-mode:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+.share-mode input:focus-visible { outline: none; }
+/* The heading takes the focus when the dialog opens; it is text, so no ring around it. */
+.share-dialog h2:focus { outline: none; }
+
+/* ── The page a share link opens ──────────────────────────────────────────
+   What will happen, the wishes with a box each, the list they go on, and one button. */
+.invite-body { display: grid; gap: var(--space-6); justify-items: start; max-inline-size: var(--measure); }
+.invite-body > .actions { margin-block-start: 0; }
+.invite-pick { display: grid; gap: var(--space-2); justify-items: start; inline-size: 100%; min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.invite-pick > .rows { inline-size: 100%; }
+/* The whole row is the label of its box. */
+.invite-wish { flex-wrap: nowrap; gap: var(--space-3); font-weight: var(--weight-regular); cursor: pointer; }
+.invite-wish:has(input:disabled) { cursor: default; }
+/* Said under the button while nothing is ticked, so the dimmed button isn't a riddle. */
+.invite-hint { font-size: var(--step--1); color: var(--ink-muted); }

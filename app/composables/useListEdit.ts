@@ -7,9 +7,11 @@ export interface RowControl {
 }
 
 /**
- * An owner's edit mode on their list: choose wishes to delete or make joint, and move them. Starting
+ * An owner's edit mode on their list: choose wishes to delete or share, and move them. Starting
  * it folds the open rows, the way folding them by hand does: it waits for their saves, and a row
- * holding a failed save stays open and keeps edit mode from starting.
+ * holding a failed save stays open and keeps edit mode from starting. It also runs on a list
+ * without wishes, where the page still offers to delete the list, and stays on when the last
+ * wish is deleted.
  * `order` is the order the page shows while editing. A move shows at once and is saved whole; a
  * save that fails says so and puts the list back in the server's order.
  */
@@ -22,7 +24,6 @@ export function useListEdit(options: {
 }) {
   const { t } = useI18n()
   const { parse } = useApiError()
-  const localePath = useLocalePath()
 
   const editing = ref(false)
   const selected = reactive(new Set<number>())
@@ -132,8 +133,7 @@ export function useListEdit(options: {
       return true
     }
     catch (failure) {
-      const parsed = parse(failure)
-      error.value = parsed.fields.wishIds ? t('joint.tooMany') : parsed.message
+      error.value = parse(failure).message
       await options.refresh()
       return false
     }
@@ -152,28 +152,10 @@ export function useListEdit(options: {
     await options.refresh()
   }
 
-  /** The one-time link for the chosen wishes, as a path; edit mode ends when it is made. */
-  async function makeLink(): Promise<string | null> {
-    const wishIds = chosen().map(wish => wish.id)
-    if (busy.value || !wishIds.length) return null
-    let path: string | null = null
-    const done = await run(async () => {
-      const made = await $fetch<{ invite: string }>(`/api/lists/${options.token()}/invites`, { method: 'POST', body: { kind: 'wishes', wishIds } })
-      path = localePath(`/j/${made.invite}`)
-    })
-    if (done) leave()
-    return path
-  }
-
-  // Nothing left to edit: edit mode ends by itself.
-  watch(() => options.wishes().length, (count) => {
-    if (!count && editing.value) leave()
-  })
-
   /** True while a move waits to be saved: the page keeps showing `order` until then. */
   const orderPending = computed(() => unsaved.value > 0)
 
-  return { editing, selected, error, orderError, busy, chosen, enter, leave, toggle, deleteSelected, makeLink, order, orderPending, move, saveOrder }
+  return { editing, selected, error, orderError, busy, chosen, enter, leave, toggle, deleteSelected, order, orderPending, move, saveOrder }
 }
 
 export type ListEdit = ReturnType<typeof useListEdit>

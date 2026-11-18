@@ -78,9 +78,12 @@ describe('the list a wish should land on', () => {
   })
 })
 
-describe('a link that works once', () => {
-  it('is for 1 to 50 wishes, or for the list', () => {
-    expect(inviteInput.parse({ kind: 'wishes', wishIds: [3, 7] })).toEqual({ kind: 'wishes', wishIds: [3, 7] })
+describe('a link that shares wishes or a list', () => {
+  it('is for 1 to 50 wishes, as copies unless it says together, or for the list', () => {
+    expect(inviteInput.parse({ kind: 'wishes', wishIds: [3, 7] })).toEqual({ kind: 'wishes', mode: 'copy', wishIds: [3, 7] })
+    expect(inviteInput.parse({ kind: 'wishes', mode: 'linked', wishIds: [3] })).toEqual({ kind: 'wishes', mode: 'linked', wishIds: [3] })
+    expect(inviteInput.parse({ kind: 'wishes', mode: 'copy', wishIds: [3] })).toEqual({ kind: 'wishes', mode: 'copy', wishIds: [3] })
+    expect(fieldErrors(inviteInput.safeParse({ kind: 'wishes', mode: 'both', wishIds: [3] }).error!)).toEqual({ mode: 'invalid' })
     expect(inviteInput.parse({ kind: 'list' })).toEqual({ kind: 'list' })
     expect(inviteInput.safeParse({ kind: 'wishes', wishIds: Array.from({ length: 50 }, (_, i) => i + 1) }).success).toBe(true)
     expect(fieldErrors(inviteInput.safeParse({ kind: 'wishes', wishIds: [] }).error!)).toEqual({ wishIds: 'required' })
@@ -89,17 +92,33 @@ describe('a link that works once', () => {
       expect(inviteInput.safeParse({ kind: 'wishes', wishIds: [bad] }).success).toBe(false)
     }
     expect(inviteInput.safeParse({ kind: 'list', wishIds: [1] }).success).toBe(false)
+    // A list is only ever shared together.
+    expect(inviteInput.safeParse({ kind: 'list', mode: 'copy' }).success).toBe(false)
     expect(inviteInput.safeParse({ kind: 'other' }).success).toBe(false)
   })
 
   it('is accepted onto a list of the person\'s, or with nothing for a list link', () => {
-    expect(acceptInput.parse({})).toBeNull()
-    expect(acceptInput.parse({ list: 'abc' })).toEqual({ list: 'abc' })
-    expect(acceptInput.parse({ newList: '  Samen ' })).toEqual({ newList: 'Samen' })
+    expect(acceptInput.parse({})).toEqual({ target: null })
+    expect(acceptInput.parse({ list: 'abc' })).toEqual({ target: { list: 'abc' } })
+    expect(acceptInput.parse({ newList: '  Samen ' })).toEqual({ target: { newList: 'Samen' } })
     expect(acceptInput.safeParse({ other: 1 }).success).toBe(false)
     expect(acceptInput.safeParse({ list: 'abc', newList: 'Samen' }).success).toBe(false)
     expect(fieldErrors(acceptInput.safeParse({ newList: '   ' }).error!)).toEqual({ newList: 'required' })
     expect(fieldErrors(acceptInput.safeParse({ list: '' }).error!)).toEqual({ list: 'required' })
+  })
+
+  it('can name which of the wishes to take: at least one, each once, 50 at most', () => {
+    expect(acceptInput.parse({ list: 'abc', wishIds: [7, 3] })).toEqual({ target: { list: 'abc' }, wishIds: [7, 3] })
+    expect(acceptInput.parse({ newList: 'Samen', wishIds: [3] })).toEqual({ target: { newList: 'Samen' }, wishIds: [3] })
+    expect(acceptInput.safeParse({ list: 'abc', wishIds: Array.from({ length: 50 }, (_, i) => i + 1) }).success).toBe(true)
+    expect(fieldErrors(acceptInput.safeParse({ list: 'abc', wishIds: [] }).error!)).toEqual({ wishIds: 'required' })
+    expect(fieldErrors(acceptInput.safeParse({ list: 'abc', wishIds: Array.from({ length: 51 }, (_, i) => i + 1) }).error!)).toEqual({ wishIds: 'too_long' })
+    expect(fieldErrors(acceptInput.safeParse({ newList: 'Samen', wishIds: [3, 3] }).error!)).toEqual({ wishIds: 'invalid' })
+    for (const bad of [0, -1, 1.5, '3']) {
+      expect(acceptInput.safeParse({ list: 'abc', wishIds: [bad] }).success).toBe(false)
+    }
+    // A link to a list takes the whole list: there is nothing to choose.
+    expect(acceptInput.safeParse({ wishIds: [3] }).success).toBe(false)
   })
 })
 

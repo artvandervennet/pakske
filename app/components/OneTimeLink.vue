@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// A link that works once, right after it was made: what it does, the full address to read or
+// A link to send, right after it was made: what it does, the full address to read or
 // select, and the button that copies it. The group is named by its sentence, so the copy button
 // inside can't be taken for the one that copies the list's own address.
 const props = defineProps<{ path: string, text: string }>()

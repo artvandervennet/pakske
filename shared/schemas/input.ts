@@ -54,11 +54,17 @@ export const targetInput = z.union([
   z.strictObject({ newList: listInput.shape.title }),
 ])
 
-/** A link that works once: for some wishes on the list, or for the list itself. */
+const wishId = z.number('invalid').int('invalid').positive('invalid')
+
+/**
+ * A link that shares some wishes on the list, or the list itself. Wishes go as copies unless the
+ * maker says "linked"; a list is only ever shared together, so it has no mode to choose.
+ */
 export const inviteInput = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('wishes'),
-    wishIds: z.array(z.number('invalid').int('invalid').positive('invalid'), 'required').min(1, 'required').max(50, 'too_long'),
+    mode: z.enum(['linked', 'copy'], 'invalid').default('copy'),
+    wishIds: z.array(wishId, 'required').min(1, 'required').max(50, 'too_long'),
   }),
   z.strictObject({ kind: z.literal('list') }),
 ])
@@ -75,14 +81,33 @@ export const wishIdsInput = z.strictObject({
 })
 
 /**
- * Accepting a link: wishes need a list to land on; a link to a list needs nothing, which parses to
- * null. The empty shape names both keys as never, so `{ newList: ' ' }` still reports the field
- * rather than a union that matched nothing.
+ * Which of a link's wishes to take: each once, and no more than a link can hold. The ceiling is
+ * a refinement because zod's own `max` ends the parse, and the union below then reports no field.
+ */
+const chosenWishIds = z.array(wishId, 'required')
+  .min(1, 'required')
+  .refine(ids => ids.length <= 50, 'too_long')
+  .refine(ids => new Set(ids).size === ids.length, 'invalid')
+  .optional()
+
+const [onList, onNewList] = targetInput.options
+
+/**
+ * Accepting a link: wishes need a list to land on, and may name which of them to take (all of
+ * them when left out); a link to a list needs nothing, which parses to a null target. The empty
+ * shape names every key as never, so `{ newList: ' ' }` still reports the field rather than a
+ * union that matched nothing. The reshaping comes after the union for the same reason: inside
+ * it, an option with a transform would no longer count as the one that nearly matched.
  */
 export const acceptInput = z.union([
-  ...targetInput.options,
-  z.strictObject({ list: z.never().optional(), newList: z.never().optional() }).transform(() => null),
-])
+  z.strictObject({ ...onList.shape, wishIds: chosenWishIds }),
+  z.strictObject({ ...onNewList.shape, wishIds: chosenWishIds }),
+  z.strictObject({ list: z.never().optional(), newList: z.never().optional(), wishIds: z.never().optional() }),
+]).transform((input): { target: ListTarget | null, wishIds?: number[] } => {
+  if ('list' in input && input.list !== undefined) return { target: { list: input.list }, wishIds: input.wishIds }
+  if ('newList' in input && input.newList !== undefined) return { target: { newList: input.newList }, wishIds: input.wishIds }
+  return { target: null }
+})
 
 const wishFields = {
   title: requiredText(120),
