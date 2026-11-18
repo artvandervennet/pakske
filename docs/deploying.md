@@ -64,6 +64,8 @@ To reach the site from outside your home, put HTTPS in front of it: a Cloudflare
 
 The server expects exactly one proxy in front and takes the visitor's address from the last entry of `X-Forwarded-For`.
 
+With both settings on, a visitor the proxy says came over plain `http://` (its `X-Forwarded-Proto`) is sent to the same page over `https://`, and HTTPS answers carry `Strict-Transport-Security` for half a year. A Cloudflare Tunnel answers on both, and the login cookie only travels over HTTPS, so on the `http://` address a logged-in person would look logged out.
+
 ## The privacy page and the terms
 
 The site has a privacy page at `/privacy` and terms at `/terms`, linked from every page's footer, from the form that makes an account, and from the login page when it offers Google. They describe what Pakske does with people's data, which is the same wherever it runs, and they name you as the one who runs it. Before you let people in:
