@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnonWish, BuyerWish, OwnerWish } from '../shared/schemas/list'
-import { canRaise, isCheckedOff, needsWarning, tickCeiling, tickRefusal, tickState } from '../shared/utils/wish-tick'
+import { anonymousShown, canRaise, givenByMe, isCheckedOff, isCrossedOut, needsWarning, tickBody, tickCeiling, tickRefusal, tickState } from '../shared/utils/wish-tick'
 
 const base = {
   id: 1,
@@ -165,5 +165,111 @@ describe('when a row shows as checked off', () => {
 
   it('never checks it off for a visitor who is not logged in', () => {
     expect(isCheckedOff(anon)).toBe(false)
+  })
+})
+
+describe('what the viewer gives themselves', () => {
+  it('is a wish a buyer has a number on, however many others took', () => {
+    expect(givenByMe(buyer(1, 1, 1))).toBe(true)
+    expect(givenByMe(buyer(4, 3, 1))).toBe(true)
+    expect(givenByMe(buyer(null, 9, 2))).toBe(true)
+    expect(givenByMe(buyer(1, 1, 1, { removed: true }))).toBe(true)
+  })
+
+  it('is not a wish only others took, or nobody', () => {
+    expect(givenByMe(buyer(1, 1, 0))).toBe(false)
+    expect(givenByMe(buyer(3, 0, 0))).toBe(false)
+  })
+
+  it("is never an owner's own tick: that is having it, not giving it", () => {
+    expect(givenByMe(owner(1, 1))).toBe(false)
+    expect(givenByMe(owner(null, 3))).toBe(false)
+  })
+
+  it('is nothing for a visitor who is not logged in', () => {
+    expect(givenByMe(anon)).toBe(false)
+  })
+})
+
+describe('when a row is greyed and crossed out', () => {
+  it('is when others took everything and the viewer gives none of it', () => {
+    expect(isCrossedOut(buyer(1, 1, 0))).toBe(true)
+    expect(isCrossedOut(buyer(3, 3, 0))).toBe(true)
+  })
+
+  it('never is a row the viewer gives, even when the wish is fully taken', () => {
+    expect(isCrossedOut(buyer(1, 1, 1))).toBe(false)
+    expect(isCrossedOut(buyer(3, 3, 1))).toBe(false)
+  })
+
+  it('is not while some are left', () => {
+    expect(isCrossedOut(buyer(3, 2, 0))).toBe(false)
+    expect(isCrossedOut(buyer(null, 9, 0))).toBe(false)
+  })
+
+  it('stays as it was for an owner: by their own ticks only', () => {
+    expect(isCrossedOut(owner(1, 1))).toBe(true)
+    expect(isCrossedOut(owner(3, 2))).toBe(false)
+    expect(isCrossedOut(owner(1, 0))).toBe(false)
+  })
+})
+
+describe('what a tick sends about giving without your name', () => {
+  const mineAnonymous = buyer(3, 1, 1, { purchases: [{ name: 'Art', quantity: 1, mine: true, anonymous: true }] })
+  const mineNamed = buyer(3, 1, 1, { purchases: [{ name: 'Art', quantity: 1, mine: true, anonymous: false }] })
+
+  it("leaves the field out when the person chose nothing, so the server applies the account's setting", () => {
+    const body = tickBody(buyer(3, 0, 0), 1, undefined)
+    expect(body).toStrictEqual({ quantity: 1 })
+    expect('anonymous' in body).toBe(false)
+  })
+
+  it('sends what the person chose with the switch, either way', () => {
+    expect(tickBody(buyer(3, 0, 0), 1, true)).toStrictEqual({ quantity: 1, anonymous: true })
+    expect(tickBody(buyer(3, 0, 0), 2, false)).toStrictEqual({ quantity: 2, anonymous: false })
+  })
+
+  it('leaves an existing purchase as the server has it when nothing is chosen', () => {
+    // The server keeps a purchase's own value when the field is left out.
+    expect(tickBody(mineAnonymous, 2, undefined)).toStrictEqual({ quantity: 2 })
+    expect(tickBody(mineNamed, 2, undefined)).toStrictEqual({ quantity: 2 })
+  })
+
+  it('sends a choice over an existing purchase too', () => {
+    expect(tickBody(mineAnonymous, 2, false)).toStrictEqual({ quantity: 2, anonymous: false })
+  })
+
+  it("never sends it for an owner's own tick", () => {
+    expect(tickBody(owner(3, 0), 1, true)).toStrictEqual({ quantity: 1 })
+    expect(tickBody(owner(3, 0), 1, undefined)).toStrictEqual({ quantity: 1 })
+  })
+})
+
+describe('what the switch to give without your name shows', () => {
+  const mineAnonymous = buyer(3, 1, 1, { purchases: [{ name: 'Art', quantity: 1, mine: true, anonymous: true }] })
+  const mineNamed = buyer(3, 1, 1, { purchases: [{ name: 'Art', quantity: 1, mine: true, anonymous: false }] })
+  const othersOnly = buyer(3, 1, 0, { purchases: [{ name: null, quantity: 1, mine: false, anonymous: true }] })
+
+  it('is what the person chose for this wish, whatever else is known', () => {
+    expect(anonymousShown(mineNamed, true, false)).toBe(true)
+    expect(anonymousShown(mineAnonymous, false, true)).toBe(false)
+    expect(anonymousShown(buyer(3, 0, 0), true, false)).toBe(true)
+  })
+
+  it("is the purchase's own value when nothing was chosen, whatever the account's setting", () => {
+    expect(anonymousShown(mineAnonymous, undefined, false)).toBe(true)
+    expect(anonymousShown(mineNamed, undefined, true)).toBe(false)
+  })
+
+  it("is the account's setting when there is no purchase of their own and no choice", () => {
+    expect(anonymousShown(buyer(3, 0, 0), undefined, true)).toBe(true)
+    expect(anonymousShown(buyer(3, 0, 0), undefined, false)).toBe(false)
+    // Someone else's anonymous purchase says nothing about this person.
+    expect(anonymousShown(othersOnly, undefined, false)).toBe(false)
+  })
+
+  it('is off for an owner and for a visitor: they give nothing here', () => {
+    expect(anonymousShown(owner(3, 1), undefined, true)).toBe(false)
+    expect(anonymousShown(anon, true, true)).toBe(false)
   })
 })
