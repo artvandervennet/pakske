@@ -60,6 +60,8 @@ It listens on port 3000 and keeps its data in the Docker volume `pakske-data`. I
 - [How it is put together](docs/how-it-works.md): the folders, how each part works, what Gesso needs, and what is left out on purpose.
 - [The mails Firebase sends](docs/mails/README.md): the templates and where they go in the Firebase console.
 
+The site itself has a privacy page (`/privacy`) and terms (`/terms`). Whoever runs it [fills in their name and address](docs/deploying.md#the-privacy-page-and-the-terms).
+
 ## Contributing
 
 Bug reports and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) says how to set up, what to run before you open a pull request, and which rules a change must keep. Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).

@@ -259,7 +259,10 @@
     "forgotLead": "Enter your email address. You’ll get an email with a link to choose a new password.",
     "forgotSend": "Send the email",
     "forgotSent": "If {email} has an account, the email is on its way. Check your spam too.",
-    "backToLogin": "Back to logging in"
+    "backToLogin": "Back to logging in",
+    "agree": "By making an account you agree to the {terms}. The {privacy} says what the site keeps about you.",
+    "agreeTerms": "terms",
+    "agreePrivacy": "privacy page"
   },
   "settings": {
     "title": "Settings",
@@ -310,6 +313,140 @@
     "deleteLogin": "Your account itself. You can no longer log in with it.",
     "deleteConfirm": "Delete account",
     "deleteCancel": "Cancel"
+  },
+  "footer": {
+    "label": "About this site",
+    "privacy": "Privacy",
+    "terms": "Terms"
+  },
+  "privacy": {
+    "title": "Privacy",
+    "lead": "What this site keeps about you, who gets to see it, and how you take it away again.",
+    "updated": "Last changed on 18 November 2026.",
+    "who": {
+      "title": "Who keeps your data",
+      "named": "{operator} runs this site, decides what happens with what you put on it, and is responsible for it.",
+      "unnamed": "The person who runs this site decides what happens with what you put on it, and is responsible for it.",
+      "mail": "Questions about your data, and the requests further down this page, go to this address:",
+      "ask": "Take questions about your data, and the requests further down this page, to them directly."
+    },
+    "what": {
+      "title": "What the site keeps",
+      "intro": "What you put on it yourself, and the little the site needs to work:",
+      "account": "Your account: your name, your email address and when you made it. If you log in with Google, also the number Google knows your account by.",
+      "lists": "Your lists and wishes: their titles, descriptions, links and pictures.",
+      "giving": "What you tick on other people’s lists: which wish, how many, whether you give anonymously, and the notes you write there.",
+      "visited": "Which lists of other people you opened and when you last did, so you find them again under “Visited”.",
+      "sharing": "The links you made to share wishes or a list, the ones you used, and the notices about who shares a wish or a list with you.",
+      "address": "To count wrong passwords and new accounts, the server holds your IP address and the email address you typed in its memory for an hour at most. Neither goes into the database.",
+      "nothing": "Pakske has no statistics, no advertising and no trackers, and keeps no log of the pages you open."
+    },
+    "see": {
+      "title": "Who sees what",
+      "link": "Everyone who has the link to a list sees the list, its wishes and the names of its owners, also without an account. Anyone who has the link can pass it on.",
+      "buyers": "Someone who is logged in sees, on other people’s wishes, who is giving what, with names and notes. If you give anonymously, they read “Someone else” where your name would be.",
+      "owners": "The owners of a wish never see who gives it, how many are taken, or what was written about it.",
+      "picture": "A wish’s picture has a random address of its own. Whoever has that address can open the picture.",
+      "hidden": "Other people never see your email address. No page lists the accounts or other people’s lists, nobody sees who opened their list, and search engines are asked to stay out."
+    },
+    "where": {
+      "title": "Where it is kept, and who else is involved",
+      "server": "Everything in the list above is in one database and one folder of pictures, on the server this site runs on.",
+      "firebase": "Logging in goes through Firebase Authentication, a service of Google. Google gets your email address, your name and your password. It keeps the password, and it sends the mails for a forgotten password or a new email address. Google may process this in the United States.",
+      "passwords": "This site keeps no passwords, except for an account from before it used Firebase. That account’s password stays here as a hash, from which the password can’t be read back, until the account next logs in.",
+      "google": "If you choose “Continue with Google”, Google tells this site your name, your email address and the number of your Google account.",
+      "network": "The connection to this site runs through {network}, which sees your IP address and passes on what you send and receive.",
+      "shops": "For a wish with a link, the server fetches the picture that shop shows for it. The shop sees the server, not you. Only when you follow a link yourself are you at the shop.",
+      "nobody": "Your data is not sold, and not passed on to anyone who wants it for purposes of their own."
+    },
+    "cookies": {
+      "title": "Cookies and your browser",
+      "intro": "The site only sets what it needs to work, so it has no cookie banner:",
+      "login": "A login cookie, from the moment you log in. It says which account is yours and holds the key that keeps you logged in at Firebase, sealed so that only the server can read it. It expires 60 days after it was last set.",
+      "opened": "While you aren’t logged in, a cookie with the lists you opened, 50 at most, for a year. Logging in moves them to your account and removes the cookie.",
+      "google": "During a login with Google, two cookies that remember where you were, for ten minutes at most.",
+      "scheme": "Your choice of light or dark, in the storage of your browser. The server never gets it."
+    },
+    "why": {
+      "title": "Why the site may use it",
+      "service": "Almost all of it is needed to do what you ask of the site: keep an account, show your lists, and tell buyers what is already taken. Under the GDPR, the European privacy law, that counts as carrying out an agreement with you.",
+      "safety": "Counting wrong passwords and new accounts per IP address protects the accounts and the server. The GDPR calls that a legitimate interest."
+    },
+    "keep": {
+      "title": "How long it is kept",
+      "until": "Until you take it away. You change and delete your lists, wishes, ticks and notes yourself, and you delete your account under Settings.",
+      "account": "Deleting your account removes it here and at Firebase, together with what you ticked and wrote on other people’s lists, your visited lists, your links and your notices. A list you share with someone stays theirs.",
+      "deleted": "A deleted list or wish is not erased. It stays in the database, marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish, with your name for as long as your account exists. Nobody else sees it.",
+      "erase": "Ask whoever runs the site to have deleted lists and wishes erased from the database as well.",
+      "backups": "Whoever runs the site can make backups. Something you deleted stays in a backup until that backup is replaced."
+    },
+    "rights": {
+      "title": "Your rights",
+      "self": "Most of it you can see and correct on the site itself.",
+      "ask": "You can also ask for a copy of everything the site keeps about you, have it corrected or erased, or object to how it is used. Ask whoever runs the site. You get an answer within a month.",
+      "authority": "If the answer doesn’t settle it, you can complain to the data protection authority of your country. In Belgium that is the Data Protection Authority, at dataprotectionauthority.be."
+    }
+  },
+  "terms": {
+    "title": "Terms",
+    "lead": "What you can expect from this site, and what it expects from you.",
+    "updated": "Last changed on 18 November 2026.",
+    "site": {
+      "title": "What this is",
+      "named": "Pakske is a wishlist site that {operator} runs for family and friends. It costs nothing.",
+      "unnamed": "Pakske is a wishlist site that someone runs for family and friends. It costs nothing.",
+      "agree": "By making an account you agree to these terms. A child can have an account when a parent or guardian agrees."
+    },
+    "account": {
+      "title": "Your account",
+      "name": "Use a name the others know you by, and an email address you can read: the link for a forgotten password goes there.",
+      "password": "Keep your password to yourself. What happens through your account counts as yours.",
+      "full": "The site has room for a set number of accounts. When that number is reached, nobody new can register."
+    },
+    "lists": {
+      "title": "Lists and links",
+      "open": "A list is open to everyone who has its link, with or without an account, and anyone who has the link can pass it on. You choose who you send it to. The site can’t take a link back from someone.",
+      "together": "Someone you make co-owner of a list or a wish can change it, just as you can."
+    },
+    "content": {
+      "title": "What you put on it",
+      "yours": "Your lists, wishes, pictures and notes stay yours. You allow the site to store them and to show them to the people the privacy page names.",
+      "privacy": "Read the privacy page",
+      "rules": "Don’t put anything on it that is against the law, that is meant to hurt or harass someone, or that isn’t yours to share, such as another person’s private details.",
+      "abuse": "Don’t try to get into other people’s accounts or lists, and don’t load the site with automated requests.",
+      "removal": "Whoever runs the site can remove what breaks these rules, and close the account behind it."
+    },
+    "surprise": {
+      "title": "The surprise",
+      "ask": "The site hides from you what others buy for you. It can’t stop you from looking with a second account, so it asks you not to."
+    },
+    "giving": {
+      "title": "Giving and buying",
+      "tick": "A tick is a promise to the other buyers, not an order. The site sells nothing and has no part in what you buy, where you buy it, or whether it arrives.",
+      "shops": "The links on a wish lead to other sites, and the wish’s owners put them there. Those sites have terms and privacy rules of their own."
+    },
+    "asis": {
+      "title": "No guarantees",
+      "offered": "You get the site as it is. It can be slow or down, it can contain mistakes, and it can stop.",
+      "loss": "Nothing guarantees that your lists are never lost. Keep a copy of what you can’t do without.",
+      "liability": "As far as the law allows, whoever runs the site is not liable for damage from using it, unless they caused it on purpose or through gross negligence. Your rights as a consumer stay as they are."
+    },
+    "ending": {
+      "title": "Stopping",
+      "you": "You can stop whenever you like: delete your account under Settings. The privacy page says what goes and what stays.",
+      "site": "Whoever runs the site can close an account that breaks these terms, and can end the site."
+    },
+    "software": {
+      "title": "The software",
+      "open": "This site runs on Pakske, open-source software under the MIT licence. These terms are about this site only. Someone else who runs Pakske sets terms of their own.",
+      "source": "The source code on GitHub"
+    },
+    "changes": {
+      "title": "Changes and questions",
+      "date": "These terms can change, and the date at the top says when they last did. If you keep using the site after that, the new terms apply to you.",
+      "mail": "Questions go to this address:",
+      "ask": "Take your questions to whoever runs the site."
+    }
   },
   "error": {
     "notFoundTitle": "This page doesn’t exist",

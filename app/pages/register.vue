@@ -71,6 +71,15 @@ const { form, pending, message, errors, run } = useForm(async () => {
             >
           </FormField>
           <PasswordField id="new-password" v-model="password" :label="t('auth.password')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="8" :error="errors.password" />
+          <!-- Above the button and Google's, so it is read before either makes the account. -->
+          <i18n-t keypath="auth.agree" tag="p" class="form-note" scope="global">
+            <template #terms>
+              <NuxtLink :to="localePath('/terms')">{{ t('auth.agreeTerms') }}</NuxtLink>
+            </template>
+            <template #privacy>
+              <NuxtLink :to="localePath('/privacy')">{{ t('auth.agreePrivacy') }}</NuxtLink>
+            </template>
+          </i18n-t>
           <div class="actions wide">
             <art-button>
               <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.register') }}</button>

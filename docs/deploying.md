@@ -22,6 +22,9 @@ The site listens on port 3000. Data lives in the Docker volume `pakske-data`.
 | `NUXT_OAUTH_GOOGLE_CLIENT_ID` | empty | With the two below: offers "Doorgaan met Google". Empty: email and password only. |
 | `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` | empty | The secret of that OAuth client. |
 | `NUXT_OAUTH_GOOGLE_REDIRECT_URL` | empty | The site's address followed by `/auth/google`, the same as the authorised redirect URI at Google. |
+| `NUXT_PUBLIC_OPERATOR_NAME` | empty | Who runs the site: you. Shown on the privacy page and the terms. Empty: they say "the person who runs this site". |
+| `NUXT_PUBLIC_OPERATOR_EMAIL` | empty | Where people send questions about their data. Shown on both pages. |
+| `NUXT_PUBLIC_OPERATOR_NETWORK` | empty | The company whose tunnel or proxy carries the traffic, such as `Cloudflare`. The privacy page then names it. |
 | `PORT` | `3000` | The port on the host. |
 
 ## Logging in: Firebase
@@ -60,6 +63,16 @@ To reach the site from outside your home, put HTTPS in front of it: a Cloudflare
 - set `NUXT_TRUST_PROXY=true`. Otherwise every visitor seems to come from the proxy's address, and the limits on wrong passwords and on new accounts count for everyone together.
 
 The server expects exactly one proxy in front and takes the visitor's address from the last entry of `X-Forwarded-For`.
+
+## The privacy page and the terms
+
+The site has a privacy page at `/privacy` and terms at `/terms`, linked from every page's footer and from the form that makes an account. They describe what Pakske does with people's data, which is the same wherever it runs, and they name you as the one who runs it. Before you let people in:
+
+- set `NUXT_PUBLIC_OPERATOR_NAME` and `NUXT_PUBLIC_OPERATOR_EMAIL`. Under the GDPR people must be able to tell who keeps their data and where to ask for it;
+- set `NUXT_PUBLIC_OPERATOR_NETWORK` if a company's tunnel or proxy sits in front, since it sees every visitor's address;
+- read both pages as they come out. They are written for one person running the site for family and friends in the EU, and they are not legal advice. If your site differs (a host outside the EU, a company behind it, logs kept by your proxy), change the sentences in `i18n/locales/` and the date in `privacy.updated` and `terms.updated`.
+
+The privacy page promises an answer within a month to someone who asks for their data. A deleted list or wish stays in the database, marked as deleted; to erase one for good on request, remove its rows by hand.
 
 ## Update
 

@@ -50,6 +50,18 @@ export default defineNuxtConfig({
       // NUXT_FIREBASE_AUTH_EMULATOR_HOST: host:port of the Firebase emulator, for trying it locally.
       authEmulatorHost: '',
     },
+    public: {
+      // Who runs this site, for its privacy page and its terms (shared/utils/legal.ts). All
+      // three may stay empty; the pages then say "the person who runs this site".
+      operator: {
+        // NUXT_PUBLIC_OPERATOR_NAME: the person or organisation that answers for the site.
+        name: '',
+        // NUXT_PUBLIC_OPERATOR_EMAIL: where questions about someone's data go. Shown on both pages.
+        email: '',
+        // NUXT_PUBLIC_OPERATOR_NETWORK: a company whose tunnel or proxy carries the traffic, e.g. Cloudflare.
+        network: '',
+      },
+    },
     session: {
       maxAge: 60 * 60 * 24 * 60,
       // NUXT_SESSION_COOKIE_SECURE=false when the site is served over plain http.

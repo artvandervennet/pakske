@@ -202,6 +202,13 @@ for secret in Moeke Zus geheimpje; do lacks "… and the HTML has no '$secret'" 
 page sis; check "sis opens the page" 200
 has "… and the HTML names mom, who bought" Moeke; has "… and holds mom's note" geheimpje
 
+echo "── the privacy page and the terms"
+status_of /privacy; check "a visitor opens the privacy page" 200; has "… in Dutch" "Wie je gegevens bewaart"
+status_of /en/privacy; check "… and the English one" 200; has "… in English" "Who keeps your data"
+status_of /terms; check "a visitor opens the terms" 200; has "… which link to the privacy page" 'href="/privacy"'
+status_of /en/terms; check "… and the English ones" 200; has "… which link to the English privacy page" 'href="/en/privacy"'
+status_of /en/register; has "the form that makes an account links to the terms" 'href="/en/terms"'
+
 echo "── the owner ticks his own wishes"
 req art PUT "/api/lists/$TOKEN/wishes/$BOOK/purchase" '{"quantity":1}'; check "art ticks his own free wish" 204
 req art GET "/api/lists/$TOKEN"; has "… and his list shows it as his" '"mine":1'

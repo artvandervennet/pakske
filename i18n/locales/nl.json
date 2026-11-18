@@ -259,7 +259,10 @@
     "forgotLead": "Vul je e-mailadres in. Je krijgt een mail met een link om een nieuw wachtwoord te kiezen.",
     "forgotSend": "Stuur de mail",
     "forgotSent": "Heeft {email} een account, dan is de mail onderweg. Kijk ook in je spam.",
-    "backToLogin": "Terug naar inloggen"
+    "backToLogin": "Terug naar inloggen",
+    "agree": "Door een account te maken ga je akkoord met de {terms}. Op de {privacy} lees je wat de site over je bewaart.",
+    "agreeTerms": "voorwaarden",
+    "agreePrivacy": "privacypagina"
   },
   "settings": {
     "title": "Instellingen",
@@ -310,6 +313,140 @@
     "deleteLogin": "Je account zelf. Je kunt er niet meer mee inloggen.",
     "deleteConfirm": "Account verwijderen",
     "deleteCancel": "Annuleren"
+  },
+  "footer": {
+    "label": "Over deze site",
+    "privacy": "Privacy",
+    "terms": "Voorwaarden"
+  },
+  "privacy": {
+    "title": "Privacy",
+    "lead": "Wat deze site over je bewaart, wie het te zien krijgt en hoe je het weer weghaalt.",
+    "updated": "Laatst gewijzigd op 18 november 2026.",
+    "who": {
+      "title": "Wie je gegevens bewaart",
+      "named": "{operator} beheert deze site, beslist wat er gebeurt met wat je erop zet, en is daar verantwoordelijk voor.",
+      "unnamed": "De persoon die deze site beheert, beslist wat er gebeurt met wat je erop zet, en is daar verantwoordelijk voor.",
+      "mail": "Vragen over je gegevens, en de verzoeken verderop op deze pagina, stuur je naar dit adres:",
+      "ask": "Met vragen over je gegevens, en met de verzoeken verderop op deze pagina, ga je rechtstreeks naar die persoon."
+    },
+    "what": {
+      "title": "Wat de site bewaart",
+      "intro": "Wat je er zelf op zet, en het weinige dat de site nodig heeft om te werken:",
+      "account": "Je account: je naam, je e-mailadres en wanneer je het maakte. Log je in met Google, dan ook het nummer waaronder Google je account kent.",
+      "lists": "Je lijsten en wensen: titels, beschrijvingen, links en foto’s.",
+      "giving": "Wat je aanvinkt op de lijsten van anderen: welke wens, hoeveel, of je anoniem geeft, en de notities die je daar schrijft.",
+      "visited": "Welke lijsten van anderen je opende en wanneer je dat het laatst deed, zodat je ze terugvindt onder “Bezocht”.",
+      "sharing": "De links die je maakte om wensen of een lijst te delen, de links die je gebruikte, en de meldingen over wie een wens of een lijst met je deelt.",
+      "address": "Om foute wachtwoorden en nieuwe accounts te tellen, houdt de server je IP-adres en het e-mailadres dat je intypte hoogstens een uur in zijn geheugen. Geen van beide komt in de database.",
+      "nothing": "Pakske heeft geen statistieken, geen reclame en geen trackers, en houdt niet bij welke pagina’s je opent."
+    },
+    "see": {
+      "title": "Wie wat ziet",
+      "link": "Iedereen die de link van een lijst heeft, ziet de lijst, de wensen erop en de namen van de eigenaars, ook zonder account. Wie de link heeft, kan hem doorgeven.",
+      "buyers": "Wie ingelogd is, ziet bij andermans wensen wie wat geeft, met naam en notities. Geef je anoniem, dan staat er “Iemand anders” waar je naam zou staan.",
+      "owners": "De eigenaars van een wens zien nooit wie hem geeft, hoeveel er al genomen zijn of wat erover geschreven is.",
+      "picture": "De foto van een wens heeft een eigen, willekeurig adres. Wie dat adres heeft, kan de foto openen.",
+      "hidden": "Anderen zien je e-mailadres nooit. Geen pagina toont de accounts of andermans lijsten, niemand ziet wie zijn lijst opende, en zoekmachines wordt gevraagd weg te blijven."
+    },
+    "where": {
+      "title": "Waar het staat, en wie er nog bij betrokken is",
+      "server": "Alles uit de lijst hierboven staat in één database en één map met foto’s, op de server waar deze site op draait.",
+      "firebase": "Inloggen loopt via Firebase Authentication, een dienst van Google. Google krijgt je e-mailadres, je naam en je wachtwoord. Het bewaart het wachtwoord en stuurt de mails voor een vergeten wachtwoord of een nieuw e-mailadres. Google kan die gegevens in de Verenigde Staten verwerken.",
+      "passwords": "Deze site bewaart geen wachtwoorden, behalve voor een account dat ouder is dan de overstap naar Firebase. Het wachtwoord van zo’n account staat hier als hash, waaruit het wachtwoord niet terug te lezen is, tot het account opnieuw inlogt.",
+      "google": "Kies je “Doorgaan met Google”, dan geeft Google deze site je naam, je e-mailadres en het nummer van je Google-account door.",
+      "network": "De verbinding met deze site loopt via {network}. Dat ziet je IP-adres en geeft door wat je verstuurt en ontvangt.",
+      "shops": "Bij een wens met een link haalt de server de foto op die de winkel erbij toont. De winkel ziet dan de server, niet jou. Pas als je zelf op een link klikt, ben je bij de winkel.",
+      "nobody": "Je gegevens worden niet verkocht, en niet doorgegeven aan iemand die er zelf iets mee wil doen."
+    },
+    "cookies": {
+      "title": "Cookies en je browser",
+      "intro": "De site zet alleen wat nodig is om te werken, en heeft daarom geen cookiebanner:",
+      "login": "Een inlogcookie, vanaf het moment dat je inlogt. Die zegt welk account van jou is en bevat de sleutel waarmee je bij Firebase ingelogd blijft, verzegeld zodat alleen de server hem kan lezen. Hij vervalt 60 dagen nadat hij voor het laatst gezet is.",
+      "opened": "Zolang je niet ingelogd bent, een cookie met de lijsten die je opende, hoogstens 50, voor een jaar. Inloggen zet ze bij je account en haalt de cookie weg.",
+      "google": "Tijdens het inloggen met Google, twee cookies die onthouden waar je was, hoogstens tien minuten.",
+      "scheme": "Je keuze voor licht of donker, in de opslag van je browser. De server krijgt die nooit."
+    },
+    "why": {
+      "title": "Waarom de site het mag gebruiken",
+      "service": "Bijna alles is nodig om te doen wat je van de site vraagt: een account bijhouden, je lijsten tonen en kopers laten zien wat al genomen is. Volgens de AVG, de Europese privacywet, is dat het uitvoeren van een overeenkomst met jou.",
+      "safety": "Foute wachtwoorden en nieuwe accounts tellen per IP-adres beschermt de accounts en de server. De AVG noemt dat een gerechtvaardigd belang."
+    },
+    "keep": {
+      "title": "Hoe lang het bewaard blijft",
+      "until": "Tot je het weghaalt. Je lijsten, wensen, vinkjes en notities wijzig en verwijder je zelf, en je account verwijder je bij Instellingen.",
+      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, samen met wat je aanvinkte en schreef op de lijsten van anderen, je bezochte lijsten, je links en je meldingen. Een lijst die je met iemand deelt, blijft van die persoon.",
+      "deleted": "Een verwijderde lijst of wens wordt niet gewist. Hij blijft in de database staan, gemarkeerd als verwijderd. Wie een wens van jou had aangevinkt, blijft die wens zien, met je naam zolang je account bestaat. Niemand anders ziet hem.",
+      "erase": "Vraag aan wie de site beheert om verwijderde lijsten en wensen ook uit de database te wissen.",
+      "backups": "Wie de site beheert, kan back-ups maken. Wat je verwijderde, blijft in een back-up staan tot die vervangen is."
+    },
+    "rights": {
+      "title": "Je rechten",
+      "self": "Het meeste kun je op de site zelf bekijken en verbeteren.",
+      "ask": "Je kunt ook een kopie vragen van alles wat de site over je bewaart, het laten verbeteren of wissen, of je verzetten tegen het gebruik ervan. Vraag het aan wie de site beheert. Je krijgt binnen een maand antwoord.",
+      "authority": "Lost het antwoord het niet op, dan kun je een klacht indienen bij de privacytoezichthouder van je land. In België is dat de Gegevensbeschermingsautoriteit, op gegevensbeschermingsautoriteit.be."
+    }
+  },
+  "terms": {
+    "title": "Voorwaarden",
+    "lead": "Wat je van deze site mag verwachten, en wat de site van jou verwacht.",
+    "updated": "Laatst gewijzigd op 18 november 2026.",
+    "site": {
+      "title": "Wat dit is",
+      "named": "Pakske is een site voor verlanglijstjes die {operator} beheert voor familie en vrienden. Je betaalt er niets voor.",
+      "unnamed": "Pakske is een site voor verlanglijstjes die iemand beheert voor familie en vrienden. Je betaalt er niets voor.",
+      "agree": "Door een account te maken ga je akkoord met deze voorwaarden. Een kind mag een account hebben als een ouder of voogd het goedvindt."
+    },
+    "account": {
+      "title": "Je account",
+      "name": "Gebruik een naam waaronder de anderen je kennen, en een e-mailadres dat je kunt lezen: daar komt de link voor een vergeten wachtwoord aan.",
+      "password": "Houd je wachtwoord voor jezelf. Wat er via je account gebeurt, geldt als van jou.",
+      "full": "De site heeft plaats voor een vast aantal accounts. Is dat aantal bereikt, dan kan er niemand meer bij."
+    },
+    "lists": {
+      "title": "Lijsten en links",
+      "open": "Een lijst staat open voor iedereen die de link heeft, met of zonder account, en wie de link heeft, kan hem doorgeven. Jij kiest naar wie je hem stuurt. De site kan een link niet van iemand terugnemen.",
+      "together": "Wie je mede-eigenaar maakt van een lijst of een wens, kan die wijzigen, net als jij."
+    },
+    "content": {
+      "title": "Wat je erop zet",
+      "yours": "Je lijsten, wensen, foto’s en notities blijven van jou. Je laat de site toe ze te bewaren en te tonen aan de mensen die de privacypagina noemt.",
+      "privacy": "Lees de privacypagina",
+      "rules": "Zet er niets op dat tegen de wet is, dat bedoeld is om iemand te kwetsen of lastig te vallen, of dat niet van jou is om te delen, zoals privégegevens van iemand anders.",
+      "abuse": "Probeer niet in de accounts of lijsten van anderen te komen, en belast de site niet met geautomatiseerde verzoeken.",
+      "removal": "Wie de site beheert, kan weghalen wat tegen deze regels ingaat, en het account erachter sluiten."
+    },
+    "surprise": {
+      "title": "De verrassing",
+      "ask": "De site verbergt voor jou wat anderen voor je kopen. De site kan niet tegenhouden dat je met een tweede account gaat kijken, en vraagt je daarom het niet te doen."
+    },
+    "giving": {
+      "title": "Geven en kopen",
+      "tick": "Een vinkje is een belofte aan de andere kopers, geen bestelling. De site verkoopt niets en staat buiten wat je koopt, waar je het koopt en of het aankomt.",
+      "shops": "De links bij een wens gaan naar andere sites, en de eigenaars van de wens zetten ze erbij. Die sites hebben hun eigen voorwaarden en privacyregels."
+    },
+    "asis": {
+      "title": "Geen garanties",
+      "offered": "Je krijgt de site zoals die is. De site kan traag of onbereikbaar zijn, fouten bevatten en ophouden te bestaan.",
+      "loss": "Niets garandeert dat je lijsten nooit verloren gaan. Bewaar zelf een kopie van wat je niet kunt missen.",
+      "liability": "Voor zover de wet het toelaat, is wie de site beheert niet aansprakelijk voor schade door het gebruik ervan, behalve bij opzet of een grove fout. Je rechten als consument blijven wat ze zijn."
+    },
+    "ending": {
+      "title": "Stoppen",
+      "you": "Je kunt stoppen wanneer je wilt: verwijder je account bij Instellingen. De privacypagina zegt wat er verdwijnt en wat er blijft.",
+      "site": "Wie de site beheert, kan een account sluiten dat tegen deze voorwaarden ingaat, en kan met de site stoppen."
+    },
+    "software": {
+      "title": "De software",
+      "open": "Deze site draait op Pakske, opensourcesoftware onder de MIT-licentie. Deze voorwaarden gaan alleen over deze site. Wie anders Pakske draait, heeft eigen voorwaarden.",
+      "source": "De broncode op GitHub"
+    },
+    "changes": {
+      "title": "Wijzigingen en vragen",
+      "date": "Deze voorwaarden kunnen wijzigen, en de datum bovenaan zegt wanneer dat het laatst gebeurde. Blijf je de site daarna gebruiken, dan gelden de nieuwe voorwaarden voor jou.",
+      "mail": "Vragen stuur je naar dit adres:",
+      "ask": "Met vragen ga je naar wie de site beheert."
+    }
   },
   "error": {
     "notFoundTitle": "Deze pagina bestaat niet",

@@ -1,0 +1,17 @@
+/* The privacy page and the terms. Written against Gesso's role tokens, like app.css. */
+
+/* Text to read: one column no wider than a comfortable line, the sections apart enough to find
+   one by its heading. */
+.legal { display: grid; gap: var(--space-8); max-inline-size: var(--measure); }
+.legal > section { display: grid; gap: var(--space-3); }
+/* A section's title in the body type, as on the Settings page: Gesso's display serif at its
+   section size is for a page with a few sections, not a dozen short ones. */
+.legal h2 {
+  font: var(--weight-bold) var(--step-1)/var(--leading-snug) var(--font-body);
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+}
+.legal ul { display: grid; gap: var(--space-2); padding-inline-start: 1.25em; }
+/* A mail address has no spaces to wrap at. */
+.legal a { overflow-wrap: anywhere; }
+.legal-updated { font-size: var(--step--1); color: var(--ink-muted); }

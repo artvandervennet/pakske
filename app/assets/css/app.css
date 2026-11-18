@@ -98,6 +98,9 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 /* The footer follows a section in another paint here, so it needs room of its own above. */
 .page-footer .inner { padding-block-start: var(--space-12); }
 .page-footer nav { display: flex; gap: var(--space-4); align-items: baseline; }
+/* The languages, then the pages about the site. Where both fit on one line with room to spare
+   they stand apart, so they read as two groups; on a phone the footer's own spacing does that. */
+@media (min-width: 40rem) { .page-footer nav + nav { margin-inline-start: var(--space-6); } }
 
 /* ── Forms ────────────────────────────────────────────────────────────────*/
 .form { display: grid; gap: var(--space-6); max-inline-size: 34rem; }
@@ -106,6 +109,9 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
    before the field, and the field sits right above its error. */
 .field > label > .hint { display: block; font-size: var(--step--1); font-weight: var(--weight-regular); color: var(--ink-muted); }
 .form > .actions { margin-block-start: var(--space-2); }
+/* A sentence in a form that is neither a hint for one field nor an answer: what making the
+   account means, above its button. */
+.form-note { font-size: var(--step--1); color: var(--ink-muted); }
 
 /* Candidate for Gesso: a field that failed validation. The message under it says how to fix
    it; the border is the second signal, never the only one. */
