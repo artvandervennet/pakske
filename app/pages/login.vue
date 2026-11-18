@@ -65,18 +65,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
             </div>
             <NuxtLink class="forgot-link" :to="{ path: localePath('/forgot'), query: email ? { email } : {} }">{{ t('auth.forgotLink') }}</NuxtLink>
           </div>
-          <!-- Someone without an account gets one from this button, without passing the form
-               that makes one, so what that form says about the terms is said here too. -->
-          <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')">
-            <i18n-t keypath="auth.agreeGoogle" tag="p" class="form-note" scope="global">
-              <template #terms>
-                <NuxtLink :to="localePath('/terms')">{{ t('auth.agreeTerms') }}</NuxtLink>
-              </template>
-              <template #privacy>
-                <NuxtLink :to="localePath('/privacy')">{{ t('auth.agreePrivacy') }}</NuxtLink>
-              </template>
-            </i18n-t>
-          </GoogleLogin>
+          <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')" />
           <p>
             {{ t('auth.noAccount') }}
             <NuxtLink :to="{ path: localePath('/register'), query: next ? { next } : {} }">{{ t('auth.register') }}</NuxtLink>

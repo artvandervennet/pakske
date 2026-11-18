@@ -262,8 +262,7 @@
     "backToLogin": "Terug naar inloggen",
     "agree": "Door een account te maken ga je akkoord met de {terms}. Op de {privacy} lees je wat de site over je bewaart.",
     "agreeTerms": "voorwaarden",
-    "agreePrivacy": "privacypagina",
-    "agreeGoogle": "Ga je voor het eerst door met Google, dan krijg je een account en ga je akkoord met de {terms}. Op de {privacy} lees je wat de site over je bewaart."
+    "agreePrivacy": "privacypagina"
   },
   "settings": {
     "title": "Instellingen",
