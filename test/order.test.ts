@@ -5,7 +5,7 @@ import { putOnList } from '../server/domain/placement'
 import { setPurchase } from '../server/domain/purchases'
 import { linkWish } from '../server/domain/sharing'
 import { deleteWish, reorderWishes } from '../server/domain/wishes'
-import { wishIdsInput } from '../shared/schemas/input'
+import { deleteInput, wishesDeleteInput, wishIdsInput } from '../shared/schemas/input'
 import { addList, addUser, addWishTo, codeOf, makeDb, titles } from './helpers'
 
 function setup() {
@@ -97,5 +97,17 @@ describe('reordering a list', () => {
     expect(wishIdsInput.safeParse({ wishIds: [1, 1] }).success).toBe(false)
     expect(wishIdsInput.safeParse({ wishIds: [1, 2] }).success).toBe(true)
     expect(wishIdsInput.safeParse({ wishIds: [] }).success).toBe(false)
+  })
+
+  it('lets a delete say that whoever bought it should not keep seeing it, and a new order say nothing of the kind', () => {
+    expect(wishesDeleteInput.parse({ wishIds: [1, 2] })).toEqual({ wishIds: [1, 2] })
+    expect(wishesDeleteInput.parse({ wishIds: [1, 2], clearForBuyers: true })).toEqual({ wishIds: [1, 2], clearForBuyers: true })
+    expect(wishesDeleteInput.safeParse({ wishIds: [1, 2], clearForBuyers: 'yes' }).success).toBe(false)
+    expect(wishesDeleteInput.safeParse({ wishIds: [1, 1] }).success).toBe(false)
+    expect(wishIdsInput.safeParse({ wishIds: [1, 2], clearForBuyers: true }).success).toBe(false)
+    expect(deleteInput.parse({})).toEqual({})
+    expect(deleteInput.parse({ clearForBuyers: true })).toEqual({ clearForBuyers: true })
+    expect(deleteInput.safeParse({ clearForBuyers: 1 }).success).toBe(false)
+    expect(deleteInput.safeParse({ other: true }).success).toBe(false)
   })
 })

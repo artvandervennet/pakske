@@ -233,6 +233,18 @@ req sis PUT "/api/lists/$TOKEN/wishes/$SOCKS/purchase" '{"quantity":1}'; check "
 req sis PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":2}'; check "sis cannot raise on the lowered wish" 409
 req mom PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":1}'; check "mom can lower on the lowered wish" 204
 
+# Deleting with "gone for everyone right away": whoever bought it doesn't keep seeing it either.
+req art POST "/api/lists/$TOKEN/wishes" '{"title":"Kaarsje"}'; CANDLE=$(json .id)
+req art POST "/api/lists/$TOKEN/wishes" '{"title":"Zeepje"}'; SOAP=$(json .id)
+req mom PUT "/api/lists/$TOKEN/wishes/$CANDLE/purchase" '{"quantity":1}'; check "mom buys the candle" 204
+req mom PUT "/api/lists/$TOKEN/wishes/$SOAP/purchase" '{"quantity":1}'; check "… and the soap" 204
+req art DELETE "/api/lists/$TOKEN/wishes/$CANDLE" '{"clearForBuyers":"yes"}'; check "a delete that says it unclearly is refused" 422
+req art DELETE "/api/lists/$TOKEN/wishes/$CANDLE" '{"clearForBuyers":true}'; check "art deletes the candle for whoever bought it as well, same answer" 204
+req art POST "/api/lists/$TOKEN/wishes/delete" "{\"wishIds\":[$SOAP],\"clearForBuyers\":true}"; check "… and the soap, from edit mode" 204
+req mom GET "/api/lists/$TOKEN"; lacks "mom no longer sees the candle" Kaarsje; lacks "… nor the soap" Zeepje; has "… but still the socks, deleted the usual way" Sokken
+req mom POST "/api/lists/$TOKEN/wishes/$CANDLE/notes" '{"body":"Waar is hij?"}'; check "… and cannot write a note on the candle" 404
+req mom DELETE "/api/lists/$TOKEN/wishes/$CANDLE/purchase"; check "… but can still take back what she was giving" 204
+
 echo "── images"
 printf 'just text' > "$TMP/fake.png"
 upload art "/api/lists/$TOKEN/wishes/$PLUGS/image" "$TMP/pic.png"; check "art uploads an image" 200; IMAGE=$(json .image)

@@ -60,13 +60,21 @@ export function updateWish(db: Db, userId: number, token: string, wishId: number
 /**
  * Takes the wish off this list of the person's own. It is deleted only when no other list shows
  * it; a joint wish stays on the other lists. The row and its image stay, in every case.
+ *
+ * Whoever bought it keeps seeing it on this list for a while, marked as taken off. With
+ * `clearForBuyers` they don't: it is gone for everyone at once.
  */
-export function deleteWish(db: Db, userId: number, token: string, wishId: number): void {
+export function deleteWish(db: Db, userId: number, token: string, wishId: number, options: DeleteOptions = {}): void {
   db.transaction((tx) => {
     ownedListId(tx, userId, token)
     if (!wishOnList(tx, token, wishId).live) throw new DomainError('not_found')
-    takeOff(tx, userId, token, [wishId])
+    takeOff(tx, userId, token, [wishId], options)
   }, { behavior: 'immediate' })
+}
+
+export interface DeleteOptions {
+  /** Gone at once for whoever bought it too, where they would otherwise keep seeing it for a while. */
+  clearForBuyers?: boolean
 }
 
 /**
@@ -74,15 +82,15 @@ export function deleteWish(db: Db, userId: number, token: string, wishId: number
  * that is no longer on the list, because a co-owner took it off meanwhile, is skipped rather than
  * failing the others.
  */
-export function deleteWishes(db: Db, userId: number, token: string, wishIds: number[]): void {
-  db.transaction(tx => takeOff(tx, userId, token, wishIds), { behavior: 'immediate' })
+export function deleteWishes(db: Db, userId: number, token: string, wishIds: number[], options: DeleteOptions = {}): void {
+  db.transaction(tx => takeOff(tx, userId, token, wishIds, options), { behavior: 'immediate' })
 }
 
-function takeOff(db: Db, userId: number, token: string, wishIds: number[]): void {
+function takeOff(db: Db, userId: number, token: string, wishIds: number[], options: DeleteOptions): void {
   const listId = ownedListId(db, userId, token)
   const live = new Set(liveIdsInOrder(db, listId))
   for (const wishId of wishIds) {
-    if (live.has(wishId)) takeOffList(db, listId, wishId)
+    if (live.has(wishId)) takeOffList(db, listId, wishId, options.clearForBuyers)
   }
 }
 

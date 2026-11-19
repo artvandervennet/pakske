@@ -131,10 +131,17 @@ async function afterRemoving() {
 // Other people's lists go without a question, as "Weghalen" on a row does: the link keeps
 // working. Your own lists are deleted for good, so that asks first.
 const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
+// Off every time the question is asked: skipping the wait is a choice made per delete. It is
+// only asked when something is deleted; a list that is left stays as it is for everyone else.
+const clearForBuyers = ref(false)
+const deletesSome = computed(() => chosenMine.value.some(list => !list.sharedWith.length))
 
 async function removeChosen() {
   if (!chosen.value.length || edit.busy.value) return
-  if (shown.value === 'mine') return deleteDialog.value?.showModal()
+  if (shown.value === 'mine') {
+    clearForBuyers.value = false
+    return deleteDialog.value?.showModal()
+  }
   await edit.each(chosenVisited.value.map(list => list.token), token => $fetch<unknown>(`/api/home/opened/${token}`, { method: 'DELETE' }))
   await afterRemoving()
 }
@@ -162,7 +169,7 @@ async function onDeleteClose() {
   const lists = chosenMine.value
   const leaving = new Set(lists.filter(list => list.sharedWith.length).map(list => list.token))
   await edit.each(lists.map(list => list.token), token =>
-    leaving.has(token) ? $fetch<unknown>(`/api/lists/${token}/leave`, { method: 'POST' }) : $fetch<unknown>(`/api/lists/${token}`, { method: 'DELETE' }))
+    leaving.has(token) ? $fetch<unknown>(`/api/lists/${token}/leave`, { method: 'POST' }) : $fetch<unknown>(`/api/lists/${token}`, { method: 'DELETE', body: { clearForBuyers: clearForBuyers.value } }))
   await afterRemoving()
 }
 </script>
@@ -304,6 +311,7 @@ async function onDeleteClose() {
           {{ list.title }}<span v-if="list.sharedWith.length" class="row-meta"> · {{ t('wish.with', { names: names(list.sharedWith) }) }}</span>
         </li>
       </ul>
+      <KeptForBuyers v-if="deletesSome" v-model="clearForBuyers" several />
       <form method="dialog" class="actions">
         <art-button variant="secondary">
           <button value="cancel" autofocus>{{ t('list.deleteCancel') }}</button>

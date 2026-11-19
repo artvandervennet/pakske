@@ -30,9 +30,14 @@ describe('how long a wish that left its list stays for whoever bought it', () =>
 
   it('lasts until those days are over, to the millisecond', () => {
     const left = at(0)
-    expect(keptForBuyers(left, at(0))).toBe(true)
-    expect(keptForBuyers(left, at(30 * day - 1))).toBe(true)
-    expect(keptForBuyers(left, at(30 * day))).toBe(false)
-    expect(keptForBuyers(left, at(400 * day))).toBe(false)
+    expect(keptForBuyers(left, null, at(0))).toBe(true)
+    expect(keptForBuyers(left, null, at(30 * day - 1))).toBe(true)
+    expect(keptForBuyers(left, null, at(30 * day))).toBe(false)
+    expect(keptForBuyers(left, null, at(400 * day))).toBe(false)
+  })
+
+  it('is over at once when its owner said so', () => {
+    expect(keptForBuyers(at(0), at(0), at(0))).toBe(false)
+    expect(keptForBuyers(at(0), at(0), at(day))).toBe(false)
   })
 })

@@ -185,9 +185,12 @@ const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
 const leaveDialog = useTemplateRef<HTMLDialogElement>('leaveDialog')
 const listError = ref('')
 const deleting = ref(false)
+// Off every time a delete is asked about: skipping the wait is a choice made per delete.
+const clearForBuyers = ref(false)
 
 function askToDeleteOrLeave() {
   if (deleting.value) return
+  clearForBuyers.value = false
   ;(shared.value ? leaveDialog : deleteDialog).value?.showModal()
 }
 
@@ -202,7 +205,7 @@ async function deleteOrLeave(how: 'delete' | 'leave') {
   deleting.value = true
   listError.value = ''
   try {
-    if (how === 'delete') await $fetch(`/api/lists/${token.value}`, { method: 'DELETE' })
+    if (how === 'delete') await $fetch(`/api/lists/${token.value}`, { method: 'DELETE', body: { clearForBuyers: clearForBuyers.value } })
     else await $fetch(`/api/lists/${token.value}/leave`, { method: 'POST' })
     await navigateTo(localePath('/'))
   }
@@ -605,12 +608,14 @@ const editDeleteDialog = useTemplateRef<HTMLDialogElement>('editDeleteDialog')
 const chosenElsewhere = computed(() => edit.chosen().some(wish => wish.role === 'owner' && wish.alsoElsewhere))
 
 function askToDeleteChosen() {
-  if (selected.size && !edit.busy.value) editDeleteDialog.value?.showModal()
+  if (!selected.size || edit.busy.value) return
+  clearForBuyers.value = false
+  editDeleteDialog.value?.showModal()
 }
 
 async function onEditDeleteClose() {
   if (answer(editDeleteDialog.value) !== 'delete') return
-  await edit.deleteSelected()
+  await edit.deleteSelected({ clearForBuyers: clearForBuyers.value })
   await nextTick()
   editCount.value?.focus()
 }
@@ -911,6 +916,7 @@ async function addWish(title: string) {
         {{ t('listEdit.deleteBody') }}
         <template v-if="chosenElsewhere">{{ t('listEdit.deleteBodyElsewhere') }}</template>
       </p>
+      <KeptForBuyers v-model="clearForBuyers" :several="selected.size > 1" />
       <form method="dialog" class="actions">
         <art-button variant="secondary">
           <button value="cancel" autofocus>{{ t('listEdit.deleteCancel') }}</button>
@@ -942,6 +948,7 @@ async function addWish(title: string) {
     <dialog v-if="canManage && !shared" ref="deleteDialog" class="dialog" aria-labelledby="list-delete-title" aria-describedby="list-delete-text" @close="onDeleteDialogClose">
       <h2 id="list-delete-title">{{ t('list.deleteTitle', { title: list.title }) }}</h2>
       <p id="list-delete-text">{{ t('list.deleteBody') }}</p>
+      <KeptForBuyers v-model="clearForBuyers" several />
       <form method="dialog" class="actions">
         <art-button variant="secondary">
           <button value="cancel" autofocus>{{ t('list.deleteCancel') }}</button>

@@ -129,6 +129,16 @@ export const wishIdsInput = z.strictObject({
     .refine(ids => new Set(ids).size === ids.length, 'invalid'),
 })
 
+// Deleting a wish or a list may say that whoever bought something there shouldn't keep seeing it
+// (shared/utils/kept-for-buyers.ts). Left out, they do, for a while.
+const clearForBuyers = z.boolean('invalid').optional()
+
+/** Deleting one wish or one list: nothing to say but that. */
+export const deleteInput = z.strictObject({ clearForBuyers })
+
+/** Deleting several wishes of a list together. */
+export const wishesDeleteInput = z.strictObject({ ...wishIdsInput.shape, clearForBuyers })
+
 /**
  * Which of a link's wishes to take: each once, and no more than a link can hold. The ceiling is
  * a refinement because zod's own `max` ends the parse, and the union below then reports no field.

@@ -13,7 +13,7 @@ import { createUser } from '../server/domain/users'
 import { deleteWish, deleteWishes, reorderWishes, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput } from '../shared/schemas/input'
 import { anonWishSchema, buyerWishSchema, ownerWishSchema, type BuyerWish } from '../shared/schemas/list'
-import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, titles, wishIn } from './helpers'
+import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, purchaseRows, titles, wishIn } from './helpers'
 
 // Addresses are counted from the start of each world, so one world can hold several lists and two
 // worlds built the same way still get the same addresses, and their views can be compared whole.
@@ -239,6 +239,55 @@ describe('thirty days after a wish left the list', () => {
     expect(titles(getListView(db, token, mom.id))).toEqual(['Slimme stekkers'])
     vi.setSystemTime(START.getTime() + 40 * DAY)
     expect(getListView(db, token, mom.id)).toMatchObject({ deleted: true, wishes: [] })
+  })
+})
+
+describe('a wish its owner deleted for whoever bought it as well', () => {
+  it('is gone for its buyer at once, and reads to the owner like any deleted wish', () => {
+    const cleared = world(true)
+    const kept = world(true)
+    deleteWish(cleared.db, cleared.art.id, cleared.token, cleared.plugs.id, { clearForBuyers: true })
+    deleteWish(kept.db, kept.art.id, kept.token, kept.plugs.id)
+    expect(wishIn(getListView(cleared.db, cleared.token, cleared.mom.id), cleared.plugs.id)).toBeUndefined()
+    expect(wishIn(getListView(kept.db, kept.token, kept.mom.id), kept.plugs.id)).toMatchObject({ removed: true, mine: 1 })
+    expect(getListView(cleared.db, cleared.token, cleared.art.id)).toEqual(getListView(kept.db, kept.token, kept.art.id))
+    expect(getListView(cleared.db, cleared.token, null)).toEqual(getListView(kept.db, kept.token, null))
+    // What mom was giving is still in the database: only nobody is shown it.
+    expect(purchaseRows(cleared.db, cleared.plugs.id)).toHaveLength(2)
+  })
+
+  it('leaves the wishes deleted without that choice where they were', () => {
+    const { db, token, art, mom, plugs, socks } = world(true)
+    deleteWish(db, art.id, token, plugs.id, { clearForBuyers: true })
+    expect(wishIn(getListView(db, token, mom.id), socks.id)).toMatchObject({ removed: true, mine: 1 })
+  })
+
+  it('goes for several at a time', () => {
+    const { db, token, art, mom, sis, plugs, book } = world(true)
+    deleteWishes(db, art.id, token, [plugs.id, book.id], { clearForBuyers: true })
+    expect(titles(getListView(db, token, mom.id))).toEqual(['Puzzels', 'Sokken'])
+    expect(titles(getListView(db, token, sis.id))).toEqual(['Puzzels'])
+  })
+
+  it('goes for a whole list, with what had left it before', () => {
+    const { db, token, art, mom, sis } = world(true)
+    deleteList(db, art.id, token, { clearForBuyers: true })
+    for (const buyer of [mom, sis]) expect(getListView(db, token, buyer.id)).toMatchObject({ deleted: true, wishes: [] })
+  })
+
+  it('is for a buyer again as any wish when it comes back to the list and leaves it later', () => {
+    const { db, token, art, mom } = world(true)
+    const other = addList(db, art.id, 'Verjaardag')
+    const game = addWishTo(db, art.id, other, 'Bordspel')
+    const listId = ownedListId(db, art.id, token)
+    putOnList(db, listId, game.id)
+    setPurchase(db, token, game.id, mom.id, 1)
+    deleteWish(db, art.id, token, game.id, { clearForBuyers: true })
+    expect(wishIn(getListView(db, token, mom.id), game.id)).toBeUndefined()
+    putOnList(db, listId, game.id)
+    expect(wishIn(getListView(db, token, mom.id), game.id)).toMatchObject({ removed: false, mine: 1 })
+    deleteWish(db, art.id, token, game.id)
+    expect(wishIn(getListView(db, token, mom.id), game.id)).toMatchObject({ removed: true, mine: 1 })
   })
 })
 

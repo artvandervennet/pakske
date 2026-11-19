@@ -183,7 +183,7 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
 
   // Every wish the list has ever shown, with whether it is on the list now and whether the viewer
   // is one of its owners.
-  const rows = db.select({ wish: wishes, removedAt: listWishes.removedAt, ownerId: wishOwners.userId }).from(listWishes)
+  const rows = db.select({ wish: wishes, removedAt: listWishes.removedAt, clearedAt: listWishes.clearedAt, ownerId: wishOwners.userId }).from(listWishes)
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
     .leftJoin(wishOwners, and(eq(wishOwners.wishId, wishes.id), eq(wishOwners.userId, viewerId)))
     .where(eq(listWishes.listId, list.id))
@@ -191,17 +191,18 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
     .all()
     .map((row) => {
       const leftAt = leftListAt(row.removedAt, row.wish.deletedAt, list.deletedAt)
-      return { wish: row.wish, owns: row.ownerId !== null, live: leftAt === null, leftAt }
+      return { wish: row.wish, owns: row.ownerId !== null, live: leftAt === null, leftAt, clearedAt: row.clearedAt }
     })
   const owned = rows.filter(row => row.live && row.owns).map(row => row.wish)
   // Buyer rows go only to someone who owns neither the wish nor the list, so a wish that left the
   // list reads the same to both kinds of owner whatever buyers did: also to whoever stopped owning
   // it by taking it off, and for wishes deleted in step one, which kept their owners. A list's
   // owners own every wish it shows, so they lose nothing here. A wish that left the list is a
-  // buyer's for a while and then nobody's: the clock decides that, not what anyone bought.
+  // buyer's for a while and then nobody's: the clock decides that, or the owner who deleted it,
+  // not what anyone bought.
   const now = new Date()
   const forBuyers = rows
-    .filter(row => !row.owns && !viewerOwnsList && (row.leftAt === null || keptForBuyers(row.leftAt, now)))
+    .filter(row => !row.owns && !viewerOwnsList && (row.leftAt === null || keptForBuyers(row.leftAt, row.clearedAt, now)))
     .map(row => ({ wish: row.wish, removed: !row.live }))
 
   const joint = jointDetails(db, list.id, [...owned.map(wish => wish.id), ...forBuyers.map(row => row.wish.id)])
@@ -239,7 +240,7 @@ export function oldLinkView(db: Db, token: string, viewerId: number | null): Lis
   if (owns) return list.deletedAt === null ? { movedTo: list.token } : undefined
 
   const now = new Date()
-  const given = db.select({ wish: wishes, removedAt: listWishes.removedAt, name: users.displayName, quantity: purchases.quantity, anonymous: purchases.anonymous })
+  const given = db.select({ wish: wishes, removedAt: listWishes.removedAt, clearedAt: listWishes.clearedAt, name: users.displayName, quantity: purchases.quantity, anonymous: purchases.anonymous })
     .from(listWishes)
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
     .innerJoin(purchases, and(eq(purchases.wishId, wishes.id), eq(purchases.userId, viewerId)))
@@ -249,7 +250,7 @@ export function oldLinkView(db: Db, token: string, viewerId: number | null): Lis
     .all()
     .filter((row) => {
       const leftAt = leftListAt(row.removedAt, row.wish.deletedAt, list.deletedAt)
-      return leftAt === null || keptForBuyers(leftAt, now)
+      return leftAt === null || keptForBuyers(leftAt, row.clearedAt, now)
     })
   if (given.length === 0) return undefined
 

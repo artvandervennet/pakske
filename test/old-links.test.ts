@@ -38,6 +38,12 @@ function setup() {
 afterEach(() => vi.useRealTimers())
 
 describe('the old address of a list that got a new link', () => {
+  it('drops a tick on a wish its owner deleted for whoever bought it as well', () => {
+    const { db, art, mom, old, token, sokken } = setup()
+    deleteWish(db, art.id, token, sokken.id, { clearForBuyers: true })
+    expect(titles(oldLinkView(db, old, mom.id) as ListView)).toEqual(['Glazen'])
+  })
+
   it('drops a tick on a wish that left the list thirty days ago, and keeps the ticks on wishes still there', () => {
     const { db, art, mom, old, token, sokken } = setup()
     vi.useFakeTimers()

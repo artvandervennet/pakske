@@ -89,12 +89,18 @@ export function ownersOfList(db: Db, listId: number): { userId: number, name: st
  * Takes every wish off the list, then deletes the list. A wish that is on no other list is deleted
  * with it; a joint wish stays on the other lists, with their owners. A list that has other owners
  * can't be deleted: one owner may not take it away from the others, so they leave instead.
+ *
+ * Whoever bought something on it keeps seeing that on the deleted list for a while. With
+ * `clearForBuyers` nothing of it is left for them, including what had left the list before.
  */
-export function deleteList(db: Db, userId: number, token: string): void {
+export function deleteList(db: Db, userId: number, token: string, options: { clearForBuyers?: boolean } = {}): void {
   db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
     if (ownersOfList(tx, listId).length > 1) throw new DomainError('list_shared')
-    for (const wishId of wishesMarkedOn(tx, listId)) takeOffList(tx, listId, wishId)
+    for (const wishId of wishesMarkedOn(tx, listId)) takeOffList(tx, listId, wishId, options.clearForBuyers)
+    if (options.clearForBuyers) {
+      tx.update(listWishes).set({ clearedAt: new Date() }).where(and(eq(listWishes.listId, listId), isNull(listWishes.clearedAt))).run()
+    }
     tx.update(lists).set({ deletedAt: new Date() }).where(eq(lists.id, listId)).run()
     // Nobody is shown a list that is gone, and what friends were told about it would lead nowhere.
     tx.delete(listFriends).where(eq(listFriends.listId, listId)).run()

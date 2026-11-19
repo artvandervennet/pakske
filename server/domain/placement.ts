@@ -91,7 +91,7 @@ export function putOnList(db: Db, listId: number, wishId: number, position?: num
   const addedAt = new Date()
   const place = position ?? bottomOf(db, listId)
   if (here) {
-    db.update(listWishes).set({ removedAt: null, addedAt, joinOrder, position: place })
+    db.update(listWishes).set({ removedAt: null, clearedAt: null, addedAt, joinOrder, position: place })
       .where(and(eq(listWishes.listId, listId), eq(listWishes.wishId, wishId))).run()
   }
   else {
@@ -107,9 +107,14 @@ function bottomOf(db: Db, listId: number): number {
   return highest === null ? 0 : highest + 1
 }
 
-/** Takes the wish off the list, and returns the ids of the people who no longer own it. */
-export function takeOffList(db: Db, listId: number, wishId: number): number[] {
-  db.update(listWishes).set({ removedAt: new Date() })
+/**
+ * Takes the wish off the list, and returns the ids of the people who no longer own it. With
+ * `clearForBuyers` it is gone there for whoever bought it too, from now; without, they keep
+ * seeing it for a while. Nothing here reads whether anyone bought it.
+ */
+export function takeOffList(db: Db, listId: number, wishId: number, clearForBuyers = false): number[] {
+  const now = new Date()
+  db.update(listWishes).set({ removedAt: now, clearedAt: clearForBuyers ? now : null })
     .where(and(eq(listWishes.listId, listId), eq(listWishes.wishId, wishId), isNull(listWishes.removedAt))).run()
   return settleOwners(db, [wishId]).map(gone => gone.userId)
 }

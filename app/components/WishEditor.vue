@@ -62,9 +62,13 @@ async function onUnlinkClose() {
 }
 
 const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
+// Off every time the question is asked: skipping the wait is a choice made per delete.
+const clearForBuyers = ref(false)
 
 function askToDelete() {
-  if (!busy.value) deleteDialog.value?.showModal()
+  if (busy.value) return
+  clearForBuyers.value = false
+  deleteDialog.value?.showModal()
 }
 
 async function onDeleteClose() {
@@ -75,7 +79,7 @@ async function onDeleteClose() {
   busy.value = true
   actionError.value = ''
   try {
-    await $fetch<unknown>(props.saving.url(), { method: 'DELETE' })
+    await $fetch<unknown>(props.saving.url(), { method: 'DELETE', body: { clearForBuyers: clearForBuyers.value } })
     emit('deleted')
   }
   catch (error) {
@@ -146,6 +150,7 @@ async function onDeleteClose() {
   <dialog v-if="canDelete" ref="deleteDialog" class="dialog" :aria-labelledby="`${id}-delete-title`" :aria-describedby="`${id}-delete-text`" @close="onDeleteClose">
     <h2 :id="`${id}-delete-title`">{{ t('wish.deleteTitle', { title: wish.title }) }}</h2>
     <p :id="`${id}-delete-text`">{{ wish.alsoElsewhere ? t('wish.deleteBodyElsewhere') : t('wish.deleteBody') }}</p>
+    <KeptForBuyers v-model="clearForBuyers" />
     <form method="dialog" class="actions">
       <art-button variant="secondary">
         <button value="cancel" autofocus>{{ t('listEdit.deleteCancel') }}</button>

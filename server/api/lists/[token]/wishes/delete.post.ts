@@ -1,4 +1,4 @@
-import { wishIdsInput } from '../../../../../shared/schemas/input'
+import { wishesDeleteInput } from '../../../../../shared/schemas/input'
 import { deleteWishes } from '../../../../domain/wishes'
 
 // Deleting several wishes from an owner's edit mode, each the way a single delete goes. Always
@@ -6,7 +6,7 @@ import { deleteWishes } from '../../../../domain/wishes'
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const token = tokenParam(event)
-  const { wishIds } = await readInput(event, wishIdsInput)
-  domain(() => deleteWishes(useDb(), user.id, token, wishIds))
+  const { wishIds, ...options } = await readInput(event, wishesDeleteInput)
+  domain(() => deleteWishes(useDb(), user.id, token, wishIds, options))
   return sendNoContent(event)
 })

@@ -1,0 +1,1 @@
+ALTER TABLE `list_wishes` ADD `cleared_at` integer;

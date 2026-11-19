@@ -1105,6 +1105,11 @@ textarea.inline-edit { overflow: hidden; }
 .switch-field { display: grid; gap: 0; }
 .switch-hint { font-size: var(--step--1); color: var(--ink-muted); }
 
+/* In a question that deletes: what whoever ticked something still sees, and the switch that
+   skips it. Quieter than the question, and set apart from it by a line. */
+.kept { display: grid; gap: var(--space-2); padding-block-start: var(--space-3); border-block-start: 1px solid var(--rule); font-size: var(--step--1); }
+.kept > p { margin: 0; color: var(--ink-muted); }
+
 /* Candidate for Gesso: a photo that is its own control: a square tile that opens the file
    chooser. Empty, it has a dashed edge and says what it is for. A photo of one's own has a
    small "remove" on its corner; a cover taken from a link says where it came from. */

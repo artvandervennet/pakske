@@ -1,6 +1,7 @@
 // A wish that left its list stays there for whoever bought it, so they can see it went and take
 // their purchase back. Not for good: after these days it is gone for them too, and the list is
-// a clean page again for the next birthday.
+// a clean page again for the next birthday. The owner who deletes it can skip the wait, for when
+// the gifts were given and there is nothing left to tell anyone.
 
 export const KEPT_FOR_BUYERS_DAYS = 30
 
@@ -13,7 +14,10 @@ export function leftListAt(removedAt: Date | null, wishDeletedAt: Date | null, l
   return moments.length ? new Date(Math.min(...moments)) : null
 }
 
-/** Whether a wish that left its list then is still there for whoever bought it. */
-export function keptForBuyers(leftAt: Date, now: Date): boolean {
-  return now.getTime() - leftAt.getTime() < KEPT_FOR_BUYERS_DAYS * 24 * 60 * 60 * 1000
+/**
+ * Whether a wish that left its list then is still there for whoever bought it. `clearedAt` is
+ * when its owner said it shouldn't be, or null.
+ */
+export function keptForBuyers(leftAt: Date, clearedAt: Date | null, now: Date): boolean {
+  return clearedAt === null && now.getTime() - leftAt.getTime() < KEPT_FOR_BUYERS_DAYS * 24 * 60 * 60 * 1000
 }

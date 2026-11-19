@@ -28,7 +28,7 @@ export function addNote(db: Db, token: string, wishId: number, userId: number, b
     if (leftAt) {
       const bought = tx.select({ id: purchases.id }).from(purchases)
         .where(and(eq(purchases.wishId, wishId), eq(purchases.userId, userId))).get()
-      if (!bought || !keptForBuyers(leftAt, new Date())) throw new DomainError('not_found')
+      if (!bought || !keptForBuyers(leftAt, placement.clearedAt, new Date())) throw new DomainError('not_found')
     }
     // Only after the owner is turned away: counting first would tell an owner that notes exist.
     const { total } = tx.select({ total: count() }).from(notes).where(eq(notes.wishId, wishId)).get()!

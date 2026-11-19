@@ -180,6 +180,12 @@
     "make": "Delen",
     "tooMany": "Kies er hoogstens 50."
   },
+  "kept": {
+    "why": "Wie dit al aanvinkte, blijft het nog {days} dagen zien, met “Van de lijst gehaald” erbij. Zo weet die persoon dat het niet meer hoeft, en kunnen jullie het nog afspreken. Daarna is het voor iedereen weg.",
+    "whySeveral": "Wie hier al iets van aanvinkte, blijft dat nog {days} dagen zien, met “Van de lijst gehaald” erbij. Zo weet die persoon dat het niet meer hoeft, en kunnen jullie het nog afspreken. Daarna is het voor iedereen weg.",
+    "clear": "Meteen weg voor iedereen",
+    "clearHint": "Ook wie het aanvinkte, ziet het dan niet meer. Voor als de cadeaus al gegeven zijn."
+  },
   "listEdit": {
     "start": "Bewerken",
     "label": "De lijst bewerken",
@@ -541,7 +547,7 @@
       "until": "Tot je het weghaalt. Je lijsten, wensen, vinkjes en notities wijzig en verwijder je zelf, en je account verwijder je bij Instellingen.",
       "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, met je naam, je e-mailadres en je profielfoto, wat je aanvinkte op de lijsten van anderen, je bezochte lijsten, je vrienden en verzoeken, je links en je meldingen.",
       "stays": "Je lijsten en de wensen erop blijven staan, zonder je naam: wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Verwijder ze eerst als je dat niet wilt. Een lijst die je met iemand deelt, blijft van die persoon. Ook je notities op de lijsten van anderen blijven staan, met “Iemand anders” waar je naam stond. Een account dat je later maakt, ook met hetzelfde e-mailadres, krijgt hier niets van.",
-      "deleted": "Een verwijderde lijst of wens wordt niet gewist. Hij blijft in de database staan, gemarkeerd als verwijderd. Wie een wens van jou had aangevinkt, ziet die wens nog 30 dagen, met je naam zolang je account bestaat. Niemand anders ziet hem, en daarna niemand meer.",
+      "deleted": "Een verwijderde lijst of wens wordt niet gewist. Hij blijft in de database staan, gemarkeerd als verwijderd. Wie een wens van jou had aangevinkt, ziet die wens nog 30 dagen, met je naam zolang je account bestaat. Niemand anders ziet hem, en daarna niemand meer. Bij het verwijderen kun je kiezen dat hij ook voor hen meteen weg is.",
       "erase": "Vraag aan wie de site beheert om verwijderde lijsten en wensen ook uit de database te wissen. Dat geldt ook voor wat van een verwijderd account bleef staan.",
       "backups": "Wie de site beheert, kan back-ups maken. Wat je verwijderde, blijft in een back-up staan tot die vervangen is."
     },

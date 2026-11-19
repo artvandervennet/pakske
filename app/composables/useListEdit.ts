@@ -142,11 +142,14 @@ export function useListEdit(options: {
     }
   }
 
-  /** Deletes the chosen wishes, each the way a single delete goes. Edit mode stays on. */
-  async function deleteSelected(): Promise<void> {
+  /**
+   * Deletes the chosen wishes, each the way a single delete goes. Edit mode stays on. With
+   * `clearForBuyers` they are gone at once for whoever ticked them too.
+   */
+  async function deleteSelected(how: { clearForBuyers?: boolean } = {}): Promise<void> {
     const wishIds = chosen().map(wish => wish.id)
     if (busy.value || !wishIds.length) return
-    const done = await run(() => $fetch<unknown>(`/api/lists/${options.token()}/wishes/delete`, { method: 'POST', body: { wishIds } }))
+    const done = await run(() => $fetch<unknown>(`/api/lists/${options.token()}/wishes/delete`, { method: 'POST', body: { wishIds, clearForBuyers: how.clearForBuyers === true } }))
     if (!done) return
     selected.clear()
     await options.refresh()

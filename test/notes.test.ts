@@ -62,6 +62,14 @@ describe('notes between buyers', () => {
     expect(noteRows()).toEqual([{ userId: mom.id, body: 'Nog net.' }])
   })
 
+  it('finds nothing for a wish its owner deleted for whoever bought it as well', () => {
+    const { db, token, wish, art, mom, noteRows } = setup()
+    setPurchase(db, token, wish.id, mom.id, 1)
+    deleteWish(db, art.id, token, wish.id, { clearForBuyers: true })
+    expect(codeOf(() => addNote(db, token, wish.id, mom.id, 'Wie houdt hem?'))).toBe('not_found')
+    expect(noteRows()).toEqual([])
+  })
+
   it('finds nothing for a deleted wish the person bought none of, whoever else did', () => {
     const { db, token, wish, art, mom, sis, noteRows } = setup()
     setPurchase(db, token, wish.id, mom.id, 1)

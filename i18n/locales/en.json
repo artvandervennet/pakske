@@ -180,6 +180,12 @@
     "make": "Share",
     "tooMany": "Choose 50 at most."
   },
+  "kept": {
+    "why": "Whoever already ticked this keeps seeing it for {days} days, marked “Taken off the list”. That tells them it is no longer wanted, and leaves you time to sort it out. After that it is gone for everyone.",
+    "whySeveral": "Whoever already ticked something here keeps seeing that for {days} days, marked “Taken off the list”. That tells them it is no longer wanted, and leaves you time to sort it out. After that it is gone for everyone.",
+    "clear": "Gone for everyone right away",
+    "clearHint": "Whoever ticked it stops seeing it too. For when the gifts have already been given."
+  },
   "listEdit": {
     "start": "Edit",
     "label": "Edit the list",
@@ -541,7 +547,7 @@
       "until": "Until you take it away. You change and delete your lists, wishes, ticks and notes yourself, and you delete your account under Settings.",
       "account": "Deleting your account removes it here and at Firebase, with your name, your email address and your profile picture, what you ticked on other people’s lists, your visited lists, your friends and requests, your links and your notices.",
       "stays": "Your lists and the wishes on them stay, without your name: anyone who has the link can keep opening them, and nobody can change them any more. Delete them first if you don’t want that. A list you share with someone stays theirs. Your notes on other people’s lists stay too, with “Someone else” where your name was. An account you make later, even with the same email address, gets none of this.",
-      "deleted": "A deleted list or wish is not erased. It stays in the database, marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish for 30 days, with your name for as long as your account exists. Nobody else sees it, and after that nobody does.",
+      "deleted": "A deleted list or wish is not erased. It stays in the database, marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish for 30 days, with your name for as long as your account exists. Nobody else sees it, and after that nobody does. When you delete it you can choose to have it gone for them right away as well.",
       "erase": "Ask whoever runs the site to have deleted lists and wishes erased from the database as well. The same goes for what stayed behind of a deleted account.",
       "backups": "Whoever runs the site can make backups. Something you deleted stays in a backup until that backup is replaced."
     },

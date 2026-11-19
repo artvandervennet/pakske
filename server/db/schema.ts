@@ -96,6 +96,9 @@ export const listWishes = sqliteTable('list_wishes', {
   joinOrder: integer('join_order').notNull().default(0),
   // Null while the wish is on the list.
   removedAt: integer('removed_at', { mode: 'timestamp_ms' }),
+  // Set when the owner who took it off said that whoever bought it shouldn't keep seeing it
+  // here. Null: they do, for a while (shared/utils/kept-for-buyers.ts).
+  clearedAt: integer('cleared_at', { mode: 'timestamp_ms' }),
   // Where the wish stands on this list; set by the list's owners. Lists show the lowest first.
   position: integer('position').notNull().default(0),
 }, t => [
