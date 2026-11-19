@@ -30,7 +30,8 @@ export async function useListView(token: MaybeRefOrGetter<string>) {
     throw createError({ statusCode: result.error.value?.statusCode ?? 404, fatal: true })
   }
   const first = result.data.value
-  const movedTo = 'movedTo' in first ? first.movedTo : null
+  // Also set by a later refresh: a page left open while the list got a new link somewhere else.
+  const movedTo = ref('movedTo' in first ? first.movedTo : null)
   // A refresh that fails (the connection dropped, the server is restarting) resets the data.
   // The page keeps the last list it got. While it is being sent on it has an empty one to draw.
   const nothing: ListView = { token: toValue(token), title: '', owners: [], viewerOwnsList: false, deleted: false, old: false, wishes: [] }
@@ -39,12 +40,13 @@ export async function useListView(token: MaybeRefOrGetter<string>) {
   // keeps the last list and says the list is gone.
   const gone = ref(false)
   watch(result.data, (value) => {
-    if (!value || 'movedTo' in value) return
+    if (!value) return
+    if ('movedTo' in value) return void (movedTo.value = value.movedTo)
     list.value = value
     gone.value = false
   })
   watch(result.error, (error) => {
     if (error?.statusCode === 404) gone.value = true
   })
-  return { list, gone: readonly(gone), refresh: result.refresh, movedTo }
+  return { list, gone: readonly(gone), refresh: result.refresh, movedTo: readonly(movedTo) }
 }

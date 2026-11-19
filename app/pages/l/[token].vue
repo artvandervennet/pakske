@@ -10,8 +10,11 @@ const { parse } = useApiError()
 
 const token = computed(() => String(route.params.token))
 const { list, gone, refresh, movedTo } = await useListView(token)
-// An owner at an address the list had before a new link: on to where it is now.
-if (movedTo) await navigateTo(localePath(`/l/${movedTo}`), { replace: true })
+// An owner at an address the list had before a new link: on to where it is now. Also when the
+// list moved while this page was open (another tab, or the other owner): the next time the page
+// asks for the list it follows, or it would go on copying a link that no longer works.
+if (movedTo.value) await navigateTo(localePath(`/l/${movedTo.value}`), { replace: true })
+watch(movedTo, to => to && navigateTo(localePath(`/l/${to}`), { replace: true }))
 
 useHead({ title: () => list.value.title })
 
@@ -272,8 +275,8 @@ async function inviteCoOwner() {
 // Edit mode, for an owner: choose wishes to delete or share, move them, and delete or leave the
 // list itself. The Edit button in the title band starts it with nothing chosen; holding a row
 // starts it with that wish chosen. The ticks turn into boxes and the bar above the list acts on
-// what is chosen. Done or Escape ends it. A list without wishes has the bar alone. Deleting a
-// wish is only done here: an open wish has no delete button to press by mistake.
+// what is chosen. Done or Escape ends it. A list without wishes has the bar alone. Deleting several
+// wishes at once is done here; an open wish has a delete button of its own, which asks first.
 const rows = new Map<number, RowControl>()
 function rowRef(id: number, row: unknown) {
   if (row) rows.set(id, row as RowControl)

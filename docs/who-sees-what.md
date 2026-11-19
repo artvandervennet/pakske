@@ -41,7 +41,7 @@ An owner can tick their own wish. Before every tick or higher number the site as
 
 Rules that keep an owner from finding out by a detour:
 
-- Taking a wish off your list ("Delete" in the list's edit mode, the only place that has it) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted; its row and image stay. Buyers who bought it still see it, marked as taken off.
+- Taking a wish off your list ("Delete" in the list's edit mode or in the wish's own card) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted; its row and image stay. Buyers who bought it still see it, marked as taken off.
 - Lowering an amount below what is bought is always accepted. Buyers then see that none are left.
 - Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it. A list with more than one owner can't be deleted, whatever is on it.
 - Linking, copying, unlinking, undo, share links and leaving a list never read purchases or notes, so they answer the same whatever was bought. An already bought wish can be linked or copied like any other.
