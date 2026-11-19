@@ -64,10 +64,12 @@
     "share_accepted": "{actor} said yes. “{title}” now belongs to {actor} too. | {actor} said yes. “{title}” and {n} other wish now belong to {actor} too. | {actor} said yes. “{title}” and {n} other wishes now belong to {actor} too.",
     "list_removed": "{actor} removed you as a co-owner of “{title}”.",
     "undo": "Undo",
-    "dismiss": "Dismiss",
+    "dismiss": "Clear",
     "view": "View",
     "undone": "Undone.",
-    "dismissed": "Notice dismissed.",
+    "dismissed": "Notice cleared.",
+    "clearAll": "Clear all",
+    "cleared": "Notices cleared.",
     "none": "No notices."
   },
   "share": {

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { invites, linkChanges, notices, wishLinks, wishes } from '../db/schema'
 import { DomainError } from './errors'
@@ -134,25 +134,48 @@ export function dismissNotice(db: Db, userId: number, noticeId: string): { unuse
   return db.transaction((tx) => {
     const notice = tx.select().from(notices).where(and(eq(notices.id, noticeId), eq(notices.userId, userId))).get()
     if (!notice) throw new DomainError('not_found')
-    tx.delete(notices).where(eq(notices.id, notice.id)).run()
-    // Closing the notice about something a friend sent is the answer "no". Wishes that were
-    // sent go. An invitation to a list stays, marked: its sender sees who is invited, and must
-    // see the same whether this friend said no or said nothing.
-    if (notice.inviteId !== null) {
-      const sent = and(eq(invites.id, notice.inviteId), eq(invites.sentTo, userId))
-      tx.update(invites).set({ declinedAt: new Date() }).where(and(sent, eq(invites.kind, 'list'))).run()
-      tx.delete(invites).where(and(sent, eq(invites.kind, 'wishes'))).run()
-    }
-    if (notice.kind !== 'wish_linked' || notice.wishId === null) return { unused: [] }
-
-    const others = tx.select({ id: notices.id }).from(notices).where(linkedNotices(notice.wishId, notice.actorId)).get()
-    if (others) return { unused: [] }
-    const link = tx.select({ id: wishLinks.id }).from(wishLinks)
-      .where(and(eq(wishLinks.wishId, notice.wishId), eq(wishLinks.userId, notice.actorId))).get()
-    if (!link) return { unused: [] }
-    const kept = pictures(tx.select({ before: linkChanges.before }).from(linkChanges)
-      .where(and(eq(linkChanges.linkId, link.id), eq(linkChanges.field, 'imageFile'))).all())
-    tx.delete(wishLinks).where(eq(wishLinks.id, link.id)).run()
-    return { unused: unusedImages(tx, kept) }
+    return { unused: unusedImages(tx, removeNotice(tx, notice)) }
   }, { behavior: 'immediate' })
+}
+
+/**
+ * "Alles wissen": removes several of the person's notices at once, each the way `dismissNotice`
+ * does. A notice about something a friend sent is left alone, whoever asks: closing that one
+ * is the answer "no", and nobody says no to everything by clearing their notices. An id that
+ * isn't a notice of theirs (any more) is skipped.
+ */
+export function dismissNotices(db: Db, userId: number, noticeIds: string[]): { unused: string[] } {
+  if (noticeIds.length === 0) return { unused: [] }
+  return db.transaction((tx) => {
+    const rows = tx.select().from(notices)
+      .where(and(eq(notices.userId, userId), inArray(notices.id, noticeIds), isNull(notices.inviteId))).all()
+    return { unused: unusedImages(tx, rows.flatMap(notice => removeNotice(tx, notice))) }
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * Removes a notice and what hangs on it. Returns the earlier pictures a link kept that it no
+ * longer keeps, which may now be unused. Runs in the caller's transaction.
+ */
+function removeNotice(tx: Db, notice: typeof notices.$inferSelect): string[] {
+  tx.delete(notices).where(eq(notices.id, notice.id)).run()
+  // Closing the notice about something a friend sent is the answer "no". Wishes that were
+  // sent go. An invitation to a list stays, marked: its sender sees who is invited, and must
+  // see the same whether this friend said no or said nothing.
+  if (notice.inviteId !== null) {
+    const sent = and(eq(invites.id, notice.inviteId), eq(invites.sentTo, notice.userId))
+    tx.update(invites).set({ declinedAt: new Date() }).where(and(sent, eq(invites.kind, 'list'))).run()
+    tx.delete(invites).where(and(sent, eq(invites.kind, 'wishes'))).run()
+  }
+  if (notice.kind !== 'wish_linked' || notice.wishId === null) return []
+
+  const others = tx.select({ id: notices.id }).from(notices).where(linkedNotices(notice.wishId, notice.actorId)).get()
+  if (others) return []
+  const link = tx.select({ id: wishLinks.id }).from(wishLinks)
+    .where(and(eq(wishLinks.wishId, notice.wishId), eq(wishLinks.userId, notice.actorId))).get()
+  if (!link) return []
+  const kept = pictures(tx.select({ before: linkChanges.before }).from(linkChanges)
+    .where(and(eq(linkChanges.linkId, link.id), eq(linkChanges.field, 'imageFile'))).all())
+  tx.delete(wishLinks).where(eq(wishLinks.id, link.id)).run()
+  return kept
 }

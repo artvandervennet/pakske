@@ -566,6 +566,12 @@ req anon DELETE "/api/notices/$NOTICE"; check "dismissing needs a login" 401
 req art DELETE "/api/notices/$NOTICE"; check "art dismisses his own" 204
 req art DELETE "/api/notices/$NOTICE"; check "… and a second time finds nothing" 404
 req lot GET /api/notices; has "lot's notice is still there" "\"id\":\"$LOTNOTICE\""
+req anon POST /api/notices/dismiss "{\"ids\":[\"$LOTNOTICE\"]}"; check "clearing notices needs a login" 401
+req art POST /api/notices/dismiss '{"ids":[]}'; check "clearing none is refused" 422
+req art POST /api/notices/dismiss "{\"ids\":[\"$LOTNOTICE\"]}"; check "art clears lot's notice, and nothing happens" 204
+req lot GET /api/notices; has "… it is still there" "\"id\":\"$LOTNOTICE\""
+req lot POST /api/notices/dismiss "{\"ids\":[\"$LOTNOTICE\",\"no-such-notice\"]}"; check "lot clears her own, with an id nobody has" 204
+req lot GET /api/notices; lacks "… and it is gone" "\"id\":\"$LOTNOTICE\""
 
 echo "── friends"
 req art POST /api/lists '{"title":"Voor vrienden"}'; check "art makes a list to show to friends" 201; FLIST=$(json .token)
@@ -634,6 +640,8 @@ req mom GET /api/notices; has "mom has the invitation" '"kind":"sent_list"'
 req art GET "/api/lists/$FLIST/friends"; same "art sees mom among the invited" ".friends.find(f=>f.id===$FMOM).invited" true
 req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"invited":false}'; check "an invitation can't be taken back" 422
 req mom GET /api/notices; INVNOTE=$(json ".notices.find(n=>n.kind==='sent_list').id"); INVSENT=$(json ".notices.find(n=>n.kind==='sent_list').invite")
+req mom POST /api/notices/dismiss "{\"ids\":[\"$INVNOTE\"]}"; check "mom clears her notices" 204
+req mom GET /api/notices; has "… which leaves the invitation: only its own cross is her no" '"kind":"sent_list"'
 req mom DELETE "/api/notices/$INVNOTE"; check "mom closes it, which is her no" 204
 req mom GET "/api/invites/$INVSENT"; check "… and it gives her nothing any more" 404
 req art GET "/api/lists/$FLIST/friends"; same "art still sees her among the invited, as if she said nothing" ".friends.find(f=>f.id===$FMOM).invited" true

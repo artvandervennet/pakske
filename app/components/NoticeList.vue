@@ -6,7 +6,7 @@ import type { NoticeView } from '#shared/schemas/list'
 // first. A row is the sender's picture, the sentence, and when it happened. Only a real choice
 // is a button: yes or no to a friend request, "Bekijken" on something a friend sent (which
 // leads to where the answer is given), and undoing what can be undone. Where a notice only
-// points somewhere, its sentence is the link. A small cross closes it.
+// points somewhere, its sentence is the link. A small cross wipes it.
 // What a press does is the panel's business (NoticesHost.vue); this only draws the rows.
 type FriendRequest = RequestsView['incoming'][number]
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { acceptInput, accountDeleteInput, emailChangeInput, fieldErrors, inviteInput, listInput, profileInput, registerInput, targetInput, wishInput, wishPatchInput } from '../shared/schemas/input'
+import { acceptInput, accountDeleteInput, emailChangeInput, fieldErrors, inviteInput, listInput, profileInput, registerInput, targetInput, noticeIdsInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
 const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', urls: [], quantity: 1, ...over })
 
@@ -209,5 +209,16 @@ describe('what Settings asks before a change to the account itself', () => {
     expect(accountDeleteInput.parse({})).toEqual({})
     expect(accountDeleteInput.parse({ currentPassword: 'correct horse' })).toEqual({ currentPassword: 'correct horse' })
     expect(fieldErrors(accountDeleteInput.safeParse({ currentPassword: '' }).error!)).toEqual({ currentPassword: 'required' })
+  })
+})
+
+describe('the notices "clear all" names', () => {
+  it('are a list of ids, at least one and at most 500', () => {
+    expect(noticeIdsInput.parse({ ids: ['a', 'b'] })).toEqual({ ids: ['a', 'b'] })
+    expect(fieldErrors(noticeIdsInput.safeParse({ ids: [] }).error!)).toEqual({ ids: 'required' })
+    expect(fieldErrors(noticeIdsInput.safeParse({}).error!)).toEqual({ ids: 'required' })
+    expect(fieldErrors(noticeIdsInput.safeParse({ ids: Array.from({ length: 501 }, (_, i) => `n${i}`) }).error!)).toEqual({ ids: 'too_long' })
+    expect(noticeIdsInput.safeParse({ ids: [7] }).success).toBe(false)
+    expect(noticeIdsInput.safeParse({ ids: ['a'], all: true }).success).toBe(false)
   })
 })

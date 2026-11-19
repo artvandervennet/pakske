@@ -119,6 +119,16 @@ const undo = (notice: NoticeView) => settle(
   t('notice.undone'),
 )
 const dismiss = (notice: NoticeView) => settle(notice.id, () => $fetch<unknown>(`/api/notices/${notice.id}`, { method: 'DELETE' }), t('notice.dismissed'))
+// "Alles wissen" takes away the notices that only say something. A row that still has a choice
+// in it stays: a friend request, something a friend sent (closing that one is saying no), and
+// a notice that can be undone. It names the notices on screen, so one that arrives meanwhile
+// isn't wiped unread.
+const clearable = computed(() => notices.value.filter(notice => !notice.invite && !notice.canUndo))
+const clearAll = () => settle(
+  'all',
+  () => $fetch<unknown>('/api/notices/dismiss', { method: 'POST', body: { ids: clearable.value.map(notice => notice.id) } }),
+  t('notice.cleared'),
+)
 // Declining says so here and tells the sender nothing.
 const decline = (request: FriendRequest) => settle(
   request.id,
@@ -151,9 +161,11 @@ defineExpose({ toggle, open: computed(() => shown.value !== null) })
 <template>
   <dialog ref="sheet" class="dialog sheet notices-sheet" aria-labelledby="notices-sheet-title" @click="$event.target === sheet && sheet?.close()" @close="onClosed">
     <div v-if="shown === 'sheet'" class="sheet-body">
+      <!-- Words, not a cross: every row under it has a cross of its own, which wipes that row. -->
       <div class="sheet-head">
         <h2 id="notices-sheet-title" ref="sheetTitle" tabindex="-1">{{ t('nav.notices') }}</h2>
-        <button type="button" class="icon-button" :aria-label="t('share.close')" @click="sheet?.close()"><AppIcon name="close" /></button>
+        <button v-if="clearable.length" type="button" class="word-button notices-clear" :aria-disabled="busy ? 'true' : undefined" @click="clearAll">{{ t('notice.clearAll') }}</button>
+        <button type="button" class="word-button" @click="sheet?.close()">{{ t('share.close') }}</button>
       </div>
       <p v-if="error" class="form-message" role="alert">{{ error }}</p>
       <NoticeList :notices="notices" :requests="requests" :busy="busy" @accept="accept" @decline="decline" @undo="undo" @dismiss="dismiss" />
@@ -163,7 +175,10 @@ defineExpose({ toggle, open: computed(() => shown.value !== null) })
   </dialog>
   <div id="notices-menu" ref="menu" class="menu anchored end notices-menu" popover role="dialog" aria-labelledby="notices-menu-title" style="position-anchor: --bell" @toggle="onMenuToggle">
     <template v-if="shown === 'menu'">
-      <h2 id="notices-menu-title" ref="menuTitle" class="notices-title" tabindex="-1">{{ t('nav.notices') }}</h2>
+      <div class="notices-head">
+        <h2 id="notices-menu-title" ref="menuTitle" class="notices-title" tabindex="-1">{{ t('nav.notices') }}</h2>
+        <button v-if="clearable.length" type="button" class="word-button notices-clear" :aria-disabled="busy ? 'true' : undefined" @click="clearAll">{{ t('notice.clearAll') }}</button>
+      </div>
       <p v-if="error" class="form-message" role="alert">{{ error }}</p>
       <NoticeList :notices="notices" :requests="requests" :busy="busy" @accept="accept" @decline="decline" @undo="undo" @dismiss="dismiss" />
       <p v-if="empty" class="notice-none">{{ t('notice.none') }}</p>

@@ -6,7 +6,7 @@ import { getListView } from '../server/domain/list-view'
 import { ownedListId } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { copyWish, linkWish } from '../server/domain/sharing'
-import { dismissNotice, undoLink, unusedImages } from '../server/domain/undo'
+import { dismissNotice, dismissNotices, undoLink, unusedImages } from '../server/domain/undo'
 import { deleteWish, setWishCover, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishPatchInput } from '../shared/schemas/input'
 import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, wishIn } from './helpers'
@@ -291,6 +291,38 @@ describe('dismissing a notice', () => {
     expect(listNotices(db, art.id)).toMatchObject([{ wishId: game.id, canUndo: true }])
     undoLink(db, art.id, A, game.id, lot.id)
     expect(wishIn(getListView(db, A, art.id), game.id)).toMatchObject({ title: 'Bordspel' })
+  })
+})
+
+describe('clearing several notices at once', () => {
+  it('removes the ones that are named, and leaves the others', () => {
+    const { db, art, lot, A, game, L } = setup()
+    const lamp = addWishTo(db, art.id, A, 'Lamp')
+    const vase = addWishTo(db, art.id, A, 'Vaas')
+    for (const wish of [game, lamp, vase]) linkWish(db, lot.id, A, wish.id, { list: L })
+    const byTitle = (title: string) => listNotices(db, art.id).find(notice => notice.title === title)!.id
+    dismissNotices(db, art.id, [byTitle('Bordspel'), byTitle('Lamp')])
+    expect(listNotices(db, art.id).map(notice => notice.title)).toEqual(['Vaas'])
+  })
+
+  it('skips someone else\'s notice and an id nobody has, without a word', () => {
+    const { db, art, lot, A, game, L } = setup()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    const [notice] = listNotices(db, art.id)
+    expect(dismissNotices(db, lot.id, [notice!.id, 'no-such-notice'])).toEqual({ unused: [] })
+    expect(dismissNotices(db, art.id, [])).toEqual({ unused: [] })
+    expect(listNotices(db, art.id)).toHaveLength(1)
+  })
+
+  it('stops a link remembering, as closing its notice by itself does', () => {
+    const { db, art, lot, A, game, L } = setup()
+    linkWish(db, lot.id, A, game.id, { list: L })
+    expect(setWishImage(db, lot.id, L, game.id, 'new.png')).toMatchObject({ unused: [] })
+    expect(dismissNotices(db, art.id, listNotices(db, art.id).map(notice => notice.id))).toEqual({ unused: ['old.png'] })
+    expect(listNotices(db, art.id)).toEqual([])
+    expect(db.select().from(wishLinks).all()).toEqual([])
+    expect(rememberedRows(db)).toBe(0)
+    expectOwnersSettled(db)
   })
 })
 

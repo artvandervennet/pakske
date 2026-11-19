@@ -1315,7 +1315,14 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 }
 .notices-menu { inline-size: min(26rem, calc(100vw - 2 * var(--gutter))); max-block-size: min(34rem, 75dvh); padding: var(--space-4) var(--space-6); overflow-y: auto; overscroll-behavior: contain; }
 .notices-menu:popover-open { display: block; }
-.notices-title { margin: 0 0 var(--space-2); font-size: var(--step-1); }
+/* The title, and "Alles wissen" at the far end of its line, above the rows' crosses. */
+.notices-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-block-end: var(--space-2); }
+.notices-title { margin: 0; font-size: var(--step-1); }
+/* In the sheet "Sluiten" comes after it; the title takes the room that is left. On the
+   narrowest phones "Sluiten" goes to a line of its own, at the far end like the rest. */
+.notices-sheet .sheet-head { flex-wrap: wrap; gap: 0 var(--space-4); }
+.notices-sheet .sheet-head h2 { flex: 1 1 auto; }
+.notices-sheet .sheet-head > :last-child { margin-inline-start: auto; }
 .notices-title:focus-visible, .notices-sheet h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 .notices-sheet .sheet-body { gap: var(--space-2); }
 /* One row per notice: who, what and when, and under it what can be done about it. */

@@ -6,7 +6,7 @@ import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, listInviteLi
 import { getListView } from '../server/domain/list-view'
 import { leaveList, listOwnedLists } from '../server/domain/lists'
 import { countUnseen, listNotices } from '../server/domain/notices'
-import { dismissNotice } from '../server/domain/undo'
+import { dismissNotice, dismissNotices } from '../server/domain/undo'
 import { deleteUser } from '../server/domain/users'
 import { deleteWish } from '../server/domain/wishes'
 import { inviteInput, listFriendInput } from '../shared/schemas/input'
@@ -238,6 +238,16 @@ describe('what was sent and can no longer be taken', () => {
     expect(getInviteView(db, notice.invite!, lot.id)).toBeUndefined()
     expect(inviteRows(db)).toBe(0)
     expect(listNotices(db, art.id)).toEqual([])
+  })
+
+  it('stays when the friend clears their notices: only closing it by itself is a no', () => {
+    const { db, art, lot, A, game } = setup()
+    sendInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }, [lot.id])
+    sendInvite(db, art.id, A, { kind: 'list' }, [lot.id])
+    dismissNotices(db, lot.id, listNotices(db, lot.id).map(notice => notice.id))
+    expect(sent(db, lot.id).map(notice => notice.kind).sort()).toEqual(['sent_linked', 'sent_list'])
+    expect(inviteRows(db)).toBe(2)
+    expect(acceptInvite(db, lot.id, sent(db, lot.id).find(notice => notice.kind === 'sent_list')!.invite!, null)).toBeTruthy()
   })
 
   it('goes with the friendship, in both directions', () => {

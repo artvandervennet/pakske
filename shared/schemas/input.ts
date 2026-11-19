@@ -205,6 +205,11 @@ export const purchaseInput = z.object({ quantity: amount, anonymous: z.boolean('
 
 export const noteInput = z.object({ body: requiredText(1000) })
 
+/** The notices "Alles wissen" removes: the ones the page shows, by id. */
+export const noticeIdsInput = z.strictObject({
+  ids: z.array(z.string('invalid').min(1, 'invalid').max(64, 'too_long'), 'required').min(1, 'required').max(500, 'too_long'),
+})
+
 export type WishInput = z.infer<typeof wishInput>
 export type WishPatchInput = z.infer<typeof wishPatchInput>
 export type ListTarget = z.infer<typeof targetInput>

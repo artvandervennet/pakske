@@ -64,10 +64,12 @@
     "share_accepted": "{actor} zei ja. “{title}” is nu ook van {actor}. | {actor} zei ja. “{title}” en nog {n} andere wens zijn nu ook van {actor}. | {actor} zei ja. “{title}” en nog {n} andere wensen zijn nu ook van {actor}.",
     "list_removed": "{actor} heeft je verwijderd als mede-eigenaar van “{title}”.",
     "undo": "Ongedaan maken",
-    "dismiss": "Sluiten",
+    "dismiss": "Wissen",
     "view": "Bekijken",
     "undone": "Ongedaan gemaakt.",
-    "dismissed": "Melding gesloten.",
+    "dismissed": "Melding gewist.",
+    "clearAll": "Alles wissen",
+    "cleared": "Meldingen gewist.",
     "none": "Geen meldingen."
   },
   "share": {
