@@ -25,6 +25,10 @@ A wish with several owners:
 - A wish taken off a list stays on that list for logged-in people who own neither the wish nor the list, marked "Taken off the list", for as long as anyone has a purchase on it. They can lower or withdraw their own purchase there and write notes, but not buy more. The list's owners and the wish's owners never get that row.
 - Someone who stops owning a wish (by taking it off their list, leaving a list or being unlinked) is a buyer of it again wherever they can still open a list that shows it, and sees its purchases and notes there.
 
+Friends change nothing on a list. A friend who opens a list is a buyer like anyone who has its link, unless they own a wish there. Switching a list on for a friend only puts it on their Lists page. `getListView` knows nothing about friends; the list's route adds who the viewer may ask to be friends beside it. `server/domain/friends.ts` reads neither purchases nor notes, and a test reads its source to keep it that way.
+
+What friends see of each other: a name, and the lists switched on for them. Nobody sees who anyone else's friends are, on any page or in any answer. An owner still never learns who opened their list: showing a list reports nothing back, and neither does a friend taking it off their page. A request shows the sender's name and the list it was sent from to that list's owner. A declined request is indistinguishable from a waiting one for its sender.
+
 An address a list had before it got a new link no longer opens the list. `oldLinkView` answers it three ways:
 
 - An owner of the list is told the new address.

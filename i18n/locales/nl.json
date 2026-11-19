@@ -423,6 +423,7 @@
     "deleteGone": "Dit verdwijnt voorgoed:",
     "deleteLogin": "Je account zelf, met je naam en je e-mailadres. Je kunt er niet meer mee inloggen.",
     "deleteGiving": "Wat je aanvinkte op de lijsten van anderen.",
+    "deleteFriends": "Je vrienden, en wat jullie elkaar lieten zien.",
     "deleteStays": "Dit blijft staan, zonder je naam:",
     "deleteLists": "Je lijsten en de wensen erop. Wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Wil je een lijst weg, verwijder hem dan eerst. Een lijst die je met iemand deelt, blijft van die persoon.",
     "deleteNotes": "Je notities op de lijsten van anderen. Daar staat dan “Iemand anders” bij.",
@@ -454,6 +455,7 @@
       "giving": "Wat je aanvinkt op de lijsten van anderen: welke wens, hoeveel, of je anoniem geeft, en de notities die je daar schrijft.",
       "visited": "Welke lijsten van anderen je opende en wanneer je dat het laatst deed, zodat je ze terugvindt onder “Bezocht”.",
       "sharing": "De links die je maakte om wensen of een lijst te delen, de links die je gebruikte, en de meldingen over wie een wens of een lijst met je deelt.",
+      "friends": "Wie je vrienden zijn, de verzoeken en vriendenlinks die je verstuurde of kreeg, en welke van je lijsten je aan welke vriend laat zien.",
       "address": "Om foute wachtwoorden en nieuwe accounts te tellen, houdt de server je IP-adres en het e-mailadres dat je intypte hoogstens een uur in zijn geheugen. Geen van beide komt in de database.",
       "nothing": "Pakske heeft geen statistieken, geen reclame en geen trackers, en houdt niet bij welke pagina’s je opent."
     },
@@ -463,7 +465,8 @@
       "buyers": "Wie ingelogd is, ziet bij andermans wensen wie wat geeft, met naam en notities. Geef je anoniem, dan staat er “Iemand anders” waar je naam zou staan.",
       "owners": "De eigenaars van een wens zien nooit wie hem geeft, hoeveel er al genomen zijn of wat erover geschreven is.",
       "picture": "De foto van een wens heeft een eigen, willekeurig adres. Wie dat adres heeft, kan de foto openen.",
-      "hidden": "Anderen zien je e-mailadres nooit. Geen pagina toont de accounts of andermans lijsten, niemand ziet wie zijn lijst opende, en zoekmachines wordt gevraagd weg te blijven."
+      "hidden": "Anderen zien je e-mailadres nooit. Geen pagina toont de accounts of andermans lijsten, niemand ziet wie zijn lijst opende, en zoekmachines wordt gevraagd weg te blijven.",
+      "friends": "Een vriend ziet je naam en vindt de lijsten die je voor die vriend aanzet. Niemand ziet wie jouw vrienden zijn. Vraag je de eigenaar van een lijst om vrienden te worden, dan ziet die je naam en vanaf welke lijst je het vroeg. Weiger je een verzoek, dan krijgt wie het stuurde daar geen bericht van."
     },
     "where": {
       "title": "Waar het staat, en wie er nog bij betrokken is",
@@ -491,7 +494,7 @@
     "keep": {
       "title": "Hoe lang het bewaard blijft",
       "until": "Tot je het weghaalt. Je lijsten, wensen, vinkjes en notities wijzig en verwijder je zelf, en je account verwijder je bij Instellingen.",
-      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, met je naam en je e-mailadres, wat je aanvinkte op de lijsten van anderen, je bezochte lijsten, je links en je meldingen.",
+      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, met je naam en je e-mailadres, wat je aanvinkte op de lijsten van anderen, je bezochte lijsten, je vrienden en verzoeken, je links en je meldingen.",
       "stays": "Je lijsten en de wensen erop blijven staan, zonder je naam: wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Verwijder ze eerst als je dat niet wilt. Een lijst die je met iemand deelt, blijft van die persoon. Ook je notities op de lijsten van anderen blijven staan, met “Iemand anders” waar je naam stond. Een account dat je later maakt, ook met hetzelfde e-mailadres, krijgt hier niets van.",
       "deleted": "Een verwijderde lijst of wens wordt niet gewist. Hij blijft in de database staan, gemarkeerd als verwijderd. Wie een wens van jou had aangevinkt, blijft die wens zien, met je naam zolang je account bestaat. Niemand anders ziet hem.",
       "erase": "Vraag aan wie de site beheert om verwijderde lijsten en wensen ook uit de database te wissen. Dat geldt ook voor wat van een verwijderd account bleef staan.",

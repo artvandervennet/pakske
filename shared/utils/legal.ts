@@ -52,8 +52,8 @@ function contact(operator: Operator): (string | LegalBlock)[] {
 export function privacyOutline(operator: Operator): LegalSection[] {
   return [
     section('privacy', 'who', [operator.name ? 'named' : 'unnamed', ...contact(operator)]),
-    section('privacy', 'what', ['intro', ['account', 'lists', 'giving', 'visited', 'sharing'], 'address', 'nothing']),
-    section('privacy', 'see', ['link', 'buyers', 'owners', 'picture', 'hidden']),
+    section('privacy', 'what', ['intro', ['account', 'lists', 'giving', 'visited', 'sharing', 'friends'], 'address', 'nothing']),
+    section('privacy', 'see', ['link', 'buyers', 'owners', 'picture', 'hidden', 'friends']),
     section('privacy', 'where', ['server', 'firebase', 'passwords', 'google', ...(operator.network ? ['network'] : []), 'shops', 'nobody']),
     section('privacy', 'cookies', ['intro', ['login', 'opened', 'google', 'scheme']]),
     section('privacy', 'why', ['service', 'safety']),

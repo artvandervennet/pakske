@@ -316,6 +316,7 @@ function openDelete() {
       <ul class="settings-gone">
         <li>{{ t('settings.deleteLogin') }}</li>
         <li>{{ t('settings.deleteGiving') }}</li>
+        <li>{{ t('settings.deleteFriends') }}</li>
       </ul>
       <p>{{ t('settings.deleteStays') }}</p>
       <ul class="settings-gone">

@@ -423,6 +423,7 @@
     "deleteGone": "This is gone for good:",
     "deleteLogin": "Your account itself, with your name and your email address. You can no longer log in with it.",
     "deleteGiving": "What you ticked on other people’s lists.",
+    "deleteFriends": "Your friends, and what you showed each other.",
     "deleteStays": "This stays, without your name:",
     "deleteLists": "Your lists and the wishes on them. Anyone who has the link can keep opening them, and nobody can change them any more. If you want a list gone, delete it first. A list you share with someone stays theirs.",
     "deleteNotes": "Your notes on other people’s lists. They read “Someone else” from then on.",
@@ -454,6 +455,7 @@
       "giving": "What you tick on other people’s lists: which wish, how many, whether you give anonymously, and the notes you write there.",
       "visited": "Which lists of other people you opened and when you last did, so you find them again under “Visited”.",
       "sharing": "The links you made to share wishes or a list, the ones you used, and the notices about who shares a wish or a list with you.",
+      "friends": "Who your friends are, the requests and friend links you sent or got, and which of your lists you show to which friend.",
       "address": "To count wrong passwords and new accounts, the server holds your IP address and the email address you typed in its memory for an hour at most. Neither goes into the database.",
       "nothing": "Pakske has no statistics, no advertising and no trackers, and keeps no log of the pages you open."
     },
@@ -463,7 +465,8 @@
       "buyers": "Someone who is logged in sees, on other people’s wishes, who is giving what, with names and notes. If you give anonymously, they read “Someone else” where your name would be.",
       "owners": "The owners of a wish never see who gives it, how many are taken, or what was written about it.",
       "picture": "A wish’s picture has a random address of its own. Whoever has that address can open the picture.",
-      "hidden": "Other people never see your email address. No page lists the accounts or other people’s lists, nobody sees who opened their list, and search engines are asked to stay out."
+      "hidden": "Other people never see your email address. No page lists the accounts or other people’s lists, nobody sees who opened their list, and search engines are asked to stay out.",
+      "friends": "A friend sees your name and finds the lists you switch on for them. Nobody sees who your friends are. If you ask the owner of a list to be friends, they see your name and which list you asked from. If you decline a request, whoever sent it isn’t told."
     },
     "where": {
       "title": "Where it is kept, and who else is involved",
@@ -491,7 +494,7 @@
     "keep": {
       "title": "How long it is kept",
       "until": "Until you take it away. You change and delete your lists, wishes, ticks and notes yourself, and you delete your account under Settings.",
-      "account": "Deleting your account removes it here and at Firebase, with your name and your email address, what you ticked on other people’s lists, your visited lists, your links and your notices.",
+      "account": "Deleting your account removes it here and at Firebase, with your name and your email address, what you ticked on other people’s lists, your visited lists, your friends and requests, your links and your notices.",
       "stays": "Your lists and the wishes on them stay, without your name: anyone who has the link can keep opening them, and nobody can change them any more. Delete them first if you don’t want that. A list you share with someone stays theirs. Your notes on other people’s lists stay too, with “Someone else” where your name was. An account you make later, even with the same email address, gets none of this.",
       "deleted": "A deleted list or wish is not erased. It stays in the database, marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish, with your name for as long as your account exists. Nobody else sees it.",
       "erase": "Ask whoever runs the site to have deleted lists and wishes erased from the database as well. The same goes for what stayed behind of a deleted account.",
