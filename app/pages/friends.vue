@@ -34,10 +34,20 @@ async function showFriend(id: number) {
   await nextTick()
   rows.get(id)?.show()
 }
+const nuxtApp = useNuxtApp()
 onMounted(() => {
   markRequestsSeen().catch(() => {})
   const named = /^#friend-(\d+)$/.exec(route.hash)
-  if (named) showFriend(Number(named[1]))
+  if (!named) return
+  const open = () => showFriend(Number(named[1]))
+  open()
+  // Arriving here from another page of the site, the focus is put on <main> once the page has
+  // finished (useRouteFocus). The row the address names takes it back after that.
+  const off = nuxtApp.hook('page:finish', () => {
+    off()
+    open()
+  })
+  onBeforeUnmount(off)
 })
 
 // "Vriend toevoegen": a link to send to one person. It shows under the band's button, with the
