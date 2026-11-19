@@ -60,13 +60,26 @@ const loginLink = computed(() => ({
   path: localePath('/login'),
   query: { next: `${route.path}#wish-${props.wish.id}` },
 }))
+
+// The picture large, in the page's viewer.
+const viewPicture = usePictureViewer()
+function enlarge(event: MouseEvent) {
+  if (!props.wish.image) return
+  viewPicture?.({ src: props.wish.image, title: props.wish.title }, (event.currentTarget as HTMLElement).querySelector('img'))
+}
 </script>
 
 <template>
   <!-- On a wide card a buyer's side has two columns: the wish and giving it, and beside them
        what the buyers tell each other. A visitor has only the first, as text. -->
   <div class="wish-card-body buyer" :class="{ pictured: wish.image, noted: wish.role === 'buyer' && !bare }">
-    <img v-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
+    <!-- The picture is the button that shows it large; the mark on its corner says so where
+         there is no pointer to turn into a magnifying glass. -->
+    <button v-if="wish.image && viewPicture" type="button" class="wish-picture-zoom" :aria-label="t('wish.pictureEnlarge')" @click="enlarge">
+      <img class="wish-picture" :src="wish.image" alt="" decoding="async">
+      <AppIcon name="expand" />
+    </button>
+    <img v-else-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
     <div class="wish-card-column">
       <p v-if="wish.role === 'buyer' && wish.removed && !bare" class="form-message">
         {{ owners.length ? t('wish.removedIntro', { names: names(owners) }, owners.length) : t('wish.removedIntroNobody') }}

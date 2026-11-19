@@ -165,6 +165,10 @@
     "alsoYours": "ook van jou",
     "viewOn": "Bekijk op {host}",
     "newTab": "(opent in een nieuw tabblad)",
+    "pictureEnlarge": "Foto vergroten",
+    "pictureOf": "Foto van “{title}”",
+    "pictureZoomIn": "Inzoomen",
+    "pictureZoomOut": "Uitzoomen",
     "close": "{title} sluiten",
     "deleteTitle": "“{title}” verwijderen?",
     "deleteBody": "Hij verdwijnt van je lijst. Dat kun je niet ongedaan maken.",
@@ -305,6 +309,7 @@
     "pictureChange": "Andere foto kiezen",
     "pictureRemove": "Foto weghalen",
     "pictureOwn": "Eigen foto",
+    "pictureEnlarge": "Vergroten",
     "pictureFromLink": "van {host}",
     "saved": "Opgeslagen"
   },

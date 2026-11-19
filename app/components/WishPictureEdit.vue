@@ -7,7 +7,7 @@ import type { WishSave } from '~/composables/useWishSave'
 // tile is empty and invites to add one. A photo of the owner's own has a small "remove" on its
 // corner. A picture the server took from the first link's shop says so on the tile ("van
 // bol.com"), and under it is the way to put up a photo of one's own instead; it has no remove,
-// since the cover would only come back.
+// since the cover would only come back. Under the tile, "Vergroten" shows the picture large.
 const props = defineProps<{ wish: OwnerWish, saving: WishSave }>()
 
 const { t } = useI18n()
@@ -78,6 +78,12 @@ async function remove() {
 }
 
 const picture = useTemplateRef<HTMLButtonElement>('picture')
+
+// The tile itself chooses another photo, so showing this one large is a button of its own.
+const viewPicture = usePictureViewer()
+function enlarge() {
+  if (shown.value) viewPicture?.({ src: shown.value, title: props.wish.title }, picture.value?.querySelector('img'))
+}
 </script>
 
 <template>
@@ -117,6 +123,10 @@ const picture = useTemplateRef<HTMLButtonElement>('picture')
     <button v-if="coverHost" type="button" class="word-button" :aria-disabled="busy || undefined" @click="choose">
       <AppIcon name="image" />
       {{ t('edit.pictureOwn') }}
+    </button>
+    <button v-if="shown && viewPicture" type="button" class="word-button" @click="enlarge">
+      <AppIcon name="expand" />
+      {{ t('edit.pictureEnlarge') }}
     </button>
     <input
       ref="input"

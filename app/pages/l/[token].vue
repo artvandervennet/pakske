@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { WishView } from '#shared/schemas/list'
 import type { RowControl } from '~/composables/useListEdit'
+import type { ViewPicture } from '~/composables/usePictureViewer'
 import type { AskTickWarning } from '~/composables/useTickWarning'
 
 const route = useRoute()
@@ -51,6 +52,10 @@ onMounted(async () => {
 // One warning dialog for every row an owner can tick.
 const warning = useTemplateRef<{ ask: AskTickWarning }>('warning')
 provideTickWarning(title => warning.value?.ask(title) ?? Promise.resolve(false))
+
+// One viewer for every wish's picture: an opened card shows its picture large in it.
+const pictureViewer = useTemplateRef<{ open: ViewPicture }>('pictureViewer')
+providePictureViewer((picture, from) => pictureViewer.value?.open(picture, from))
 const hasOwnWishes = computed(() => list.value.wishes.some(wish => wish.role === 'owner'))
 
 // A tick on a wish that was deleted meanwhile refreshes the list, and the row usually goes
@@ -820,6 +825,7 @@ async function addWish(title: string) {
     </section>
 
     <TickWarning v-if="hasOwnWishes" ref="warning" />
+    <PictureViewer ref="pictureViewer" />
 
     <!-- One card serves every owner's name; it hangs from the name that opened it. -->
     <div

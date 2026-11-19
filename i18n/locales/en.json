@@ -165,6 +165,10 @@
     "alsoYours": "also yours",
     "viewOn": "View on {host}",
     "newTab": "(opens in a new tab)",
+    "pictureEnlarge": "Enlarge photo",
+    "pictureOf": "Photo of “{title}”",
+    "pictureZoomIn": "Zoom in",
+    "pictureZoomOut": "Zoom out",
     "close": "Close {title}",
     "deleteTitle": "Delete “{title}”?",
     "deleteBody": "It disappears from your list. You can’t undo that.",
@@ -305,6 +309,7 @@
     "pictureChange": "Choose another photo",
     "pictureRemove": "Remove photo",
     "pictureOwn": "Own photo",
+    "pictureEnlarge": "Enlarge",
     "pictureFromLink": "from {host}",
     "saved": "Saved"
   },

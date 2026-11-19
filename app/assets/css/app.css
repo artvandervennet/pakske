@@ -813,6 +813,74 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
   background: var(--surface-sunken);
   border-radius: var(--radius-chip);
 }
+/* The picture as the button that shows it large, with a small round mark on its corner. */
+.wish-picture-zoom {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  border-radius: var(--radius-chip);
+  cursor: zoom-in;
+}
+.wish-picture-zoom:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.wish-picture-zoom > .icon {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  box-sizing: content-box;
+  inline-size: 1rem;
+  block-size: 1rem;
+  padding: 0.3rem;
+  border-radius: var(--radius-round);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tape);
+}
+
+/* Candidate for Gesso: a picture shown large. The dialog is the picture with its buttons above
+   it and nothing else: no card, no padding, so everything around it is the backdrop. The
+   picture takes the room the screen has (--room-x, --room-y), in its own shape (--ratio, set
+   from the picture), up to twice its own width (--natural). Zoomed in, the picture is wider
+   than that room (the component sets its width) and its frame scrolls. */
+.picture-viewer {
+  --room-x: calc(100vw - 2 * var(--space-3));
+  --room-y: calc(100dvh - 2 * var(--space-3) - 3.5rem);
+  inline-size: fit-content;
+  margin: auto;
+  max-inline-size: none;
+  max-block-size: none;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+.picture-viewer::backdrop { background: color-mix(in oklch, var(--neutral-950) 85%, transparent); }
+/* The strip beside the buttons is the backdrop too: a press there reaches the dialog. */
+.picture-viewer-body { display: grid; gap: var(--space-2); justify-items: end; pointer-events: none; }
+.picture-viewer-body > * { margin: 0; pointer-events: auto; }
+.picture-viewer-head { display: flex; gap: var(--space-2); pointer-events: none; }
+.picture-viewer-head > * { pointer-events: auto; }
+.picture-viewer-frame {
+  max-inline-size: var(--room-x);
+  max-block-size: var(--room-y);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-chip);
+  background: var(--surface-sunken);
+}
+.picture-viewer-frame:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.picture-viewer-frame.zoomable { cursor: zoom-in; }
+.picture-viewer-frame.zoomed { cursor: zoom-out; }
+.picture-viewer img {
+  display: block;
+  inline-size: min(var(--room-x), calc(var(--room-y) * var(--ratio)), calc(var(--natural) * 2px));
+  max-inline-size: none;
+  block-size: auto;
+  aspect-ratio: var(--ratio);
+  user-select: none;
+}
+
 /* A wish's links for someone who may buy it: buttons side by side. */
 .wish-links { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
 .wish-links > li { max-inline-size: 100%; }
