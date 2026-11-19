@@ -223,7 +223,8 @@ function onLeaveDialogClose() {
 // What was asked stays on the page as a line; the server says the same after a reload, also for
 // a request that was declined, which its sender must not be able to tell.
 type Befriendable = NonNullable<typeof list.value.ownersToBefriend>[number]
-const befriendable = computed(() => (list.value.old ? [] : list.value.ownersToBefriend ?? []))
+// An owner who is a friend already isn't named here: there is nothing to ask, and nothing to say.
+const befriendable = computed(() => (list.value.old ? [] : list.value.ownersToBefriend ?? []).filter(owner => befriendState(owner) !== 'friends' || asked.has(owner.id)))
 const asked = reactive(new Map<number, 'asked' | 'friends'>())
 const befriendState = (owner: Befriendable) => asked.get(owner.id) ?? owner.state
 const befriending = ref(false)
@@ -247,7 +248,7 @@ async function befriend(owner: Befriendable) {
   }
 }
 
-// "Vrienden", for an owner: which friends find this list with their own lists.
+// "Vrienden", for an owner: which friends find this list among other people's lists on their Lists page.
 const friendsDialog = useTemplateRef<{ open: () => Promise<void> }>('friendsDialog')
 const friendsStatus = ref('')
 function onFriendsSaved(shown: number) {

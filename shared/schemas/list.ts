@@ -118,7 +118,7 @@ export interface ListView {
   ownersToBefriend?: { id: number, name: string, state: 'none' | 'asked' | 'friends' }[]
 }
 
-/** A list someone else owns that this person opened before. */
+/** A list someone else owns that is on this person's page: a friend shows it to them, or they opened its link. */
 export interface OpenedList {
   token: string
   title: string
@@ -208,25 +208,21 @@ export interface HomeView {
   /** The most recently opened or joined first. */
   owned: OwnedList[]
   ownedTotal: number
-  /** The most recently opened first. */
+  /** Other people's lists: what friends show the person first, then what they opened, most recent first. */
   opened: OpenedList[]
   openedTotal: number
   /** Newest first; empty when logged out. */
   notices: NoticeView[]
-  /** The lists friends show the person, the one ticked last first; empty when logged out. */
-  shown: ShownList[]
-  shownTotal: number
   /** Friend requests waiting for the person's answer, newest first; empty when logged out. */
   requests: { id: string, fromId: number, from: string, via: string | null, fresh: boolean }[]
 }
 
 /**
- * What the lists page shows: every list the person owns and every list of someone else's that
- * they opened, in the home page's order. Nobody gets a list here that they don't own and never opened.
+ * What the lists page shows: every list the person owns, and other people's lists as one row
+ * (`opened`): the ones a friend shows them and the ones they opened, in the home page's order.
+ * Nobody gets a list here that they don't own, weren't shown and never opened.
  */
 export interface ListsView {
   owned: OwnedList[]
   opened: OpenedList[]
-  /** The lists friends show the person; empty when logged out. */
-  shown: ShownList[]
 }

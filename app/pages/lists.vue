@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ListsView } from '#shared/schemas/list'
 
-// Every list of your own, every list a friend shows you, and every list of someone else's that
-// you opened, with one search over all of them. Logged in they are three tabs; logged out there
-// are only the lists this browser opened.
+// Every list of your own, and other people's lists: the ones a friend shows you and the ones you
+// opened by a link, as one row, with one search over all of them. Logged in they are two tabs;
+// logged out there are only the lists this browser opened.
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -25,9 +25,8 @@ const loadError = computed(() => (error.value ? parse(error.value).message : '')
 const query = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const searching = computed(() => query.value.trim() !== '')
 const mine = computed(() => searchLists(data.value?.owned ?? [], query.value))
-const fromFriends = computed(() => searchLists(data.value?.shown ?? [], query.value))
 const visited = computed(() => searchLists(data.value?.opened ?? [], query.value))
-const found = computed(() => (loggedIn.value ? mine.value.length + fromFriends.value.length : 0) + visited.value.length)
+const found = computed(() => (loggedIn.value ? mine.value.length : 0) + visited.value.length)
 
 watch(query, (words) => {
   router.replace({ query: { ...route.query, q: words.trim() ? words : undefined } })
@@ -35,17 +34,16 @@ watch(query, (words) => {
 
 // Tabs. The chosen one lives in the address (?tab=visited), so a reload and the back button
 // keep it. It replaces the history entry: walking through the tabs is not a trail of pages.
-type Tab = 'mine' | 'friends' | 'visited'
-const tab = computed<Tab>(() => (route.query.tab === 'visited' ? 'visited' : route.query.tab === 'friends' ? 'friends' : 'mine'))
+type Tab = 'mine' | 'visited'
+const tab = computed<Tab>(() => (route.query.tab === 'visited' ? 'visited' : 'mine'))
 const tabs = computed(() => [
   { id: 'mine' as const, label: t('lists.mine'), count: mine.value.length },
-  { id: 'friends' as const, label: t('lists.friends'), count: fromFriends.value.length },
   { id: 'visited' as const, label: t('lists.visited'), count: visited.value.length },
 ])
 const tabButtons = useTemplateRef<HTMLButtonElement[]>('tabButton')
 
 function show(next: Tab) {
-  router.replace({ query: { ...route.query, tab: next === 'mine' ? undefined : next } })
+  router.replace({ query: { ...route.query, tab: next === 'visited' ? 'visited' : undefined } })
 }
 
 // Left and Right walk through the tabs and wrap around; Home and End go to the first and the
@@ -65,10 +63,9 @@ function onTabKey(event: KeyboardEvent) {
 // off, so the value is set here, after Vue has hidden a panel. A browser that doesn't know the
 // value simply hides the panel.
 const minePanel = useTemplateRef<HTMLElement>('minePanel')
-const friendsPanel = useTemplateRef<HTMLElement>('friendsPanel')
 const visitedPanel = useTemplateRef<HTMLElement>('visitedPanel')
 function keepFindable() {
-  for (const panel of [minePanel.value, friendsPanel.value, visitedPanel.value]) {
+  for (const panel of [minePanel.value, visitedPanel.value]) {
     if (panel?.hidden) panel.setAttribute('hidden', 'until-found')
   }
 }
@@ -80,10 +77,7 @@ const { creating, createError, createList } = useNewList()
 // After "Weghalen" the focus goes to what names the visited lists: their tab, or their heading
 // when logged out.
 const visitedTitle = useTemplateRef<HTMLElement>('visitedTitle')
-const tabButton = (id: Tab) => tabButtons.value?.[tabs.value.findIndex(item => item.id === id)]
-const { removeError, forget } = useForgetList(refresh, () => (loggedIn.value ? tabButton('visited') : visitedTitle.value))
-// The same for a list a friend shows you: it leaves your page, and the focus goes to its tab.
-const { hideError, hide } = useHideShown(refresh, () => tabButton('friends'))
+const { removeError, forget } = useForgetList(refresh, () => (loggedIn.value ? tabButtons.value?.[1] : visitedTitle.value))
 </script>
 
 <template>
@@ -141,29 +135,6 @@ const { hideError, hide } = useHideShown(refresh, () => tabButton('friends'))
                   <QuickAdd :label="t('lists.newList')" :field-label="t('lists.newListName')" :pending="creating" :error="createError" @add="createList" />
                 </li>
               </ul>
-            </div>
-          </div>
-
-          <!-- A panel without anything to focus in it is a Tab stop itself, so a keyboard reaches
-               what it says. -->
-          <div
-            v-if="loggedIn"
-            id="panel-friends"
-            ref="friendsPanel"
-            role="tabpanel"
-            aria-labelledby="tab-friends"
-            :hidden="tab !== 'friends'"
-            :tabindex="tab === 'friends' && !fromFriends.length ? 0 : undefined"
-            @beforematch="show('friends')"
-          >
-            <div class="lists-panel">
-              <p class="lists-note">{{ t('lists.friendsIntro') }}</p>
-              <p v-if="hideError" class="form-message" role="alert">{{ hideError }}</p>
-              <ul v-if="fromFriends.length" class="rows">
-                <ShownListRow v-for="list in fromFriends" :key="list.token" :list="list" @hide="hide" />
-              </ul>
-              <p v-else-if="loadError" class="form-message">{{ loadError }}</p>
-              <p v-else class="lists-none">{{ searching ? t('lists.friendsNone', { query: query.trim() }) : t('lists.friendsEmpty') }}</p>
             </div>
           </div>
 

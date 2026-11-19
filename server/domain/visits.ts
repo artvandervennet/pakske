@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { listOwners, listVisits, lists, users } from '../db/schema'
 import type { OpenedList } from '../../shared/schemas/list'
-import { shownListIds } from './friends'
+import { hideShownList, listShownLists, shownListIds } from './friends'
 
 /** A list by its token, deleted or not, with whether this person owns it. Undefined when no list has the token. */
 function findList(db: Db, userId: number, token: string) {
@@ -72,6 +72,26 @@ export function listOpenedLists(db: Db, userId: number): OpenedList[] {
   // A list a friend shows the person is under "from friends" while it is shown, not here as well.
   const shown = shownListIds(db, userId)
   return toOpened(db, rows.filter(row => !owned.has(row.id) && !shown.has(row.id)))
+}
+
+/**
+ * Other people's lists on this person's page, as one row: the lists friends show them, the one
+ * switched on last first, and then the lists they opened by a link, the one opened last first.
+ * A list is never in it twice: while a friend shows it, it isn't a visited list as well.
+ */
+export function listOthersLists(db: Db, userId: number): OpenedList[] {
+  const shown = listShownLists(db, userId).map(({ token, title, owners }) => ({ token, title, owners, deleted: false }))
+  return [...shown, ...listOpenedLists(db, userId)]
+}
+
+/**
+ * Takes someone else's list off this person's page, whichever way it got there: the visit is
+ * forgotten, and a list a friend shows them is hidden for them alone. The friend isn't told and
+ * the list's link keeps working; opening it again puts it back.
+ */
+export function takeOffPage(db: Db, userId: number, token: string): void {
+  forgetList(db, userId, token)
+  if (listShownLists(db, userId).some(list => list.token === token)) hideShownList(db, userId, token)
 }
 
 /** Describes lists by token, in the given order. Tokens that match no list are skipped. */

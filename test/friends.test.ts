@@ -11,7 +11,7 @@ import { LIST_TOKEN } from '../server/domain/tokens'
 import { deleteList, leaveList, ownedListId, relinkList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { createUser, deleteUser } from '../server/domain/users'
-import { listOpenedLists, rememberList } from '../server/domain/visits'
+import { listOpenedLists, listOthersLists, rememberList, takeOffPage } from '../server/domain/visits'
 import { addList, addOwner, addUser, codeOf, makeDb } from './helpers'
 
 // A clock that only moves when a test moves it, so "newest first" never depends on two actions
@@ -573,6 +573,40 @@ describe('showing a list to a friend', () => {
     // She had opened its link herself before, so it is a visited list again once it isn't shown.
     setShownTo(db, art.id, kerst, [])
     expect(listOpenedLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
+  })
+
+  it('stands in one row of other people\'s lists with the ones opened by a link, and never twice', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    const lotList = listFriends(db, lot.id)[0]!.shows[0]!.token
+    // Mom opened Lotte's list by its link; Art's she opened too, and then he switched it on for her.
+    rememberList(db, mom.id, lotList)
+    rememberList(db, mom.id, kerst)
+    setShownTo(db, art.id, kerst, [mom.id])
+    expect(listOthersLists(db, mom.id)).toEqual([
+      { token: kerst, title: 'Kerst', owners: ['Art'], deleted: false },
+      { token: lotList, title: 'Lijst van lot', owners: ['Lot'], deleted: false },
+    ])
+    // Nothing of her own, and nothing for someone who was shown nothing and opened nothing.
+    expect(listOthersLists(db, art.id)).toEqual([])
+  })
+
+  it('leaves the page altogether when taken off, also when it had been opened by its link before', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    const lotList = listFriends(db, lot.id)[0]!.shows[0]!.token
+    rememberList(db, mom.id, kerst)
+    rememberList(db, mom.id, lotList)
+    setShownTo(db, art.id, kerst, [mom.id])
+    takeOffPage(db, mom.id, kerst)
+    expect(listOthersLists(db, mom.id).map(list => list.title)).toEqual(['Lijst van lot'])
+    // Art's switch is as it was, and he isn't told.
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    // A list that was only opened goes the same way; one that isn't on the page is no error.
+    takeOffPage(db, mom.id, lotList)
+    takeOffPage(db, mom.id, lotList)
+    expect(listOthersLists(db, mom.id)).toEqual([])
+    // Opening its link again puts it back, like any list.
+    rememberList(db, mom.id, kerst)
+    expect(listOthersLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
   })
 
   it('ends with the friendship, and nothing comes back when they are friends again', () => {

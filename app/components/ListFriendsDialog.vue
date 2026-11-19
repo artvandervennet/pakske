@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// "Vrienden" on a list of your own: which of your friends find this list with their own lists.
+// "Vrienden" on a list of your own: which of your friends find this list among other people's
+// lists on their Lists page.
 // The dialog asks the server who your friends are each time it opens, so a friend made a minute
 // ago is in it. Nothing changes until Opslaan, which sends the whole set. On a joint list every
 // owner has a dialog of their own, with their own friends.

@@ -1147,7 +1147,10 @@ html:has(.joint-bar) art-header::part(drips) { display: none; }
 .one-time-link-address { font-size: var(--step--1); text-overflow: ellipsis; }
 /* Under the title band's buttons, on a line of its own, as is what the band says back. */
 .page-head .actions > :is(.one-time-link, .form-message) { flex: 1 0 100%; }
-.page-head .actions > .one-time-link { margin-block-start: var(--space-2); }
+/* A whole line also where the band is wide enough to fit the box beside a button: its limit on
+   width moves to what is in it, or the box would sit next to the button and stretch it. */
+.page-head .actions > .one-time-link { max-inline-size: none; margin-block-start: var(--space-2); }
+.page-head .actions > .one-time-link > * { max-inline-size: min(100%, var(--measure)); }
 
 /* A band that is one column at every width: a form, or the error page. */
 .band.wide > .inner { padding-block: var(--space-12) var(--space-16); }

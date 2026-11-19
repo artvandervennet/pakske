@@ -574,25 +574,27 @@ req sis GET "/api/friends/links/$FLINK"; check "sis opens it" 200; has "… from
 req sis POST "/api/friends/links/$FLINK/accept"; check "sis accepts" 200
 req lot POST "/api/friends/links/$FLINK/accept"; check "the link is spent for lot" 409; has "… with the code invite_closed" invite_closed
 req lot GET "/api/friends/links/$UNKNOWN"; check "a friend link nobody made is not found" 404
-req mom GET /api/lists; same "being friends shows mom nothing of art's" ".shown.length" 0; same "… the list she opened is a visited one" ".opened.some(l=>l.token==='$FLIST')" true
+req mom GET /api/friends; same "being friends shows mom nothing of art's" ".friends[0].sees.length" 0
+req mom GET /api/lists; same "… the list she opened is among other people's, as a visited one" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req art PUT "/api/friends/$FMOM/lists" "{\"lists\":[\"$FLIST\"]}"; check "art ticks his list for mom" 204
-req mom GET /api/lists; same "now it is among the lists friends show her" ".shown.length" 1; has "… shown by art" '"by":["Art"]'; same "… and no longer a visited one as well" ".opened.some(l=>l.token==='$FLIST')" false
-req mom GET /api/home; same "the home page counts it" ".shownTotal" 1
+req mom GET /api/friends; same "now art shows it to her" ".friends[0].sees.length" 1
+req mom GET /api/lists; same "… and it is among other people's lists once, not twice" ".opened.filter(l=>l.token==='$FLIST').length" 1
+req mom GET /api/home; same "the home page has it once too" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req sis GET "/api/lists/$FLIST/friends"; check "sis cannot see who art shows his list to" 404
 req sis PUT "/api/lists/$FLIST/friends" '{"friends":[]}'; check "… or change it" 404
 req art GET "/api/lists/$FLIST/friends"; same "art sees his two friends there" ".friends.length" 2; same "… mom ticked" ".friends.find(f=>f.id===$FMOM).shown" true
 req art PUT "/api/lists/$FLIST/friends" "{\"friends\":[$LOT_ID]}"; check "art cannot tick lot, who is no friend" 404; has "… with the code not_friends" not_friends
 req art PUT "/api/friends/$FMOM/lists" "{\"lists\":[\"$MOMLIST\"]}"; check "… or show mom a list that isn't his" 404
-req mom DELETE "/api/friends/shown/$FLIST"; check "mom takes the list off her own page" 204
-req mom GET /api/lists; same "it is gone there" ".shown.length" 0
+req mom DELETE "/api/home/opened/$FLIST"; check "mom takes the list off her own page" 204
+req mom GET /api/lists; same "it is gone there, the visit with it" ".opened.filter(l=>l.token==='$FLIST').length" 0
 req art GET "/api/lists/$FLIST/friends"; same "art's tick is as it was" ".friends.find(f=>f.id===$FMOM).shown" true
 req art PUT "/api/lists/$FLIST/friends" '{"friends":[]}'; check "art unticks everyone" 204
 req art PUT "/api/lists/$FLIST/friends" "{\"friends\":[$FMOM]}"; check "… and ticks mom again" 204
-req mom GET /api/lists; same "it is back on mom's page" ".shown.length" 1
+req mom GET /api/lists; same "it is back on mom's page" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req mom GET /api/friends; lacks "mom's friends page says nothing of art's other friend" "Zus"
 req mom GET "/api/lists/$FLIST"; lacks "… and neither does the list" "Zus"
 req art DELETE "/api/friends/$FMOM"; check "art removes mom as a friend" 204
-req mom GET /api/lists; same "the list is off her page" ".shown.length" 0
+req mom GET /api/lists; same "the list is off her page" ".opened.filter(l=>l.token==='$FLIST').length" 0
 req mom GET /api/friends; same "… and art off her friends" ".friends.length" 0
 req art DELETE "/api/friends/$FMOM"; check "removing her again finds no friend" 404; has "… with the code not_friends" not_friends
 
