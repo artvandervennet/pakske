@@ -152,7 +152,8 @@ async function accept() {
         <p v-if="lead" id="invite-state" class="lead">{{ lead }}</p>
       </template>
     </PageHead>
-    <section class="band section invite" data-paint="1">
+    <!-- One column: Gesso's .section would put all of this in its narrow title column. -->
+    <section class="band wide invite" data-paint="1">
       <div class="inner">
         <div v-if="state === 'open'" class="invite-body">
           <template v-if="invite.kind === 'wishes'">

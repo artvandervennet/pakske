@@ -84,6 +84,12 @@ const showNotices = computed(() => loggedIn.value && (notices.value.length > 0 |
 
 // Logged out, the page is the hero and the lists opened before; with none, one quiet sentence.
 const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !!loadError.value)
+
+// Gesso paints a page's sections 1, 2, 3 in order, whichever of them are there.
+const paints = computed(() => {
+  let paint = 0
+  return { notices: showNotices.value ? ++paint : 0, yours: loggedIn.value ? ++paint : 0, opened: ++paint }
+})
 </script>
 
 <template>
@@ -105,59 +111,8 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
       <art-drip class="band-drip" pigment="--surface" stagger flush />
     </div>
 
-    <section v-if="loggedIn" class="band section" data-paint="1" aria-labelledby="yours-title">
-      <div class="inner">
-        <div class="section-head">
-          <h2 id="yours-title" class="section-title">{{ t('home.yourLists') }}</h2>
-        </div>
-        <div class="section-body">
-          <p v-if="loadError" class="form-message">{{ loadError }}</p>
-          <ul class="rows">
-            <OwnedListRow v-for="list in owned" :key="list.token" :list="list" />
-            <li>
-              <QuickAdd :label="t('lists.newList')" :field-label="t('lists.newListName')" :pending="creating" :error="createError" @add="createList" />
-            </li>
-          </ul>
-          <!-- Both sections end in a link with these words; each one's heading is its
-               description, so a screen reader says which lists it leads to. -->
-          <p v-if="ownedTotal > owned.length" class="lists-all">
-            <NuxtLink :to="localePath('/lists')" aria-describedby="yours-title">{{ t('home.allLists', { n: ownedTotal }) }}</NuxtLink>
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section v-if="showOpened" class="band section" :data-paint="loggedIn ? 2 : 1" aria-labelledby="opened-title">
-      <div class="inner">
-        <div class="section-head">
-          <h2 id="opened-title" ref="openedTitle" class="section-title" tabindex="-1">{{ t('home.visited') }}</h2>
-          <p class="intro">{{ t('lists.visitedIntro') }}</p>
-        </div>
-        <div class="section-body">
-          <p v-if="removeError" class="form-message" role="alert">{{ removeError }}</p>
-          <template v-if="opened.length">
-            <ul class="rows">
-              <VisitedListRow v-for="list in opened" :key="list.token" :list="list" @forget="forget" />
-            </ul>
-            <p v-if="openedTotal > opened.length" class="lists-all">
-              <NuxtLink :to="{ path: localePath('/lists'), query: { tab: 'visited' } }" aria-describedby="opened-title">{{ t('home.allLists', { n: openedTotal }) }}</NuxtLink>
-            </p>
-          </template>
-          <p v-else-if="loadError" class="form-message">{{ loadError }}</p>
-          <div v-else class="empty">
-            <art-splatter pigment="complement" seed="none-opened" />
-            <p>{{ t('lists.visitedEmpty') }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-    <div v-else class="band section" data-paint="1">
-      <div class="inner">
-        <p class="muted">{{ t('lists.visitedEmpty') }}</p>
-      </div>
-    </div>
-
-    <section v-if="showNotices" class="band section" data-paint="1" aria-labelledby="notices-title">
+    <!-- First under the hero: the mark in the header sends people here for these. -->
+    <section v-if="showNotices" class="band section" :data-paint="paints.notices" aria-labelledby="notices-title">
       <div class="inner">
         <div class="section-head">
           <h2 id="notices-title" ref="noticesTitle" class="section-title" tabindex="-1">{{ t('home.notices') }}</h2>
@@ -184,5 +139,62 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
         </div>
       </div>
     </section>
+
+    <section v-if="loggedIn" class="band section" :data-paint="paints.yours" aria-labelledby="yours-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="yours-title" class="section-title">{{ t('home.yourLists') }}</h2>
+        </div>
+        <div class="section-body">
+          <p v-if="loadError" class="form-message">{{ loadError }}</p>
+          <ul class="rows">
+            <OwnedListRow v-for="list in owned" :key="list.token" :list="list" />
+            <li>
+              <QuickAdd :label="t('lists.newList')" :field-label="t('lists.newListName')" :pending="creating" :error="createError" @add="createList" />
+            </li>
+          </ul>
+          <!-- Both sections end in a link with these words; each one's heading is its
+               description, so a screen reader says which lists it leads to. -->
+          <p v-if="ownedTotal > owned.length" class="lists-all">
+            <NuxtLink :to="localePath('/lists')" aria-describedby="yours-title">{{ t('home.allLists', { n: ownedTotal }) }}</NuxtLink>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="showOpened" class="band section" :data-paint="paints.opened" aria-labelledby="opened-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="opened-title" ref="openedTitle" class="section-title" tabindex="-1">{{ t('home.visited') }}</h2>
+          <p class="intro">{{ t('lists.visitedIntro') }}</p>
+        </div>
+        <div class="section-body">
+          <p v-if="removeError" class="form-message" role="alert">{{ removeError }}</p>
+          <template v-if="opened.length">
+            <ul class="rows">
+              <VisitedListRow v-for="list in opened" :key="list.token" :list="list" @forget="forget" />
+            </ul>
+            <p v-if="openedTotal > opened.length" class="lists-all">
+              <NuxtLink :to="{ path: localePath('/lists'), query: { tab: 'visited' } }" aria-describedby="opened-title">{{ t('home.allLists', { n: openedTotal }) }}</NuxtLink>
+            </p>
+          </template>
+          <p v-else-if="loadError" class="form-message">{{ loadError }}</p>
+          <div v-else class="empty">
+            <art-splatter pigment="complement" seed="none-opened" />
+            <p>{{ t('lists.visitedEmpty') }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- One column, not Gesso's .section: that one keeps its first column for a title. -->
+    <div v-else class="band wide" data-paint="1">
+      <div class="inner">
+        <div class="empty">
+          <art-splatter pigment="complement" seed="none-opened" />
+          <p>{{ t('lists.visitedEmpty') }}</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
