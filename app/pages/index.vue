@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HomeView, NoticeView } from '#shared/schemas/list'
+import type { HomeView } from '#shared/schemas/list'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -13,8 +13,6 @@ useHead({ title: () => t('home.title') })
 const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api/home')
 const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
-const notices = computed(() => home.value?.notices ?? [])
-const requests = computed(() => home.value?.requests ?? [])
 const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
 const openedTotal = computed(() => home.value?.openedTotal ?? 0)
 // Without it a failed load would look like having no lists at all.
@@ -28,112 +26,13 @@ const pageTitle = ref<HTMLElement>()
 // whole section along; then it goes to the page's heading.
 const { removeError, forget } = useForgetList(refresh, () => openedTitle.value ?? pageTitle.value)
 
-// Notices. Opening this page counts as having seen them, which takes the header's mark away.
-const { markSeen } = useNotices()
-onMounted(() => {
-  // If it fails, the mark stays until the next visit; nothing on this page depends on it.
-  if (loggedIn.value) markSeen().catch(() => {})
-})
-
-const noticesTitle = ref<HTMLElement>()
-const noticeBusy = ref<string | null>(null)
-const noticeStatus = ref('')
-const noticeError = ref('')
-
-// Undo and dismiss each take the notice away, the row and its focused button with it. A notice
-// someone already dealt with elsewhere (another tab, another owner's undo) answers 404; the
-// page then catches up and says so. Either way the focus goes to the section's heading, which
-// stays while there is something to say, even when the last notice has gone.
-async function settleNotice(notice: NoticeView, request: () => Promise<unknown>, done: string) {
-  if (noticeBusy.value) return
-  noticeBusy.value = notice.id
-  noticeStatus.value = ''
-  noticeError.value = ''
-  try {
-    await request()
-    noticeStatus.value = done
-  }
-  catch (error) {
-    const parsed = parse(error)
-    noticeError.value = parsed.message
-    if (parsed.code !== 'not_found') return
-  }
-  finally {
-    noticeBusy.value = null
-  }
-  await refresh()
-  await nextTick()
-  if (!document.activeElement || document.activeElement === document.body) noticesTitle.value?.focus()
-}
-
-function undo(notice: NoticeView) {
-  return settleNotice(
-    notice,
-    () => $fetch<unknown>(`/api/lists/${notice.token}/wishes/${notice.wishId}/owners/${notice.actorId}/undo`, { method: 'POST' }),
-    t('notice.undone'),
-  )
-}
-
-function dismiss(notice: NoticeView) {
-  return settleNotice(notice, () => $fetch<unknown>(`/api/notices/${notice.id}`, { method: 'DELETE' }), t('notice.dismissed'))
-}
-
-const noticeLink = (notice: NoticeView) =>
-  localePath(`/l/${notice.token}${notice.wishId === null ? '' : `#wish-${notice.wishId}`}`)
-
-// A notice about a friend leads to that friend's row on the friends page.
-const aboutFriend = (notice: NoticeView) => notice.kind === 'friend_accepted' || notice.kind === 'friend_link_used'
-const friendLink = (id: number) => ({ path: localePath('/friends'), hash: `#friend-${id}` })
-
-// Friend requests wait here with the notices until they are answered. Accepting goes on to the
-// new friend's row, where nothing is ticked yet; declining says so here and tells the sender nothing.
-type FriendRequest = HomeView['requests'][number]
-async function acceptRequest(request: FriendRequest) {
-  if (noticeBusy.value) return
-  noticeBusy.value = request.id
-  noticeError.value = ''
-  try {
-    const made = await $fetch<{ friendId: number }>(`/api/friends/requests/${request.id}/accept`, { method: 'POST' })
-    await navigateTo(friendLink(made.friendId))
-  }
-  catch (error) {
-    noticeError.value = parse(error).message
-    await refresh()
-  }
-  finally {
-    noticeBusy.value = null
-  }
-}
-
-async function declineRequest(request: FriendRequest) {
-  if (noticeBusy.value) return
-  noticeBusy.value = request.id
-  noticeStatus.value = ''
-  noticeError.value = ''
-  try {
-    await $fetch<unknown>(`/api/friends/requests/${request.id}/decline`, { method: 'POST' })
-    noticeStatus.value = t('friends.declined', { name: request.from })
-  }
-  catch (error) {
-    noticeError.value = parse(error).message
-  }
-  finally {
-    await refresh()
-    noticeBusy.value = null
-  }
-  await nextTick()
-  if (!document.activeElement || document.activeElement === document.body) noticesTitle.value?.focus()
-}
-
-const showNotices = computed(() => loggedIn.value && (notices.value.length > 0 || requests.value.length > 0 || !!noticeStatus.value || !!noticeError.value))
-
 // Logged out, the page is the hero and the lists opened before; with none, one quiet sentence.
 const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !!loadError.value)
 
 // Gesso paints a page's sections 1, 2, 3 in order, whichever of them are there.
 const paints = computed(() => {
   let paint = 0
-  return { notices: showNotices.value ? ++paint : 0, yours: loggedIn.value ? ++paint : 0, opened: ++paint }
+  return { yours: loggedIn.value ? ++paint : 0, opened: ++paint }
 })
 </script>
 
@@ -158,55 +57,6 @@ const paints = computed(() => {
       </div>
       <art-drip class="band-drip" pigment="--surface" stagger flush />
     </div>
-
-    <!-- First under the hero: the mark in the header sends people here for these. -->
-    <section v-if="showNotices" class="band section" :data-paint="paints.notices" aria-labelledby="notices-title">
-      <div class="inner">
-        <div class="section-head">
-          <h2 id="notices-title" ref="noticesTitle" class="section-title" tabindex="-1">{{ t('home.notices') }}</h2>
-        </div>
-        <div class="section-body">
-          <p class="form-message" role="status">{{ noticeStatus }}</p>
-          <p v-if="noticeError" class="form-message" role="alert">{{ noticeError }}</p>
-          <ul v-if="notices.length || requests.length" class="rows">
-            <li v-for="request in requests" :key="request.id" class="row notice">
-              <p :id="`request-${request.id}`" class="notice-line">
-                {{ t('friends.wants', { name: request.from }) }}<template v-if="request.via"> · {{ t('friends.via', { title: request.via }) }}</template>
-              </p>
-              <div class="notice-actions">
-                <art-button size="s">
-                  <button type="button" :aria-describedby="`request-${request.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="acceptRequest(request)">{{ t('friends.accept') }}</button>
-                </art-button>
-                <art-button variant="quiet" size="s">
-                  <button type="button" :aria-describedby="`request-${request.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="declineRequest(request)">{{ t('friends.decline') }}</button>
-                </art-button>
-              </div>
-            </li>
-            <li v-for="notice in notices" :key="notice.id" class="row notice">
-              <p :id="`notice-${notice.id}`" class="notice-line">{{ noticeLine(notice, t) }}</p>
-              <div class="notice-actions">
-                <!-- Something a friend sent: on to the page where the answer is given. -->
-                <art-button v-if="notice.invite" size="s">
-                  <NuxtLink :to="localePath(`/j/${notice.invite}`)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
-                </art-button>
-                <art-button v-else-if="notice.token" variant="quiet" size="s">
-                  <NuxtLink :to="noticeLink(notice)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
-                </art-button>
-                <art-button v-else-if="aboutFriend(notice)" variant="quiet" size="s">
-                  <NuxtLink :to="friendLink(notice.actorId)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
-                </art-button>
-                <art-button v-if="notice.canUndo" variant="quiet" size="s">
-                  <button type="button" :aria-describedby="`notice-${notice.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="undo(notice)">{{ t('notice.undo') }}</button>
-                </art-button>
-                <art-button variant="quiet" size="s">
-                  <button type="button" :aria-describedby="`notice-${notice.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="dismiss(notice)">{{ t('notice.dismiss') }}</button>
-                </art-button>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </section>
 
     <section v-if="loggedIn" class="band section" :data-paint="paints.yours" aria-labelledby="yours-title">
       <div class="inner">

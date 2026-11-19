@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { lists } from '../server/db/schema'
 import { acceptFriendLink, listFriends, makeFriendLink } from '../server/domain/friends'
+import { acceptInvite, listInviteLink } from '../server/domain/invites'
 import { getListView } from '../server/domain/list-view'
 import { listMyLists, listOwnedLists } from '../server/domain/lists'
+import { listNotices } from '../server/domain/notices'
 import { createUser, deleteUser, findUserByEmail, findUserById, localeOfPath, sessionBelongsTo, setPicture, updateProfile } from '../server/domain/users'
 import { sessionUserOf } from '../server/utils/http'
 import { addUser, codeOf, makeDb } from './helpers'
@@ -124,5 +126,23 @@ describe('a profile picture', () => {
     const token = listOwnedLists(db, art.id)[0]!.token
     expect(JSON.stringify(getListView(db, token, mom.id))).not.toContain('d'.repeat(32))
     expect(JSON.stringify(getListView(db, token, null))).not.toContain('d'.repeat(32))
+  })
+})
+
+describe('a notice', () => {
+  it('carries its sender\'s picture for a friend, and for nobody else', () => {
+    const db = makeDb()
+    const art = createUser(db, { email: 'art@example.test', displayName: 'Art', passwordHash: null })
+    const mom = createUser(db, { email: 'mom@example.test', displayName: 'Mom', passwordHash: null })
+    const sis = createUser(db, { email: 'sis@example.test', displayName: 'Sis', passwordHash: null })
+    setPicture(db, mom.id, 'e'.repeat(32) + '.jpg')
+    setPicture(db, sis.id, 'f'.repeat(32) + '.jpg')
+    acceptFriendLink(db, mom.id, makeFriendLink(db, art.id).token)
+    // Art is told Mom used his link: they are friends now, so her picture comes along.
+    expect(listNotices(db, art.id)).toMatchObject([{ kind: 'friend_link_used', actor: 'Mom', picture: `/uploads/${'e'.repeat(32)}.jpg` }])
+    // Sis joins his list through its invitation: no friend, so no picture.
+    const token = listOwnedLists(db, art.id)[0]!.token
+    acceptInvite(db, sis.id, listInviteLink(db, art.id, token).invite, null)
+    expect(listNotices(db, art.id).find(notice => notice.kind === 'list_joined')).toMatchObject({ actor: 'Sis', picture: null })
   })
 })

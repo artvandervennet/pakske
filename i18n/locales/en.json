@@ -11,6 +11,7 @@
     "login": "Log in",
     "logout": "Log out",
     "language": "Language",
+    "notices": "Notices",
     "newNotices": "{n} new notice | {n} new notices"
   },
   "home": {
@@ -18,8 +19,7 @@
     "lead": "Make a list and share the link. Buyers sort it out here, and you don’t get to see it.",
     "yourLists": "Your lists",
     "visited": "From others",
-    "allLists": "All lists ({n})",
-    "notices": "Notices"
+    "allLists": "All lists ({n})"
   },
   "lists": {
     "title": "Lists",
@@ -57,7 +57,8 @@
     "dismiss": "Dismiss",
     "view": "View",
     "undone": "Undone.",
-    "dismissed": "Notice dismissed."
+    "dismissed": "Notice dismissed.",
+    "none": "No notices."
   },
   "share": {
     "copy": "Copy link",

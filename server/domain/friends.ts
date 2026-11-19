@@ -181,6 +181,7 @@ export function listRequests(db: Db, userId: number): RequestsView {
       from,
       via: title !== null && deletedAt === null && owner !== null ? title : null,
       fresh: request.seenAt === null,
+      createdAt: request.createdAt.toISOString(),
     })),
     outgoing,
   }

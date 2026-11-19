@@ -11,6 +11,7 @@
     "login": "Inloggen",
     "logout": "Uitloggen",
     "language": "Taal",
+    "notices": "Meldingen",
     "newNotices": "{n} nieuwe melding | {n} nieuwe meldingen"
   },
   "home": {
@@ -18,8 +19,7 @@
     "lead": "Maak een lijst en deel de link. Wie iets koopt, spreekt het hier af zonder dat jij het ziet.",
     "yourLists": "Jouw lijsten",
     "visited": "Van anderen",
-    "allLists": "Alle lijsten ({n})",
-    "notices": "Meldingen"
+    "allLists": "Alle lijsten ({n})"
   },
   "lists": {
     "title": "Lijsten",
@@ -57,7 +57,8 @@
     "dismiss": "Sluiten",
     "view": "Bekijken",
     "undone": "Ongedaan gemaakt.",
-    "dismissed": "Melding gesloten."
+    "dismissed": "Melding gesloten.",
+    "none": "Geen meldingen."
   },
   "share": {
     "copy": "Link kopiëren",

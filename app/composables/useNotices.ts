@@ -1,5 +1,6 @@
-// How many notices and friend requests the person hasn't seen yet. The header and the home page share one fetch
-// under one key, so marking them seen on the home page takes the header's mark away at once.
+// How many notices and friend requests the person hasn't seen yet, for the dot on the header's
+// bell. One fetch under one key, so marking them seen where they are read (the panel the bell
+// opens, or the friends page for requests) takes the dot away at once.
 // Logged out there is nothing to fetch: logging in and out reload the whole page.
 export function useNotices() {
   const { loggedIn } = useUserSession()
@@ -11,7 +12,7 @@ export function useNotices() {
 
   const unseen = computed(() => data.value.unseen)
 
-  // The mark also counts friend requests that wait for an answer; seeing them takes it away,
+  // The dot also counts friend requests that wait for an answer; seeing them takes it away,
   // though each stays until it is answered.
   async function markSeen() {
     await Promise.all([

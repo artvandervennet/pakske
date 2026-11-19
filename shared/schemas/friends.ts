@@ -2,7 +2,7 @@
 
 export interface RequestsView {
   /** Waiting for this person's answer, newest first. `via` is the list it was sent from, while that exists. */
-  incoming: { id: string, fromId: number, from: string, via: string | null, fresh: boolean }[]
+  incoming: { id: string, fromId: number, from: string, via: string | null, fresh: boolean, createdAt: string }[]
   /** What this person asked and still sees: waiting or declined, with nothing to tell them apart. */
   outgoing: { id: string, toId: number, to: string }[]
 }

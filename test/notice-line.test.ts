@@ -21,6 +21,7 @@ function notice(kind: NoticeKind, extra: Partial<NoticeView> = {}): NoticeView {
     token: 'list-1',
     wishId: 7,
     invite: null,
+    picture: null,
     canUndo: false,
     fresh: true,
     createdAt: '2026-11-17T10:00:00.000Z',

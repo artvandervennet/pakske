@@ -1271,25 +1271,86 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 
 .dialog h2 { font-size: var(--step-2); overflow-wrap: anywhere; }
 
+
 /* ── Notices ──────────────────────────────────────────────────────────────
-   One row per notice: the sentence, then what you can do about it, in quiet buttons that
-   wrap under the sentence on a phone. */
+   The bell in the header, and what it opens: a panel under it on a wide screen, a sheet
+   against the bottom edge on a narrow one. */
+.bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.bell:hover, .bell[aria-expanded="true"] { background: color-mix(in oklch, currentColor 12%, transparent); }
+.bell:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.bell > .icon { inline-size: 1.45rem; block-size: 1.45rem; }
+/* Something new: a dot in the accent, ringed in the header's paint so it reads on the bell. */
+.bell-dot {
+  position: absolute;
+  inset-block-start: 0.6rem;
+  inset-inline-end: 0.65rem;
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+/* Logged out, on a small screen: the one link stands in the bar, beside "Inloggen". On a wide
+   screen the header's own link shows, with the stroke under it, and this one stays away. */
+.bar-link { display: none; }
+@media (max-width: 48rem) {
+  .bar-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    padding-inline: var(--space-1);
+    color: inherit;
+    font-size: var(--step--1);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+  .bar-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+}
+.notices-menu { inline-size: min(26rem, calc(100vw - 2 * var(--gutter))); max-block-size: min(34rem, 75dvh); padding: var(--space-4) var(--space-6); overflow-y: auto; overscroll-behavior: contain; }
+.notices-menu:popover-open { display: block; }
+.notices-title { margin: 0 0 var(--space-2); font-size: var(--step-1); }
+.notices-title:focus-visible, .notices-sheet h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+.notices-sheet .sheet-body { gap: var(--space-2); }
+/* One row per notice: who, what and when, and under it what can be done about it. */
+.notice-list { margin: 0; padding: 0; list-style: none; }
+.notice-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--rule);
+  --picture-size: 2.5rem;
+}
+.notice-item:first-child { border-block-start: 0; }
+.notice-main { display: grid; gap: var(--space-1); min-inline-size: 0; }
+.notice-text { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.notice-link { color: inherit; text-decoration: none; }
+.notice-link:hover { text-decoration: underline; }
+.notice-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+.notice-meta { margin: 0; font-size: var(--step--1); color: var(--ink-muted); }
+.notice-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block-start: var(--space-2); }
+/* Not seen yet: the words are heavier and the picture carries the accent's ring. */
+.notice-item.fresh .notice-text { font-weight: var(--weight-bold); }
+.notice-item.fresh .person-picture { outline: 2px solid var(--accent); outline-offset: 2px; }
+.notice-close { margin-block-start: calc(-1 * var(--space-2)); margin-inline-end: calc(-1 * var(--space-2)); }
+.notice-none { margin-block: var(--space-4); color: var(--ink-muted); }
+/* A friend request as a row on the friends page: the sentence, then its two answers, which
+   wrap under it on a phone. */
 .notice-line { flex: 1 1 18rem; min-inline-size: 0; overflow-wrap: anywhere; }
 .notice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-
-/* Candidate for Gesso: a small mark on a header link that says there is something new there.
-   It is a dot in the accent; its words are an aria-label, since <art-header> copies the links'
-   text into its repaint. It sits on the wordmark, which leads to the home page with the notices
-   and stays in view when the other links fold under "Menu". */
-.nav-mark {
-  display: inline-block;
-  inline-size: 0.5rem;
-  block-size: 0.5rem;
-  margin-inline-start: 0.3em;
-  border-radius: var(--radius-round);
-  background: var(--accent);
-  vertical-align: super;
-}
 
 /* The login form's password and button. "Wachtwoord vergeten?" comes after the button, so Tab goes
    from the email to the password, but it shows at the end of the password's label line: it

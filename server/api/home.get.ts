@@ -1,7 +1,5 @@
 import { HOME_LISTS, type HomeView } from '../../shared/schemas/list'
-import { listRequests } from '../domain/friends'
 import { listOwnedLists } from '../domain/lists'
-import { listNotices } from '../domain/notices'
 import { describeLists, listOthersLists } from '../domain/visits'
 
 // The home page gets the first few lists of each kind and how many there are; the lists page
@@ -17,7 +15,5 @@ export default defineEventHandler(async (event): Promise<HomeView> => {
     ownedTotal: owned.length,
     opened: opened.slice(0, HOME_LISTS),
     openedTotal: opened.length,
-    notices: userId === null ? [] : listNotices(db, userId),
-    requests: userId === null ? [] : listRequests(db, userId).incoming,
   }
 })

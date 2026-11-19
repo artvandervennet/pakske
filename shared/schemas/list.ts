@@ -192,6 +192,8 @@ export interface NoticeView {
   /** The display name of the person who did it, as it is now. */
   actor: string
   actorId: number
+  /** Their profile picture, when they are a friend of the recipient: nobody else is shown one. */
+  picture: string | null
   /** The wish's or list's title as it was when it happened. */
   title: string
   /** How many more wishes besides the one named. */
@@ -212,7 +214,7 @@ export const HOME_LISTS = 5
 
 /**
  * What the home page shows: the few lists of each kind the person had to do with last, how many
- * there are in all, and their notices.
+ * there are in all.
  */
 export interface HomeView {
   /** The most recently opened or joined first. */
@@ -221,10 +223,6 @@ export interface HomeView {
   /** Other people's lists: what friends show the person first, then what they opened, most recent first. */
   opened: OpenedList[]
   openedTotal: number
-  /** Newest first; empty when logged out. */
-  notices: NoticeView[]
-  /** Friend requests waiting for the person's answer, newest first; empty when logged out. */
-  requests: { id: string, fromId: number, from: string, via: string | null, fresh: boolean }[]
 }
 
 /**

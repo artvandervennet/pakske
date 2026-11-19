@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listFriends, listOwners, lists, listWishes, notices, users, wishes, wishLinks } from '../db/schema'
+import { friendships, listFriends, listOwners, lists, listWishes, notices, users, wishes, wishLinks } from '../db/schema'
 import type { NoticeKind, NoticeView } from '../../shared/schemas/list'
 import { waitingSend } from './invites'
 import { onListNow } from './placement'
@@ -30,13 +30,18 @@ export function addNotice(db: Db, notice: {
  * while that can still be taken.
  */
 export function listNotices(db: Db, userId: number): NoticeView[] {
-  const rows = db.select({ notice: notices, actor: users.displayName }).from(notices)
+  // A profile picture goes to friends only, so the sender's is there when the two are friends.
+  const rows = db.select({ notice: notices, actor: users.displayName, imageFile: users.imageFile, friend: friendships.userLow }).from(notices)
     .innerJoin(users, eq(users.id, notices.actorId))
+    .leftJoin(friendships, or(
+      and(eq(friendships.userLow, notices.actorId), eq(friendships.userHigh, notices.userId)),
+      and(eq(friendships.userHigh, notices.actorId), eq(friendships.userLow, notices.userId)),
+    ))
     .where(eq(notices.userId, userId))
     // Of notices made in the same millisecond, the one inserted last comes first.
     .orderBy(desc(notices.createdAt), desc(sql`${notices}.rowid`))
     .all()
-  return rows.flatMap(({ notice, actor }) => {
+  return rows.flatMap(({ notice, actor, imageFile, friend }) => {
     const invite = notice.inviteId === null ? null : waitingSend(db, notice.inviteId, userId)
     if (notice.inviteId !== null && invite === null) return []
     const token = notice.kind === 'list_shown' ? shownToken(db, userId, notice.listId) : noticeToken(db, userId, notice.wishId, notice.listId)
@@ -48,6 +53,7 @@ export function listNotices(db: Db, userId: number): NoticeView[] {
       kind: notice.kind as NoticeKind,
       actor,
       actorId: notice.actorId,
+      picture: friend !== null && imageFile ? `/uploads/${imageFile}` : null,
       title: notice.title,
       more: notice.more,
       token,
