@@ -19,6 +19,7 @@
     "yourLists": "Jouw lijsten",
     "visited": "Bezocht",
     "allLists": "Alle lijsten ({n})",
+    "friends": "Van vrienden",
     "notices": "Meldingen"
   },
   "lists": {
@@ -36,6 +37,10 @@
     "visitedIntro": "Stuurt iemand je de link van een lijst, dan vind je die hier terug. Weghalen neemt een lijst alleen hier weg; de link blijft werken.",
     "visitedEmpty": "Nog geen lijsten. Open de link die iemand je stuurde.",
     "visitedNone": "Geen bezochte lijst past bij “{query}”.",
+    "friends": "Van vrienden",
+    "friendsIntro": "De lijsten die je vrienden je laten zien. Weghalen neemt een lijst alleen hier weg; de link blijft werken.",
+    "friendsEmpty": "Nog geen lijsten. Wat een vriend je laat zien, vind je hier.",
+    "friendsNone": "Geen lijst van vrienden past bij “{query}”.",
     "deleted": "Verwijderd",
     "remove": "Weghalen",
     "login": "Log in om zelf lijsten te maken"
@@ -110,7 +115,18 @@
     "newLinkConfirm": "Nieuwe link geven",
     "newLinkDone": "Deze lijst heeft een nieuwe link. De oude werkt niet meer.",
     "oldLink": "Deze lijst heeft een nieuwe link. Hier staat alleen nog wat jij aanvinkte: je kunt het verlagen of intrekken. Vraag de eigenaar om de nieuwe link.",
-    "oldLinkDone": "Je hebt hier niets meer aangevinkt."
+    "oldLinkDone": "Je hebt hier niets meer aangevinkt.",
+    "newLinkBodyFriends": "De vriend die hem bij de eigen lijsten vindt, krijgt de nieuwe link vanzelf. | De {n} vrienden die hem bij hun lijsten vinden, krijgen de nieuwe link vanzelf.",
+    "befriend": "Vriend worden met {name}",
+    "befriendAsked": "Verzoek verstuurd aan {name}",
+    "befriendFriends": "Vrienden met {name}",
+    "friends": "Vrienden",
+    "friendsTitle": "Wie vindt “{title}” bij de eigen lijsten?",
+    "friendsAll": "Alle vrienden",
+    "friendsNote": "Iedereen met de link kan de lijst openen, ook wie hier niet aan staat.",
+    "friendsNone": "Je hebt nog geen vrienden.",
+    "friendsSave": "Opslaan",
+    "friendsSaved": "Geen vriend vindt deze lijst nog bij de eigen lijsten. | 1 vriend vindt deze lijst bij de eigen lijsten. | {n} vrienden vinden deze lijst bij hun eigen lijsten."
   },
   "wish": {
     "yours": "Je hebt dit zelf | Je hebt er zelf {n}",

@@ -218,6 +218,42 @@ function onLeaveDialogClose() {
   if (answer(leaveDialog.value) === 'leave' && !deleting.value) deleteOrLeave('leave')
 }
 
+// Someone who opened a list may ask its owners to be friends, one button per owner. That is how
+// people find each other here: there is no search, and the request names the list it came from.
+// What was asked stays on the page as a line; the server says the same after a reload, also for
+// a request that was declined, which its sender must not be able to tell.
+type Befriendable = NonNullable<typeof list.value.ownersToBefriend>[number]
+const befriendable = computed(() => (list.value.old ? [] : list.value.ownersToBefriend ?? []))
+const asked = reactive(new Map<number, 'asked' | 'friends'>())
+const befriendState = (owner: Befriendable) => asked.get(owner.id) ?? owner.state
+const befriending = ref(false)
+
+async function befriend(owner: Befriendable) {
+  if (befriending.value) return
+  befriending.value = true
+  bandError.value = ''
+  try {
+    const answered = await $fetch<{ state: 'asked' | 'friends' }>(`/api/lists/${token.value}/friend-requests`, { method: 'POST', body: { owner: owner.id } })
+    asked.set(owner.id, answered.state)
+    // The button is gone; the line that took its place is read out where the focus lands.
+    await nextTick()
+    document.getElementById(`befriend-${owner.id}`)?.focus()
+  }
+  catch (error) {
+    bandError.value = parse(error).message
+  }
+  finally {
+    befriending.value = false
+  }
+}
+
+// "Vrienden", for an owner: which friends find this list with their own lists.
+const friendsDialog = useTemplateRef<{ open: () => Promise<void> }>('friendsDialog')
+const friendsStatus = ref('')
+function onFriendsSaved(shown: number) {
+  friendsStatus.value = t('list.friendsSaved', { n: shown }, shown)
+}
+
 // "Nieuwe link", in edit mode: the list gets another address and the one it had stops opening it.
 // It asks first. Afterwards the page goes on at the new address, where it says so once: the
 // page there is a new one, so what to say travels in a state that page clears when it goes.
@@ -232,8 +268,20 @@ if (justRelinked) {
   onBeforeUnmount(() => (relinkedTo.value = null))
 }
 
-function askForNewLink() {
-  if (!relinking.value) newLinkDialog.value?.showModal()
+// How many of the owner's friends find the list now: they follow it to the new address.
+const shownFriends = ref(0)
+
+async function askForNewLink() {
+  if (relinking.value) return
+  try {
+    const answered = await $fetch<{ friends: { shown: boolean }[] }>(`/api/lists/${token.value}/friends`)
+    shownFriends.value = answered.friends.filter(friend => friend.shown).length
+  }
+  catch {
+    // The question can do without that sentence.
+    shownFriends.value = 0
+  }
+  newLinkDialog.value?.showModal()
 }
 
 async function onNewLinkClose() {
@@ -560,15 +608,31 @@ async function addWish(title: string) {
       <template #actions>
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
         <ShareButton v-if="!list.deleted && !list.old" :path="localePath(`/l/${list.token}`)" :share="{ title: list.title, text: shareText }" />
+        <div v-if="befriendable.length" class="befriend">
+          <template v-for="owner in befriendable" :key="owner.id">
+            <art-button v-if="befriendState(owner) === 'none'" variant="quiet" size="s">
+              <button type="button" :aria-disabled="befriending || undefined" @click="befriend(owner)">{{ t('list.befriend', { name: owner.name }) }}</button>
+            </art-button>
+            <span v-else :id="`befriend-${owner.id}`" class="befriend-state" tabindex="-1">
+              {{ befriendState(owner) === 'asked' ? t('list.befriendAsked', { name: owner.name }) : t('list.befriendFriends', { name: owner.name }) }}
+            </span>
+          </template>
+        </div>
+        <p v-if="bandError && !canManage" class="form-message" role="alert">{{ bandError }}</p>
         <template v-if="canManage">
           <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
           <art-button v-if="!editing" variant="secondary">
             <button ref="editButton" type="button" @click="startEditing()"><AppIcon name="pencil" />{{ t('listEdit.start') }}</button>
           </art-button>
           <art-button variant="secondary">
+            <button type="button" @click="friendsDialog?.open()">{{ t('list.friends') }}</button>
+          </art-button>
+          <art-button variant="secondary">
             <button type="button" :aria-disabled="inviting || undefined" @click="inviteCoOwner">{{ t('list.invite') }}</button>
           </art-button>
           <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" :share="{ title: list.title, text: t('list.inviteShareText', { title: list.title }) }" />
+          <!-- Always there for an owner, so the words are announced when they appear. -->
+          <p class="form-message" role="status">{{ friendsStatus }}</p>
           <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
         </template>
       </template>
@@ -728,6 +792,8 @@ async function addWish(title: string) {
       </button>
     </div>
 
+    <ListFriendsDialog v-if="canManage" ref="friendsDialog" :token="list.token" :title="list.title" @saved="onFriendsSaved" />
+
     <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 
     <dialog v-if="canManage && shared" ref="leaveDialog" class="dialog" aria-labelledby="list-leave-title" aria-describedby="list-leave-text" @close="onLeaveDialogClose">
@@ -764,6 +830,7 @@ async function addWish(title: string) {
       <p id="list-new-link-text">
         {{ t('list.newLinkBody') }}
         <template v-if="shared">{{ t('list.newLinkBodyShared', { names: otherOwners }, list.owners.length - 1) }}</template>
+        <template v-if="shownFriends">{{ ' ' + t('list.newLinkBodyFriends', { n: shownFriends }, shownFriends) }}</template>
       </p>
       <form method="dialog" class="actions">
         <art-button variant="secondary">

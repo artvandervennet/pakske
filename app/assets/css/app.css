@@ -298,6 +298,14 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
 .friend-saved { min-block-size: 1.5em; font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
 .friends-sent-title { margin-block: var(--space-6) var(--space-2); }
 
+/* On someone else's list, in the title band: asking its owners to be friends, and what became
+   of that. A line of its own under the band's button. */
+.befriend { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); }
+.befriend-state { font-size: var(--step--1); font-weight: var(--weight-medium); }
+.befriend-state:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+/* The dialog that says which friends find a list: its switches under each other, like a friend's row. */
+.friends-dialog .friend-shows { margin-block-end: var(--space-2); }
+
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
 
 /* Candidate for Gesso: rows that unfold in place. Each row is a tick, a picture, a title with

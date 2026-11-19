@@ -13,6 +13,8 @@ useHead({ title: () => t('home.title') })
 const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api/home')
 const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
+const shown = computed(() => home.value?.shown ?? [])
+const shownTotal = computed(() => home.value?.shownTotal ?? 0)
 const notices = computed(() => home.value?.notices ?? [])
 const requests = computed(() => home.value?.requests ?? [])
 const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
@@ -27,6 +29,11 @@ const pageTitle = ref<HTMLElement>()
 // After "Weghalen" the focus goes to the section's heading. Logged out, the last list takes the
 // whole section along; then it goes to the page's heading.
 const { removeError, forget } = useForgetList(refresh, () => openedTitle.value ?? pageTitle.value)
+
+// What friends show the person, only when there is any. "Weghalen" takes a list off this page;
+// when it was the last one the section goes, and the focus goes to the page's heading.
+const shownTitle = ref<HTMLElement>()
+const { hideError, hide } = useHideShown(refresh, () => shownTitle.value ?? pageTitle.value)
 
 // Notices. Opening this page counts as having seen them, which takes the header's mark away.
 const { markSeen } = useNotices()
@@ -130,10 +137,13 @@ const showNotices = computed(() => loggedIn.value && (notices.value.length > 0 |
 // Logged out, the page is the hero and the lists opened before; with none, one quiet sentence.
 const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !!loadError.value)
 
+// What friends show the person stands between their own lists and the visited ones, when there is any.
+const showShown = computed(() => shown.value.length > 0 || !!hideError.value)
+
 // Gesso paints a page's sections 1, 2, 3 in order, whichever of them are there.
 const paints = computed(() => {
   let paint = 0
-  return { notices: showNotices.value ? ++paint : 0, yours: loggedIn.value ? ++paint : 0, opened: ++paint }
+  return { notices: showNotices.value ? ++paint : 0, yours: loggedIn.value ? ++paint : 0, friends: showShown.value ? ++paint : 0, opened: ++paint }
 })
 </script>
 
@@ -221,6 +231,23 @@ const paints = computed(() => {
                description, so a screen reader says which lists it leads to. -->
           <p v-if="ownedTotal > owned.length" class="lists-all">
             <NuxtLink :to="localePath('/lists')" aria-describedby="yours-title">{{ t('home.allLists', { n: ownedTotal }) }}</NuxtLink>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="showShown" class="band section" :data-paint="paints.friends" aria-labelledby="friends-lists-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="friends-lists-title" ref="shownTitle" class="section-title" tabindex="-1">{{ t('home.friends') }}</h2>
+        </div>
+        <div class="section-body">
+          <p v-if="hideError" class="form-message" role="alert">{{ hideError }}</p>
+          <ul class="rows">
+            <ShownListRow v-for="list in shown" :key="list.token" :list="list" @hide="hide" />
+          </ul>
+          <p v-if="shownTotal > shown.length" class="lists-all">
+            <NuxtLink :to="{ path: localePath('/lists'), query: { tab: 'friends' } }" aria-describedby="friends-lists-title">{{ t('home.allLists', { n: shownTotal }) }}</NuxtLink>
           </p>
         </div>
       </div>

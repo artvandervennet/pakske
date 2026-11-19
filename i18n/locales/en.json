@@ -19,6 +19,7 @@
     "yourLists": "Your lists",
     "visited": "Visited",
     "allLists": "All lists ({n})",
+    "friends": "From friends",
     "notices": "Notices"
   },
   "lists": {
@@ -36,6 +37,10 @@
     "visitedIntro": "When someone sends you the link to a list, you find it here again. Removing a list only takes it away here; the link keeps working.",
     "visitedEmpty": "No lists yet. Open the link someone sent you.",
     "visitedNone": "No visited list matches “{query}”.",
+    "friends": "From friends",
+    "friendsIntro": "The lists your friends show you. Removing a list only takes it away here; the link keeps working.",
+    "friendsEmpty": "No lists yet. What a friend shows you, you find here.",
+    "friendsNone": "No list from friends matches “{query}”.",
     "deleted": "Deleted",
     "remove": "Remove",
     "login": "Log in to make lists of your own"
@@ -110,7 +115,18 @@
     "newLinkConfirm": "Give a new link",
     "newLinkDone": "This list has a new link. The old one no longer works.",
     "oldLink": "This list has a new link. Only what you ticked is still here: you can lower it or take it back. Ask the owner for the new link.",
-    "oldLinkDone": "You have nothing ticked here any more."
+    "oldLinkDone": "You have nothing ticked here any more.",
+    "newLinkBodyFriends": "The friend who finds it with their own lists gets the new link by itself. | The {n} friends who find it with their lists get the new link by itself.",
+    "befriend": "Become friends with {name}",
+    "befriendAsked": "Request sent to {name}",
+    "befriendFriends": "Friends with {name}",
+    "friends": "Friends",
+    "friendsTitle": "Who finds “{title}” with their own lists?",
+    "friendsAll": "All friends",
+    "friendsNote": "Anyone who has the link can open the list, also someone who is off here.",
+    "friendsNone": "You have no friends yet.",
+    "friendsSave": "Save",
+    "friendsSaved": "No friend finds this list with their own lists yet. | 1 friend finds this list with their own lists. | {n} friends find this list with their own lists."
   },
   "wish": {
     "yours": "You have this yourself | You have {n} yourself",
