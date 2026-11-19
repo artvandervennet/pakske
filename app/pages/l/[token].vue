@@ -23,6 +23,12 @@ const names = useNames()
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
+// The words that go along with the link in the share sheet: "my" list from its owner,
+// "our" from one of several, "the" list from someone passing it on.
+const shareText = computed(() => {
+  const whose = !list.value.viewerOwnsList ? 'Other' : list.value.owners.length > 1 ? 'Joint' : 'Own'
+  return t(`share.text${whose}`, { title: list.value.title })
+})
 
 const open = reactive(new Set<number>())
 function toggle(id: number) {
@@ -551,7 +557,7 @@ async function addWish(title: string) {
       </template>
       <template #actions>
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
-        <ShareButton v-if="!list.deleted && !list.old" :path="localePath(`/l/${list.token}`)" />
+        <ShareButton v-if="!list.deleted && !list.old" :path="localePath(`/l/${list.token}`)" :share="{ title: list.title, text: shareText }" />
         <template v-if="canManage">
           <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
           <art-button v-if="!editing" variant="secondary">

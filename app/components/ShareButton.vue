@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { shareMessage } from '#shared/utils/share'
+
 // Copies the full address of a page on this site, and says so in the button itself for a few
 // seconds: nothing appears beside it, so what stands next to it stays where it is. A screen
 // reader doesn't read a button's new words while the focus is on it, so the same is said in a
 // status line nobody sees. Without a clipboard (the site served over plain http on a home
 // network, or permission refused) it shows the address to copy by hand.
-const props = defineProps<{ path: string }>()
+// With `share` it is "Delen" instead, and opens the device's own share sheet with those words
+// and the address, to send on with WhatsApp or anything else there. A browser without a share
+// sheet gets the copy button, as if `share` wasn't given.
+const props = defineProps<{ path: string, share?: { title: string, text: string } }>()
 const { t } = useI18n()
 
 const id = useId()
@@ -14,6 +19,27 @@ const address = ref('')
 const field = ref<HTMLInputElement>()
 let timer: ReturnType<typeof setTimeout> | undefined
 let lastStatus = ''
+
+// The server can't know what the browser can do, so it sends "Delen" wherever sharing is
+// meant. A browser without a share sheet changes that to the copy button once it has the page.
+const sharing = ref(props.share !== undefined)
+onMounted(() => {
+  sharing.value = props.share !== undefined && typeof navigator.share === 'function'
+})
+
+async function press() {
+  if (!sharing.value || !props.share) return copy()
+  try {
+    // The link goes in the words and not beside them as `url`: given both, the apps in the
+    // sheet of a Mac or an iPhone send the address alone.
+    await navigator.share({ title: props.share.title, text: shareMessage(props.share.text, location.origin + props.path) })
+  }
+  catch (failure) {
+    // Closing the sheet without choosing is no failure. Anything else: the link at least.
+    if (failure instanceof DOMException && failure.name === 'AbortError') return
+    await copy()
+  }
+}
 
 async function copy() {
   const url = location.origin + props.path
@@ -51,11 +77,12 @@ onBeforeUnmount(() => clearTimeout(timer))
 <template>
   <div class="share">
     <art-button variant="secondary">
-      <!-- Both wordings lie on top of each other and one shows, so the button is always as wide
-           as the longer one. The hidden one is no part of the button's name. -->
-      <button type="button" @click="copy">
+      <!-- The wordings lie on top of each other and one shows, so the button is always as wide
+           as the longest. The hidden ones are no part of the button's name. -->
+      <button type="button" @click="press">
         <span class="share-faces">
-          <span class="share-face" :class="{ away: copied }"><AppIcon name="share" />{{ t('share.copy') }}</span>
+          <span v-if="share" class="share-face" :class="{ away: copied || !sharing }"><AppIcon name="share" />{{ t('share.open') }}</span>
+          <span class="share-face" :class="{ away: copied || sharing }"><AppIcon name="share" />{{ t('share.copy') }}</span>
           <span class="share-face" :class="{ away: !copied }"><AppIcon name="check" />{{ t('share.copiedShort') }}</span>
         </span>
       </button>
