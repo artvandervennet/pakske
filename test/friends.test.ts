@@ -412,6 +412,41 @@ describe('showing a list to a friend', () => {
     expect(shownRows_(db)).toBe(0)
   })
 
+  it('counts a friend who opened the list by its link as having it', () => {
+    const { db, art, mom, kerst } = friends()
+    rememberList(db, mom.id, kerst)
+    // Art sees it on both screens: she has the list, so there is nothing left to share.
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, shown: true }])
+    expect(listFriends(db, art.id).find(friend => friend.id === mom.id)!.shows).toMatchObject([{ token: kerst, shown: true }])
+    // And Mom sees it as one of Art's that she has.
+    expect(listFriends(db, mom.id).find(friend => friend.id === art.id)!.sees).toEqual([{ token: kerst, title: 'Kerst' }])
+    // Nobody was told anything: she opened it herself.
+    expect(shownNotices(db, mom.id)).toEqual([])
+  })
+
+  it('takes such a list off the friend\'s page when it is switched off', () => {
+    const { db, art, mom, kerst } = friends()
+    rememberList(db, mom.id, kerst)
+    setShownToOne(db, art.id, kerst, mom.id, false)
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, shown: false }])
+    expect(listOthersLists(db, mom.id)).toEqual([])
+    expect(listFriends(db, mom.id).find(friend => friend.id === art.id)!.sees).toEqual([])
+    // The link is still the key: opening it again puts it back.
+    rememberList(db, mom.id, kerst)
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, shown: true }])
+  })
+
+  it('keeps such a list on when the whole set is saved, without telling the friend what they know', () => {
+    const { db, art, mom, kerst } = friends()
+    rememberList(db, mom.id, kerst)
+    setShownLists(db, art.id, mom.id, [kerst])
+    expect(shownNotices(db, mom.id)).toEqual([])
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, shown: true }])
+    // Saved without it, it goes.
+    setShownLists(db, art.id, mom.id, [])
+    expect(listOthersLists(db, mom.id)).toEqual([])
+  })
+
   it('shows nothing just by being friends', () => {
     const { db, art, mom } = friends()
     expect(listShownLists(db, mom.id)).toEqual([])
@@ -598,9 +633,10 @@ describe('showing a list to a friend', () => {
     expect(listOpenedLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
     setShownTo(db, art.id, kerst, [mom.id])
     expect(listOpenedLists(db, mom.id)).toEqual([])
-    // She had opened its link herself before, so it is a visited list again once it isn't shown.
+    // Switched off, it is off her page, also though she had opened its link herself before:
+    // to Art she had the list, and he took it away.
     setShownTo(db, art.id, kerst, [])
-    expect(listOpenedLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
+    expect(listOpenedLists(db, mom.id)).toEqual([])
   })
 
   it('stands in one row of other people\'s lists with the ones opened by a link, and never twice', () => {

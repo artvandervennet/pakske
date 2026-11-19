@@ -76,7 +76,8 @@
     "nowInvited": "{name} is invited.",
     "textOwn": "Hey, here’s my wishlist “{title}”. Do make an account of your own: then you can see what’s already ticked off, and nothing gets bought twice.",
     "textJoint": "Hey, here’s our wishlist “{title}”. Do make an account of your own: then you can see what’s already ticked off, and nothing gets bought twice.",
-    "textOther": "Hey, here’s the wishlist “{title}”. Do make an account of your own: then you can see what’s already ticked off, and nothing gets bought twice.",
+    "textOther": "Hey, here’s the wishlist “{title}” by {names}. Do make an account of your own: then you can see what’s already ticked off, and nothing gets bought twice.",
+    "textNobody": "Hey, here’s the wishlist “{title}”. Do make an account of your own: then you can see what’s already ticked off, and nothing gets bought twice.",
     "title": "Share this wish | Share these {n} wishes",
     "how": "How do you want to share?",
     "modeCopy": "Copy",
@@ -371,7 +372,6 @@
     "showsNone": "You have no lists to show.",
     "seesTitle": "What you see of {name}’s",
     "seesNone": "{name} shows you no lists yet.",
-    "linkNote": "With a list switched on, your friend finds it under “From others”. Anyone who has a list’s link can open it anyway.",
     "saved": "Saved",
     "remove": "Remove friend",
     "removeTitle": "Remove {name} as a friend?",
@@ -491,7 +491,7 @@
       "buyers": "Someone who is logged in sees, on other people’s wishes, who is giving what, with names and notes. If you give anonymously, they read “Someone else” where your name would be.",
       "owners": "The owners of a wish never see who gives it, how many are taken, or what was written about it.",
       "picture": "A wish’s picture has a random address of its own. Whoever has that address can open the picture.",
-      "hidden": "Other people never see your email address. No page lists the accounts or other people’s lists, nobody sees who opened their list, and search engines are asked to stay out.",
+      "hidden": "Other people never see your email address. No page lists the accounts or other people’s lists, and search engines are asked to stay out. Nobody sees who opened their list, with one exception: when a friend opens your list by its link, you see among your friends that they have it.",
       "friends": "A friend sees your name and your profile picture, and finds the lists you switch on for them. Nobody sees who your friends are. If you ask the owner of a list to be friends, they see your name and which list you asked from. If you decline a request, whoever sent it isn’t told. If you send a friend wishes or a list, they get a notice with your name; if they close it, you aren’t told."
     },
     "where": {

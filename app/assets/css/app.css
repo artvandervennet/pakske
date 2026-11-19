@@ -267,42 +267,43 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
 .friend-item { display: block; }
 .friend > summary {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1) var(--space-4);
+  gap: var(--space-4);
   min-block-size: 3.5rem;
   padding-block: var(--space-3);
   list-style: none;
   cursor: pointer;
+  --picture-size: 2.75rem;
 }
 .friend > summary::-webkit-details-marker { display: none; }
 .friend > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
-.friend-name { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
-.friend-name::after {
-  content: "";
-  display: inline-block;
-  inline-size: 0.45em;
-  block-size: 0.45em;
-  margin-inline-start: 0.5em;
-  border-inline-end: 2px solid currentColor;
-  border-block-end: 2px solid currentColor;
-  rotate: 45deg;
-  translate: 0 -0.2em;
-  color: var(--ink-muted);
+/* The name with, under it, what goes each way; the chevron stands at the far end. */
+.friend-text { flex: 1; display: grid; gap: 0.1em; min-inline-size: 0; }
+.friend-name { font-weight: var(--weight-bold); overflow-wrap: anywhere; }
+.friend > summary > .icon { color: var(--ink-muted); transition: rotate var(--dur-dab) var(--ease-brush); }
+.friend[open] > summary > .icon { rotate: 180deg; }
+/* Under the name, in line with it: the two columns, and at their end the one thing that ends
+   the friendship. On a narrow screen the columns stack and start at the row's own edge. */
+.friend-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-6) var(--space-8);
+  padding-block: var(--space-2) var(--space-6);
+  padding-inline-start: calc(2.75rem + var(--space-4));
 }
-.friend[open] .friend-name::after { rotate: 225deg; translate: 0 0.1em; }
-.friend > summary > .row-meta { flex: 1 1 12rem; }
-.friend-body { display: grid; gap: var(--space-6); padding-block: var(--space-2) var(--space-6); }
-.friend-shows { display: grid; justify-items: start; min-inline-size: 0; padding: 0; margin: 0; border: 0; }
-.friend-shows > legend { padding: 0; }
-.friend-saved { min-block-size: 1.5em; font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
+@media (max-width: 40rem) { .friend-body { padding-inline-start: 0; } }
+.friend-shows { display: grid; align-content: start; justify-items: start; min-inline-size: 0; padding: 0; margin: 0; border: 0; }
+.friend-shows > legend { padding: 0; margin-block-end: var(--space-1); }
+.friend-sees { display: grid; align-content: start; min-inline-size: 0; }
+.friend-sees > .wish-label { margin: 0 0 var(--space-1); }
+/* A friend's lists, each a line as high as a switch, so the two columns keep step. */
+.friend-lists { display: grid; margin: 0; padding: 0; list-style: none; }
+.friend-lists > li { display: flex; align-items: center; min-block-size: 2.75rem; }
+.friend-lists a { overflow-wrap: anywhere; }
+.friend-foot { grid-column: 1 / -1; display: grid; justify-items: start; }
+.word-button.danger { color: var(--danger); }
 .friends-sent-title { margin-block: var(--space-6) var(--space-2); }
 
-/* On someone else's list, in the title band: asking its owners to be friends, and what became
-   of that. A line of its own under the band's button. */
-.befriend { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); }
-.befriend-state { font-size: var(--step--1); font-weight: var(--weight-medium); }
-.befriend-state:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 /* Candidate for Gesso: a share sheet. One <dialog class="dialog sheet"> that is a centred card
    on a wide screen and lies against the bottom edge on a narrow one, where a thumb reaches it.
    The dialog itself has no padding, so a click that lands on it landed on the backdrop. */
@@ -384,7 +385,6 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
   box-shadow: inset 0 0 0 1px var(--rule);
 }
 .person-picture.study { background: linear-gradient(var(--study-angle), var(--study-a) 55%, var(--study-b) 55%); }
-.friend > summary > .person-picture { --picture-size: 2.25rem; }
 /* The profile picture in Settings, with what can be done to it beside it. */
 .profile-picture { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-6); margin-block-end: var(--space-6); --picture-size: 5rem; }
 .profile-picture-text { display: grid; gap: var(--space-1); min-inline-size: 0; }

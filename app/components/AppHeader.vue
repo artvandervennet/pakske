@@ -47,12 +47,6 @@ async function logout() {
     <NuxtLink :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/friends')">{{ t('nav.friends') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
-    <!-- Logging out is an action, so it is a button and looks like one. It stands among the
-         links and not in the actions: there <art-header> folds it away under "Menu" on a small
-         screen, with the links, and the bar keeps its room for the bell. -->
-    <art-button v-if="loggedIn" size="s" variant="secondary">
-      <button type="button" @click="logout">{{ t('nav.logout') }}</button>
-    </art-button>
     <!-- The bell is an action, and actions stay in the bar at every width: never under "Menu". -->
     <button
       v-if="loggedIn"
@@ -68,6 +62,12 @@ async function logout() {
       <AppIcon name="bell" />
       <span v-if="unseen > 0" class="bell-dot" aria-hidden="true" />
     </button>
+    <!-- Logging out is an action too, and looks like one: a button after the bell. With `fold`
+         <art-header> moves it into "Menu" on a small screen, as its last line, so the bar there
+         keeps its room for the bell. -->
+    <art-button v-if="loggedIn" slot="actions" fold size="s" variant="secondary">
+      <button type="button" @click="logout">{{ t('nav.logout') }}</button>
+    </art-button>
     <art-button v-else slot="actions" size="s">
       <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
     </art-button>

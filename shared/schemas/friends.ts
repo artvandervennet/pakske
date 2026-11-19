@@ -12,9 +12,9 @@ export interface FriendView {
   name: string
   /** Their profile picture, or null when they have none and the page draws one from the id. */
   picture: string | null
-  /** Every live list of the asker's own that isn't this friend's too, with whether this friend finds it. */
+  /** Every live list of the asker's own that isn't this friend's too, with whether this friend has it: switched on for them, or opened by its link. */
   shows: { token: string, title: string, shown: boolean }[]
-  /** The lists this friend shows the asker, without the ones the asker took off their page. */
+  /** The lists of this friend's that the asker has: shown by the friend (without the ones the asker took off their page) or opened by their link. */
   sees: { token: string, title: string }[]
 }
 

@@ -597,10 +597,10 @@ req sis GET "/api/friends/links/$FLINK"; check "sis opens it" 200; has "… from
 req sis POST "/api/friends/links/$FLINK/accept"; check "sis accepts" 200
 req lot POST "/api/friends/links/$FLINK/accept"; check "the link is spent for lot" 409; has "… with the code invite_closed" invite_closed
 req lot GET "/api/friends/links/$UNKNOWN"; check "a friend link nobody made is not found" 404
-req mom GET /api/friends; same "being friends shows mom nothing of art's" ".friends[0].sees.length" 0
+req mom GET /api/friends; same "being friends shows mom nothing of art's that she hadn't opened herself" ".friends[0].sees.some(l=>l.token==='$UNKNOWN')" false; same "… and what she opened by its link counts as hers to see" ".friends[0].sees.some(l=>l.token==='$FLIST')" true
 req mom GET /api/lists; same "… the list she opened is among other people's, as a visited one" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req art PUT "/api/friends/$FMOM/lists" "{\"lists\":[\"$FLIST\"]}"; check "art ticks his list for mom" 204
-req mom GET /api/friends; same "now art shows it to her" ".friends[0].sees.length" 1
+req mom GET /api/friends; same "now art shows it to her, and she has it once" ".friends[0].sees.filter(l=>l.token==='$FLIST').length" 1
 req mom GET /api/lists; same "… and it is among other people's lists once, not twice" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req mom GET /api/home; same "the home page has it once too" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req sis GET "/api/lists/$FLIST/friends"; check "sis cannot see who art shows his list to" 404

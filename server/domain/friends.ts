@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql } fr
 import type { FriendLinkView, FriendView, RequestsView } from '../../shared/schemas/friends'
 import type { ShownList } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { friendLinks, friendRequests, friendships, invites, listFriends as shown, listOwners, lists, notices, users } from '../db/schema'
+import { friendLinks, friendRequests, friendships, invites, listFriends as shown, listOwners, lists, listVisits, notices, users } from '../db/schema'
 import { DomainError } from './errors'
 import { ownedListId, ownersOfList } from './lists'
 import { addNotice } from './notices'
@@ -291,10 +291,19 @@ const tickOf = (listId: number, friendId: number, ownerId: number) =>
 const toldOf = (listId: number, friendId: number, ownerId: number) =>
   and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId), eq(notices.userId, friendId), eq(notices.actorId, ownerId))
 
+// A friend has a list of someone's in two ways: its owner switched it on for them, or they
+// opened its link themselves, which the site remembers as a visit. To the owner both read as
+// "this friend has it": there is nothing left to share with them, and one switch takes it off
+// their page either way. So between friends, and only between friends, an owner does see that
+// their list was opened. The privacy page says so.
+const opened = (listId: number, userId: number) => and(eq(listVisits.listId, listId), eq(listVisits.userId, userId))
+
 /**
- * Sets one owner's tick of one list for one friend. A new tick tells the friend; taking one away
- * takes that notice along and tells nobody. A friend who owns the list is not ticked: it is on
- * their own lists already. Runs in the caller's transaction.
+ * Sets one owner's tick of one list for one friend. A new tick tells the friend, unless they
+ * have the list already because they opened it themselves. Taking it away takes the notice
+ * along, and the friend's own visit, so the list is off their page however it got there; nobody
+ * is told. A friend who owns the list is not ticked: it is on their own lists already. Runs in
+ * the caller's transaction.
  */
 function tick(db: Db, ownerId: number, list: { id: number, title: string }, friendId: number, on: boolean): void {
   const has = db.select({ listId: shown.listId }).from(shown).where(tickOf(list.id, friendId, ownerId)).get() !== undefined
@@ -302,12 +311,16 @@ function tick(db: Db, ownerId: number, list: { id: number, title: string }, frie
     const theirs = db.select({ userId: listOwners.userId }).from(listOwners)
       .where(and(eq(listOwners.listId, list.id), eq(listOwners.userId, friendId))).get() !== undefined
     if (theirs) return
+    const knows = db.select({ userId: listVisits.userId }).from(listVisits).where(opened(list.id, friendId)).get() !== undefined
     db.insert(shown).values({ listId: list.id, userId: friendId, shownBy: ownerId }).run()
-    addNotice(db, { userId: friendId, kind: 'list_shown', actorId: ownerId, title: list.title, listId: list.id })
+    if (!knows) addNotice(db, { userId: friendId, kind: 'list_shown', actorId: ownerId, title: list.title, listId: list.id })
   }
-  if (!on && has) {
-    db.delete(shown).where(tickOf(list.id, friendId, ownerId)).run()
-    db.delete(notices).where(toldOf(list.id, friendId, ownerId)).run()
+  if (!on) {
+    if (has) {
+      db.delete(shown).where(tickOf(list.id, friendId, ownerId)).run()
+      db.delete(notices).where(toldOf(list.id, friendId, ownerId)).run()
+    }
+    db.delete(listVisits).where(opened(list.id, friendId)).run()
   }
 }
 
@@ -333,7 +346,7 @@ export function setShownLists(db: Db, ownerId: number, friendId: number, listTok
 
 /**
  * The person's friends who can be shown this list of the person's own, each with whether they
- * are, and whether the person invited them to co-own it in the last 30 days. A friend who owns
+ * have it (switched on for them, or opened by its link), and whether the person invited them to co-own it in the last 30 days. A friend who owns
  * the list too isn't among them: it is on their own lists already.
  *
  * `invited` reads the same for an invitation that waits and for one the friend declined, and
@@ -348,9 +361,11 @@ export function listFriendsForList(db: Db, ownerId: number, listToken: string): 
   const asked = new Set(db.select({ userId: invites.sentTo }).from(invites)
     .where(and(eq(invites.listId, listId), eq(invites.kind, 'list'), eq(invites.createdBy, ownerId), isNotNull(invites.sentTo), gt(invites.expiresAt, new Date())))
     .all().map(row => row.userId))
+  // A friend who opened the list by its link has it as well.
+  const visited = new Set(db.select({ userId: listVisits.userId }).from(listVisits).where(eq(listVisits.listId, listId)).all().map(row => row.userId))
   return friendsOf(db, ownerId)
     .filter(friend => !owners.has(friend.id))
-    .map(friend => ({ ...friend, shown: ticked.has(friend.id), invited: asked.has(friend.id) }))
+    .map(friend => ({ ...friend, shown: ticked.has(friend.id) || visited.has(friend.id), invited: asked.has(friend.id) }))
 }
 
 /**
@@ -444,14 +459,26 @@ export function listFriends(db: Db, userId: number): FriendView[] {
   const own = ownLists(db, userId)
   const given = db.select({ listId: shown.listId, friendId: shown.userId }).from(shown).where(eq(shown.shownBy, userId)).all()
   const got = ticksFor(db, userId)
+  // Lists that were opened by their link count too, both ways: what a friend opened of the
+  // person's, and what the person opened of a friend's.
+  const visits = db.select({ listId: listVisits.listId, userId: listVisits.userId }).from(listVisits).all()
+  const mine = new Set(own.map(list => list.id))
   return friendsOf(db, userId).map((friend) => {
     const theirs = listsOwnedBy(db, friend.id)
+    const shownByThem = got.filter(row => row.by === friend.id).map(row => ({ token: row.token, title: row.title }))
+    const openedOfTheirs = ownLists(db, friend.id)
+      .filter(list => !mine.has(list.id) && visits.some(row => row.listId === list.id && row.userId === userId) && !shownByThem.some(row => row.token === list.token))
+      .map(list => ({ token: list.token, title: list.title }))
     return {
       ...friend,
       // Not the lists this friend owns too: those are theirs already, and have no switch.
       shows: own.filter(list => !theirs.has(list.id))
-        .map(list => ({ token: list.token, title: list.title, shown: given.some(row => row.listId === list.id && row.friendId === friend.id) })),
-      sees: got.filter(row => row.by === friend.id).map(row => ({ token: row.token, title: row.title })),
+        .map(list => ({
+          token: list.token,
+          title: list.title,
+          shown: given.some(row => row.listId === list.id && row.friendId === friend.id) || visits.some(row => row.listId === list.id && row.userId === friend.id),
+        })),
+      sees: [...shownByThem, ...openedOfTheirs],
     }
   })
 }

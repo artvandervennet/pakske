@@ -94,9 +94,14 @@ async function onRemoveClose() {
     <details ref="details" class="friend">
       <summary ref="summary">
         <PersonPicture :person="friend" />
-        <span class="friend-name">{{ friend.name }}</span>
-        <span class="row-meta">{{ counts }}</span>
+        <span class="friend-text">
+          <span class="friend-name">{{ friend.name }}</span>
+          <span class="row-meta">{{ counts }}</span>
+        </span>
+        <AppIcon name="chevron" />
       </summary>
+      <!-- Two columns where there is room: what goes each way. Nothing is explained here; a
+           switch says what it does by the list it stands beside. -->
       <div class="friend-body">
         <fieldset class="friend-shows">
           <legend class="wish-label">{{ t('friends.showsTitle', { name: friend.name }) }}</legend>
@@ -105,20 +110,15 @@ async function onRemoveClose() {
             <input
               type="checkbox"
               :checked="ticked.has(list.token)"
-              :aria-describedby="`${id}-note`"
               @change="event => flip(list.token, (event.target as HTMLInputElement).checked)"
             >
             {{ list.title }}
           </label>
-          <p :id="`${id}-note`" class="switch-hint">{{ t('friends.linkNote') }}</p>
-          <!-- Always there, so the word is announced when it appears. -->
-          <p class="friend-saved" role="status">{{ saved ? t('friends.saved') : '' }}</p>
-          <p v-if="error" class="form-message" role="alert">{{ error }}</p>
         </fieldset>
 
         <div class="friend-sees">
           <h3 :id="`${id}-sees`" class="wish-label">{{ t('friends.seesTitle', { name: friend.name }) }}</h3>
-          <ul v-if="friend.sees.length" class="people" :aria-labelledby="`${id}-sees`">
+          <ul v-if="friend.sees.length" class="friend-lists" :aria-labelledby="`${id}-sees`">
             <li v-for="list in friend.sees" :key="list.token">
               <NuxtLink :to="localePath(`/l/${list.token}`)">{{ list.title }}</NuxtLink>
             </li>
@@ -126,10 +126,11 @@ async function onRemoveClose() {
           <p v-else class="muted">{{ t('friends.seesNone', { name: friend.name }) }}</p>
         </div>
 
-        <div class="actions">
-          <art-button variant="quiet" size="s" class="danger">
-            <button type="button" :aria-disabled="removing || undefined" @click="removeDialog?.showModal()">{{ t('friends.remove') }}</button>
-          </art-button>
+        <div class="friend-foot">
+          <p v-if="error" class="form-message" role="alert">{{ error }}</p>
+          <!-- Always there, so the word is announced when it appears; the switch shows the rest. -->
+          <p class="visually-hidden" role="status">{{ saved ? t('friends.saved') : '' }}</p>
+          <button type="button" class="word-button danger" :aria-disabled="removing || undefined" @click="removeDialog?.showModal()">{{ t('friends.remove') }}</button>
         </div>
       </div>
     </details>

@@ -23,11 +23,12 @@ const names = useNames()
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
-// The words that go along with the link in the share sheet: "my" list from its owner,
-// "our" from one of several, "the" list from someone passing it on.
+// The words that go along with the link in the share sheet: "my" list from its owner, "our"
+// from one of several, and from someone passing it on the list with whose it is, so whoever
+// gets the message knows that too. A list nobody owns any more is just "the" list.
 const shareText = computed(() => {
-  const whose = !list.value.viewerOwnsList ? 'Other' : list.value.owners.length > 1 ? 'Joint' : 'Own'
-  return t(`share.text${whose}`, { title: list.value.title })
+  const whose = list.value.viewerOwnsList ? (list.value.owners.length > 1 ? 'Joint' : 'Own') : list.value.owners.length ? 'Other' : 'Nobody'
+  return t(`share.text${whose}`, { title: list.value.title, names: names(list.value.owners) })
 })
 
 const open = reactive(new Set<number>())
@@ -262,14 +263,17 @@ async function onRemoveOwnerClose() {
 
 // Someone who opened a list may ask its owners to be friends, one button per owner. That is how
 // people find each other here: there is no search, and the request names the list it came from.
-// What was asked stays on the page as a line; the server says the same after a reload, also for
-// a request that was declined, which its sender must not be able to tell.
+// The button stands beside "Delen". Once pressed it stays where it is and says the request
+// went, so the focus has somewhere to be; the server says the same after a reload, also for a
+// request that was declined, which its sender must not be able to tell.
 type Befriendable = NonNullable<typeof list.value.ownersToBefriend>[number]
 // An owner who is a friend already isn't named here: there is nothing to ask, and nothing to say.
 const befriendable = computed(() => (list.value.old ? [] : list.value.ownersToBefriend ?? []).filter(owner => befriendState(owner) !== 'friends' || asked.has(owner.id)))
 const asked = reactive(new Map<number, 'asked' | 'friends'>())
 const befriendState = (owner: Befriendable) => asked.get(owner.id) ?? owner.state
 const befriending = ref(false)
+// What the button did, for a screen reader: its own words change while the focus is on it.
+const befriendStatus = ref('')
 
 async function befriend(owner: Befriendable) {
   if (befriending.value) return
@@ -278,9 +282,7 @@ async function befriend(owner: Befriendable) {
   try {
     const answered = await $fetch<{ state: 'asked' | 'friends' }>(`/api/lists/${token.value}/friend-requests`, { method: 'POST', body: { owner: owner.id } })
     asked.set(owner.id, answered.state)
-    // The button is gone; the line that took its place is read out where the focus lands.
-    await nextTick()
-    document.getElementById(`befriend-${owner.id}`)?.focus()
+    befriendStatus.value = t(answered.state === 'asked' ? 'list.befriendAsked' : 'list.befriendFriends', { name: owner.name })
   }
   catch (error) {
     bandError.value = parse(error).message
@@ -629,16 +631,17 @@ async function addWish(title: string) {
         <art-button v-if="!list.deleted && !list.old" variant="secondary">
           <button type="button" @click="openListShare('share', $event)"><AppIcon name="share" />{{ t('share.open') }}</button>
         </art-button>
-        <div v-if="befriendable.length" class="befriend">
-          <template v-for="owner in befriendable" :key="owner.id">
-            <art-button v-if="befriendState(owner) === 'none'" variant="quiet" size="s">
-              <button type="button" :aria-disabled="befriending || undefined" @click="befriend(owner)">{{ t('list.befriend', { name: owner.name }) }}</button>
-            </art-button>
-            <span v-else :id="`befriend-${owner.id}`" class="befriend-state" tabindex="-1">
-              {{ befriendState(owner) === 'asked' ? t('list.befriendAsked', { name: owner.name }) : t('list.befriendFriends', { name: owner.name }) }}
-            </span>
-          </template>
-        </div>
+        <art-button v-for="owner in befriendable" :key="owner.id" variant="secondary">
+          <button
+            type="button"
+            :aria-disabled="befriending || befriendState(owner) !== 'none' || undefined"
+            @click="befriendState(owner) === 'none' && befriend(owner)"
+          >
+            <template v-if="befriendState(owner) === 'none'">{{ t('list.befriend', { name: owner.name }) }}</template>
+            <template v-else><AppIcon name="check" />{{ befriendState(owner) === 'asked' ? t('list.befriendAsked', { name: owner.name }) : t('list.befriendFriends', { name: owner.name }) }}</template>
+          </button>
+        </art-button>
+        <p v-if="befriendable.length" class="visually-hidden" role="status">{{ befriendStatus }}</p>
         <p v-if="bandError && !canManage" class="form-message" role="alert">{{ bandError }}</p>
         <template v-if="canManage">
           <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
