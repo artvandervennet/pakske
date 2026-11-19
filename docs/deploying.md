@@ -38,7 +38,7 @@ Firebase Authentication (Google's) holds the passwords and the Google logins, an
 5. Under Templates, set the template language to Dutch, and paste in the sender's name, subject and message from `docs/mails/` (its README says what goes where). If the console answers that template updates are unavailable for the project, only Firebase support can change that; the mails then go out in Firebase's own words.
 6. Under Templates, open any template with the pencil, press "customize action URL" and fill in `https://<the site's address>/auth/action`. It counts for every template. From then on the link in a mail opens the site's own page for it (see [The page behind a mail's link](#the-page-behind-a-mails-link)). It is saved like a template, so a project that can't change its templates may be refused this too; the mails then keep opening Firebase's page, which works as before.
 7. Under Project settings → General, set the public-facing name to the site's name. Firebase's own mails use it.
-8. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`.
+8. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`. A new project may not show the key there; it is then at https://console.cloud.google.com, in that project, under APIs & Services → Credentials, as "Browser key (auto created by Firebase)".
 
 The free plan sends 150 password mails a day.
 
@@ -65,9 +65,15 @@ Google goes through Firebase too, so do the steps above first.
 
 1. In the Firebase console, under Authentication → Sign-in method, turn on Google. Firebase makes an OAuth client for it in the same Google Cloud project.
 2. At https://console.cloud.google.com, in that project, under APIs & Services → Credentials, open "Web client (auto created by Google Service)". Add `https://<your address>/auth/google` as an authorised redirect URI.
-3. Put that client's ID and secret in `.env`, with that same URI as `NUXT_OAUTH_GOOGLE_REDIRECT_URL`, and run `docker compose up -d`.
+3. Put that client's ID and secret in `.env`, with that same URI as `NUXT_OAUTH_GOOGLE_REDIRECT_URL`, and run `docker compose up -d`. Google shows a secret only when it is made: press "Add secret" on the client's page for one you can copy. The one Firebase made stays, and Firebase keeps using it.
 
 Someone who logs in with Google for the first time gets an account without a password, named as at Google; Settings mails them a link if they want a password too. An account that already has their address logs in with its password and links Google under Settings. When that address was never confirmed, Firebase lets Google take the account over and drops its password: Google has shown the address is theirs. "Wachtwoord vergeten" gives them a password again.
+
+### A second project for development
+
+The accounts you make while working on the site don't belong among the real ones. Make a second Firebase project for your own machine and put its key and OAuth client in the `.env` there. It needs steps 1 to 3 of the Firebase steps and, for Google, the three above with `http://localhost:3400/auth/google` as the redirect URI. `localhost` is already among its authorised domains.
+
+A database goes with the project its accounts were made in. An account here is tied to its Firebase account by Firebase's id (`firebase_uid`), and another project gives the same address another id. With a database that already has accounts, a different key leaves them unable to log in: Firebase doesn't know them, and registering again is refused because the address is taken here. Start the other project with an empty database, or make the accounts there and write their new ids into `users.firebase_uid`.
 
 To reach the site from outside your home, put HTTPS in front of it: a Cloudflare Tunnel, Tailscale Funnel, or Caddy with a port forward. In that case:
 
