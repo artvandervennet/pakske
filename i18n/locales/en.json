@@ -460,7 +460,9 @@
   "footer": {
     "label": "About this site",
     "privacy": "Privacy",
-    "terms": "Terms"
+    "terms": "Terms",
+    "issue": "Something not quite right, or something missing? {link}.",
+    "issueLink": "Open an issue on GitHub"
   },
   "privacy": {
     "title": "Privacy",

@@ -460,7 +460,9 @@
   "footer": {
     "label": "Over deze site",
     "privacy": "Privacy",
-    "terms": "Voorwaarden"
+    "terms": "Voorwaarden",
+    "issue": "Klopt er iets niet, of mis je iets? {link}.",
+    "issueLink": "Maak een issue aan op GitHub"
   },
   "privacy": {
     "title": "Privacy",

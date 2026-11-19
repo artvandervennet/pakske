@@ -3,6 +3,8 @@
 // from the site's settings: a sentence that names them is only in the outline when the site
 // knows the name.
 
+import { SOURCE_URL } from './source'
+
 /** Who runs this site, from NUXT_PUBLIC_OPERATOR_*. Each is '' when it isn't set. */
 export interface Operator {
   /** The person or organisation that answers for the site. */
@@ -27,8 +29,6 @@ export interface LegalSection {
   title: string
   blocks: LegalBlock[]
 }
-
-const SOURCE = 'https://github.com/artvandervennet/pakske'
 
 /** A section of `page`: plain names become paragraphs, an array of names a list. */
 function section(page: string, id: string, blocks: (string | string[] | LegalBlock)[]): LegalSection {
@@ -72,7 +72,7 @@ export function termsOutline(operator: Operator): LegalSection[] {
     section('terms', 'giving', ['tick', 'shops']),
     section('terms', 'asis', ['offered', 'loss', 'liability']),
     section('terms', 'ending', ['you', 'site']),
-    section('terms', 'software', ['open', { kind: 'link', key: 'terms.software.source', to: SOURCE }]),
+    section('terms', 'software', ['open', { kind: 'link', key: 'terms.software.source', to: SOURCE_URL }]),
     section('terms', 'changes', ['date', ...contact(operator)]),
   ]
 }
