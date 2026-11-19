@@ -218,6 +218,43 @@ function onLeaveDialogClose() {
   if (answer(leaveDialog.value) === 'leave' && !deleting.value) deleteOrLeave('leave')
 }
 
+// Removing a co-owner, in edit mode beside leaving: one quiet button per person who joined the
+// list after you, which asks first. What happened is said in a line that is always there, since
+// the button that was pressed goes with the person.
+type CoOwner = NonNullable<typeof list.value.coOwners>[number]
+const removable = computed(() => (list.value.coOwners ?? []).filter(owner => owner.canRemove))
+const removeOwnerDialog = useTemplateRef<HTMLDialogElement>('removeOwnerDialog')
+const leaving = ref<CoOwner | null>(null)
+const ownerStatus = ref('')
+
+async function askToRemove(owner: CoOwner) {
+  if (deleting.value) return
+  leaving.value = owner
+  // The dialog names the person, so it shows once that name is in it.
+  await nextTick()
+  removeOwnerDialog.value?.showModal()
+}
+
+async function onRemoveOwnerClose() {
+  const owner = leaving.value
+  if (answer(removeOwnerDialog.value) !== 'remove' || !owner || deleting.value) return
+  deleting.value = true
+  listError.value = ''
+  ownerStatus.value = ''
+  try {
+    await $fetch(`/api/lists/${token.value}/owners/${owner.id}`, { method: 'DELETE' })
+    ownerStatus.value = t('list.removeOwnerDone', { name: owner.name })
+  }
+  catch (error) {
+    listError.value = parse(error).message
+  }
+  finally {
+    deleting.value = false
+    // Also after a refusal: someone joined, left or was removed since the page loaded.
+    await refresh()
+  }
+}
+
 // Someone who opened a list may ask its owners to be friends, one button per owner. That is how
 // people find each other here: there is no search, and the request names the list it came from.
 // What was asked stays on the page as a line; the server says the same after a reload, also for
@@ -766,6 +803,11 @@ async function addWish(title: string) {
                buttons, and it asks first. -->
           <div v-if="editing" class="list-actions">
             <p v-if="listError" class="form-message" role="alert">{{ listError }}</p>
+            <!-- Always there, so the words are announced; the button that went shows the rest. -->
+            <p class="visually-hidden" role="status">{{ ownerStatus }}</p>
+            <art-button v-for="owner in removable" :key="owner.id" variant="quiet" size="s">
+              <button type="button" :aria-disabled="deleting || undefined" @click="askToRemove(owner)">{{ t('list.removeOwner', { name: owner.name }) }}</button>
+            </art-button>
             <art-button variant="quiet" size="s">
               <button type="button" :aria-disabled="relinking || undefined" @click="askForNewLink">{{ t('list.newLink') }}</button>
             </art-button>
@@ -817,6 +859,19 @@ async function addWish(title: string) {
         </art-button>
         <art-button>
           <button value="leave">{{ t('list.leaveConfirm') }}</button>
+        </art-button>
+      </form>
+    </dialog>
+
+    <dialog v-if="canManage && shared" ref="removeOwnerDialog" class="dialog" aria-labelledby="remove-owner-title" aria-describedby="remove-owner-text" @close="onRemoveOwnerClose">
+      <h2 id="remove-owner-title">{{ t('list.removeOwnerTitle', { name: leaving?.name ?? '' }) }}</h2>
+      <p id="remove-owner-text">{{ t('list.removeOwnerBody', { name: leaving?.name ?? '' }) }}</p>
+      <form method="dialog" class="actions">
+        <art-button variant="secondary">
+          <button value="cancel" autofocus>{{ t('list.deleteCancel') }}</button>
+        </art-button>
+        <art-button class="danger">
+          <button value="remove">{{ t('list.removeOwnerConfirm') }}</button>
         </art-button>
       </form>
     </dialog>

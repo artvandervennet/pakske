@@ -1,5 +1,6 @@
 import { listFriendsForList, ownersToBefriend } from '../../../domain/friends'
 import { getListView, oldLinkView } from '../../../domain/list-view'
+import { coOwnersOf } from '../../../domain/lists'
 import { rememberList } from '../../../domain/visits'
 
 // The one endpoint that returns a list. `getListView` decides per wish what this viewer may see,
@@ -30,5 +31,7 @@ export default defineEventHandler(async (event) => {
     ...view,
     ownersToBefriend: viewerId === null ? [] : ownersToBefriend(db, viewerId, token),
     friendsToSend: viewerId !== null && view.viewerOwnsList && !view.deleted ? listFriendsForList(db, viewerId, token).length : 0,
+    // Ids of people are for owners only: a visitor gets the owners' names in the view and no more.
+    coOwners: viewerId !== null && view.viewerOwnsList && !view.deleted ? coOwnersOf(db, viewerId, token) : undefined,
   }
 })

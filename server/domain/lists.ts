@@ -152,6 +152,38 @@ export function leaveList(db: Db, userId: number, token: string): void {
 }
 
 /**
+ * Takes a co-owner off a list, which only someone who owned it before them can do: the first
+ * owner can remove everyone, and nobody can remove the person who was there when they joined.
+ * For the person removed it is what leaving is, and they are told. The list's invitation links
+ * end with it, whoever made them, or the one still going round would let them straight back in.
+ */
+export function removeOwner(db: Db, userId: number, token: string, ownerId: number): void {
+  db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    const owners = ownersOfList(tx, listId).map(owner => owner.userId)
+    const theirs = owners.indexOf(ownerId)
+    if (theirs === -1) throw new DomainError('not_found')
+    if (theirs <= owners.indexOf(userId)) throw new DomainError('forbidden')
+    const list = tx.select({ title: lists.title }).from(lists).where(eq(lists.id, listId)).get()!
+    dropOwner(tx, listId, ownerId)
+    endInviteLinks(tx, listId)
+    addNotice(tx, { userId: ownerId, kind: 'list_removed', actorId: userId, title: list.title, listId })
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * The other owners of a list of the person's own, in the order they joined, each with whether
+ * this person may remove them (`removeOwner`).
+ */
+export function coOwnersOf(db: Db, viewerId: number, token: string): { id: number, name: string, canRemove: boolean }[] {
+  const owners = ownersOfList(db, ownedListId(db, viewerId, token))
+  const mine = owners.findIndex(owner => owner.userId === viewerId)
+  return owners
+    .map((owner, index) => ({ id: owner.userId, name: owner.name, canRemove: index > mine }))
+    .filter(owner => owner.id !== viewerId)
+}
+
+/**
  * Gives the list a new address; the one it had stops opening it for everyone. The list, its
  * wishes, its owners and its links for single wishes stay as they are. Its invitation links end:
  * a new link is how an owner stops what is going round. Whoever doesn't own it loses it

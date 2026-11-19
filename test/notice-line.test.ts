@@ -29,7 +29,7 @@ function notice(kind: NoticeKind, extra: Partial<NoticeView> = {}): NoticeView {
 }
 
 describe("a notice's sentence", () => {
-  it.each(['wish_linked', 'wish_unlinked', 'joint_link_used', 'list_joined', 'sent_copy', 'sent_linked', 'sent_list', 'share_accepted'] as const)(
+  it.each(['wish_linked', 'wish_unlinked', 'joint_link_used', 'list_joined', 'sent_copy', 'sent_linked', 'sent_list', 'share_accepted', 'list_removed'] as const)(
     'uses the key of its own kind, %s, with who did it and the title',
     (kind) => {
       expect(noticeLine(notice(kind), t)).toBe(`[notice.${kind} {"actor":"Lotte","title":"Bordspel","n":0} 0]`)

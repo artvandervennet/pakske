@@ -116,6 +116,8 @@ export interface ListView {
    * Added by the route for someone logged in who doesn't own the list; nobody for anyone else.
    */
   ownersToBefriend?: { id: number, name: string, state: 'none' | 'asked' | 'friends' }[]
+  /** For an owner: the other owners, in the order they joined, and whether this viewer may remove each. */
+  coOwners?: { id: number, name: string, canRemove: boolean }[]
   /** For an owner: how many friends of theirs don't own this list too, and so can be sent it or wishes on it. */
   friendsToSend?: number
 }
@@ -177,7 +179,7 @@ export interface InviteView {
   mine: MyLists
 }
 
-export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted'
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed'
 
 /** A notice as its recipient gets it. Notices are about owners and lists, never about buyers. */
 export interface NoticeView {

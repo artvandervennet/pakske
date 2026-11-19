@@ -525,7 +525,14 @@ req lot POST "/api/invites/$LISTINVITE/accept" '{}'; check "lot accepts" 200; ha
 req lot POST "/api/invites/$LISTINVITE/accept" '{}'; check "she can't join a list she owns" 403
 req art POST "/api/lists/$JOINT/invites" '{"kind":"list"}'; same "asked again, art gets the link that is going round" ".invite" "$LISTINVITE"
 req mom POST "/api/invites/$LISTINVITE/accept" '{}'; check "the same link lets mom in too" 200
-req mom POST "/api/lists/$JOINT/leave"; check "… who leaves again" 204
+req art GET "/api/lists/$JOINT"; same "art sees his two co-owners, and may remove both" ".coOwners.filter(o=>o.canRemove).length" 2; MOM_ID=$(json ".coOwners[1].id"); JLOT_ID=$(json ".coOwners[0].id")
+req anon GET "/api/lists/$JOINT"; lacks "a visitor gets no co-owners with ids" coOwners
+req mom DELETE "/api/lists/$JOINT/owners/$JLOT_ID"; check "mom cannot remove lot, who was there before her" 403
+req sis DELETE "/api/lists/$JOINT/owners/$MOM_ID"; check "someone who doesn't own the list can remove nobody" 404
+req lot DELETE "/api/lists/$JOINT/owners/$MOM_ID"; check "lot removes mom, who joined after her" 204
+req mom GET /api/home; has "mom is told" '"kind":"list_removed","actor":"Lotte"'
+req mom GET "/api/invites/$LISTINVITE"; check "… and the link that let her in is gone" 404
+req lot DELETE "/api/lists/$JOINT/owners/$MOM_ID"; check "removing her again finds no co-owner" 404
 req lot GET /api/home; has "lot's home page has it, shared with Art" "\"token\":\"$JOINT\",\"title\":\"Samen\",\"wishes\":0,\"owners\":[\"Art\",\"Lotte\"],\"sharedWith\":[\"Art\"]"
 same "… as the first of her lists, since she just joined it" ".owned[0].token" "$JOINT"
 req art GET /api/home; has "art is told Lotte joined" '"kind":"list_joined","actor":"Lotte"'

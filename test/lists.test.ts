@@ -3,7 +3,9 @@ import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { listWishes, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
-import { createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList, renameList } from '../server/domain/lists'
+import { acceptFriendLink, listShownLists, makeFriendLink, setShownTo } from '../server/domain/friends'
+import { acceptInvite, getInviteView, listInviteLink, sendInvite } from '../server/domain/invites'
+import { coOwnersOf, createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList, removeOwner, renameList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { putOnList } from '../server/domain/placement'
 import { LIST_TOKEN } from '../server/domain/tokens'
@@ -285,3 +287,100 @@ describe('a new link for a list', () => {
   })
 })
 
+describe('removing a co-owner', () => {
+  /** Art's list, which Lot joined and then Sis, in that order. */
+  function joint() {
+    const db = makeDb()
+    const art = addUser(db, 'art')
+    const lot = addUser(db, 'lot')
+    const sis = addUser(db, 'sis')
+    const mom = addUser(db, 'mom')
+    const A = addList(db, art.id)
+    const game = addWishTo(db, art.id, A, 'Bordspel')
+    const book = addWishTo(db, art.id, A, 'Boek')
+    addOwner(db, A, lot.id)
+    addOwner(db, A, sis.id)
+    return { db, art, lot, sis, mom, A, game, book }
+  }
+
+  it('takes away someone who joined later, as if they left', () => {
+    const { db, art, lot, mom, A, game, book } = joint()
+    const L = addList(db, lot.id, 'Lijst van Lotte')
+    putOnList(db, ownedListId(db, lot.id, L), game.id)
+    acceptFriendLink(db, mom.id, makeFriendLink(db, lot.id).token)
+    setShownTo(db, lot.id, A, [mom.id])
+    expect(listShownLists(db, mom.id)).toHaveLength(1)
+
+    removeOwner(db, art.id, A, lot.id)
+    expect(getListView(db, A, lot.id)).toMatchObject({ viewerOwnsList: false, owners: ['Art', 'Sis'] })
+    expect(listOwnedLists(db, lot.id).map(list => list.token)).toEqual([L])
+    // She keeps only the wish that is also on a list of her own.
+    expect(ownerIds(db, game.id)).toContain(lot.id)
+    expect(ownerIds(db, book.id)).not.toContain(lot.id)
+    // What she showed her friend of this list was hers to show.
+    expect(listShownLists(db, mom.id)).toEqual([])
+    expectOwnersSettled(db)
+  })
+
+  it('tells the removed person and nobody else', () => {
+    const { db, art, lot, sis, A } = joint()
+    removeOwner(db, art.id, A, lot.id)
+    expect(listNotices(db, lot.id)).toMatchObject([{ kind: 'list_removed', actor: 'Art', title: 'Kerst', token: null, canUndo: false, fresh: true }])
+    expect(listNotices(db, sis.id)).toEqual([])
+    expect(listNotices(db, art.id)).toEqual([])
+  })
+
+  it('refuses someone who joined earlier, yourself, and someone who is no owner', () => {
+    const { db, art, lot, sis, mom, A } = joint()
+    expect(codeOf(() => removeOwner(db, lot.id, A, art.id))).toBe('forbidden')
+    expect(codeOf(() => removeOwner(db, sis.id, A, lot.id))).toBe('forbidden')
+    expect(codeOf(() => removeOwner(db, art.id, A, art.id))).toBe('forbidden')
+    expect(codeOf(() => removeOwner(db, art.id, A, mom.id))).toBe('not_found')
+    expect(codeOf(() => removeOwner(db, mom.id, A, lot.id))).toBe('not_found')
+    expect(codeOf(() => removeOwner(db, art.id, 'no-such-list-token-00', lot.id))).toBe('not_found')
+    expect(getListView(db, A, art.id)).toMatchObject({ owners: ['Art', 'Lot', 'Sis'] })
+    // The second owner may remove the third.
+    removeOwner(db, lot.id, A, sis.id)
+    expect(getListView(db, A, art.id)).toMatchObject({ owners: ['Art', 'Lot'] })
+  })
+
+  it('ends the list\'s invitation links and what waited for that person', () => {
+    const { db, art, lot, sis, mom, A } = joint()
+    const byArt = listInviteLink(db, art.id, A).invite
+    const bySis = listInviteLink(db, sis.id, A).invite
+    const byLot = listInviteLink(db, lot.id, A).invite
+    removeOwner(db, art.id, A, lot.id)
+    for (const token of [byArt, bySis, byLot]) {
+      expect(getInviteView(db, token, lot.id)).toBeUndefined()
+      expect(codeOf(() => acceptInvite(db, lot.id, token, null))).toBe('not_found')
+      expect(getInviteView(db, token, mom.id)).toBeUndefined()
+    }
+    expect(getListView(db, A, lot.id)).toMatchObject({ viewerOwnsList: false })
+
+    // An invitation that waited for someone before they came in another way goes too.
+    acceptFriendLink(db, mom.id, makeFriendLink(db, art.id).token)
+    sendInvite(db, art.id, A, { kind: 'list' }, [mom.id])
+    const waiting = listNotices(db, mom.id).find(notice => notice.kind === 'sent_list')!.invite!
+    acceptInvite(db, mom.id, listInviteLink(db, sis.id, A).invite, null)
+    removeOwner(db, art.id, A, mom.id)
+    expect(getInviteView(db, waiting, mom.id)).toBeUndefined()
+    expect(listNotices(db, mom.id).filter(notice => notice.kind === 'sent_list')).toEqual([])
+  })
+
+  it('says who may be removed', () => {
+    const { db, art, lot, sis, mom, A } = joint()
+    expect(coOwnersOf(db, art.id, A)).toEqual([
+      { id: lot.id, name: 'Lot', canRemove: true },
+      { id: sis.id, name: 'Sis', canRemove: true },
+    ])
+    expect(coOwnersOf(db, lot.id, A)).toEqual([
+      { id: art.id, name: 'Art', canRemove: false },
+      { id: sis.id, name: 'Sis', canRemove: true },
+    ])
+    expect(coOwnersOf(db, sis.id, A)).toEqual([
+      { id: art.id, name: 'Art', canRemove: false },
+      { id: lot.id, name: 'Lot', canRemove: false },
+    ])
+    expect(codeOf(() => coOwnersOf(db, mom.id, A))).toBe('not_found')
+  })
+})
