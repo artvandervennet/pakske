@@ -135,7 +135,11 @@
     "deleteConfirm": "Verwijderen",
     "deleteCancel": "Annuleren",
     "move": "{title} verplaatsen",
-    "moveHelp": "Verplaats de wens met de pijltjestoetsen omhoog en omlaag.",
+    "moveHelp": "Verplaats de wens met de pijltjestoetsen omhoog en omlaag, of druk op de knop om te kiezen waarheen.",
+    "moveTop": "Bovenaan zetten",
+    "moveUp": "Eén omhoog",
+    "moveDown": "Eén omlaag",
+    "moveBottom": "Onderaan zetten",
     "position": "{title}, {n} van {total}",
     "orderFailed": "De nieuwe volgorde is niet bewaard. De lijst toont de laatst bewaarde volgorde."
   },

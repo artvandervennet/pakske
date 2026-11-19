@@ -135,7 +135,11 @@
     "deleteConfirm": "Delete",
     "deleteCancel": "Cancel",
     "move": "Move {title}",
-    "moveHelp": "Use the up and down arrow keys to move the wish.",
+    "moveHelp": "Use the up and down arrow keys to move the wish, or press the button to choose where it goes.",
+    "moveTop": "Move to the top",
+    "moveUp": "Move up one",
+    "moveDown": "Move down one",
+    "moveBottom": "Move to the bottom",
     "position": "{title}, {n} of {total}",
     "orderFailed": "The new order wasn’t saved. The list shows the last saved order."
   },

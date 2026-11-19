@@ -15,6 +15,8 @@ const PATHS = {
   'add-to-list': 'M4 6h11M4 12h8M4 18h6M17 13v7M13.5 16.5h7',
   'chevron': 'M6 9l6 6 6-6',
   'check': 'M5 12.5l4.5 4.5L19 7.5',
+  // Six dots, each a line without length that its round ends make a dot.
+  'grip': 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
 } as const
 
 export type IconName = keyof typeof PATHS

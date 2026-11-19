@@ -6,12 +6,15 @@
  * The listeners are on the document, so the drag goes on when the pointer leaves the row, and it
  * follows only the pointer that started it. `start` can take over a pointer that is already down,
  * such as the one that just held a row (useLongPress).
+ * A pointer that goes down on the handle and up again without having moved was a press of the
+ * handle, not a drag: `onTap` hears of it (the page then offers to move the row without dragging).
  */
 export function useDragReorder(options: {
   list: Ref<HTMLElement | null>
   order: Ref<number[]>
   move: (id: number, to: number) => void
   onDrop: () => void
+  onTap?: (id: number) => void
 }) {
   const dragging = ref<number | null>(null)
 
@@ -26,6 +29,9 @@ export function useDragReorder(options: {
   let startScroll = 0
   let lastY = 0
   let to = -1
+  // Whether this drag may end as a tap, and whether the pointer has left the spot it went down on.
+  let tappable = false
+  let travelled = false
   let frame = 0
   let lastFrame = 0
 
@@ -82,7 +88,7 @@ export function useDragReorder(options: {
     frame = requestAnimationFrame(scrollStep)
   }
 
-  function start(wishId: number, event: PointerEvent) {
+  function start(wishId: number, event: PointerEvent, options_: { tap?: boolean } = {}) {
     if (dragging.value !== null || !event.isPrimary) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     item = options.list.value?.querySelector<HTMLElement>(`#wish-${wishId}`) ?? null
@@ -90,6 +96,8 @@ export function useDragReorder(options: {
     pointerId = event.pointerId
     touched = event.pointerType === 'touch' ? event.target : null
     startY = lastY = event.clientY
+    tappable = options_.tap === true
+    travelled = false
     startScroll = window.scrollY
     to = options.order.value.indexOf(wishId)
     dragging.value = wishId
@@ -114,6 +122,7 @@ export function useDragReorder(options: {
   function onMove(event: PointerEvent) {
     if (event.pointerId !== pointerId) return
     lastY = event.clientY
+    if (Math.abs(lastY - startY) > 6) travelled = true
     update()
   }
 
@@ -127,8 +136,12 @@ export function useDragReorder(options: {
     const moved = to !== -1 && to !== options.order.value.indexOf(id)
     const dropped = item
     const before = dropped?.getBoundingClientRect()
+    const tapped = tappable && !travelled
     finish()
-    if (!moved) return
+    if (!moved) {
+      if (tapped) options.onTap?.(id)
+      return
+    }
     options.move(id, to)
     options.onDrop()
     // Glide from where it was let go to its new place.
@@ -179,6 +192,7 @@ export function useDragReorder(options: {
     const touch = event.touches[0]
     if (!touch || dragging.value === null) return
     lastY = touch.clientY
+    if (Math.abs(lastY - startY) > 6) travelled = true
     update()
   }
 

@@ -1000,7 +1000,15 @@ textarea.inline-edit { overflow: hidden; }
 .joint-bar-count { flex: 1 1 8rem; font-weight: var(--weight-medium); }
 .joint-bar > art-button { flex: none; }
 .joint-bar-actions { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.joint-bar-list { margin-inline-start: auto; }
+@media (width < 40rem) { .joint-bar { padding: var(--space-2) var(--space-3); } }
+/* The bar covers the top of the list while it sticks. A row that gets the focus scrolls to
+   under it, not to behind it: the page sets --edit-bar-height to the bar's height. */
+html:has(.joint-bar) { scroll-padding-block-start: calc(var(--art-header-height, 3.5rem) + var(--edit-bar-height, 0px) + var(--space-4)); }
+/* The header's drips would hang over the bar's words while it sticks under the header. */
+html:has(.joint-bar) art-header::part(drips) { display: none; }
+/* What concerns the whole list (a new link, deleting or leaving it), under the list at its far end. */
+.list-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2) var(--space-4); margin-block-start: var(--space-4); }
+.list-actions > .form-message { flex: 1 1 16rem; }
 .joint-bar > .form-message { flex: 1 0 100%; }
 /* The bar's count takes the focus after a delete; it is text, so no ring around it. */
 .joint-bar-count:focus { outline: none; }
@@ -1030,8 +1038,6 @@ textarea.inline-edit { overflow: hidden; }
   inline-size: 2.75rem;
   block-size: 2.75rem;
   border-radius: var(--radius-chip);
-  font-size: var(--step-1);
-  line-height: 1;
   color: var(--ink-muted);
   cursor: grab;
   touch-action: none;
@@ -1040,6 +1046,11 @@ textarea.inline-edit { overflow: hidden; }
 }
 .wish-handle:is(:hover, :focus-visible) { background: var(--surface-sunken); color: var(--ink); }
 .wish-handle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Its dots are lines without length, so they are as big as the line is thick. */
+.wish-handle .icon { stroke-width: 2.8; }
+/* The choices a handle opens are Gesso's .menu; one that can't be chosen now is dimmed. */
+.menu > [aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.menu > [aria-disabled="true"]:hover { background: none; }
 :root.dragging-row, :root.dragging-row * { cursor: grabbing !important; }
 .wish-row.dragging {
   position: relative;

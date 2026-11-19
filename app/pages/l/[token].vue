@@ -287,6 +287,23 @@ const { editing, selected } = edit
 const editButton = useTemplateRef<HTMLButtonElement>('editButton')
 const editCount = useTemplateRef<HTMLElement>('editCount')
 
+// The bar sticks under the header while the list scrolls. The page is told how tall it is
+// (app.css adds it to the scroll padding), so a row that gets the focus scrolls to under the
+// bar and not to behind it.
+const editBar = useTemplateRef<HTMLElement>('editBar')
+let barObserver: ResizeObserver | undefined
+watch(editBar, (bar) => {
+  barObserver?.disconnect()
+  const root = document.documentElement
+  if (!bar) return root.style.removeProperty('--edit-bar-height')
+  barObserver = new ResizeObserver(() => root.style.setProperty('--edit-bar-height', `${bar.offsetHeight}px`))
+  barObserver.observe(bar)
+}, { flush: 'post' })
+onBeforeUnmount(() => {
+  barObserver?.disconnect()
+  document.documentElement.style.removeProperty('--edit-bar-height')
+})
+
 /** Starts edit mode; the focus goes to the chosen wish's box, else to the bar. */
 async function startEditing(wishId?: number) {
   if (!(await edit.enter(wishId))) return false
@@ -308,7 +325,8 @@ async function stopEditing() {
 }
 
 function onEscape(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || !editing.value || document.querySelector('dialog[open]')) return
+  // A dialog or the move menu that is open takes Escape for itself.
+  if (event.key !== 'Escape' || !editing.value || document.querySelector('dialog[open], :popover-open')) return
   stopEditing()
 }
 onMounted(() => document.addEventListener('keydown', onEscape))
@@ -337,7 +355,8 @@ function onShareClose(made: boolean) {
 }
 
 // Moving wishes in edit mode: drag the handle, or hold the row and drag (on a phone), or the
-// arrow keys on the handle. The list shows the move at once; the order is saved whole.
+// arrow keys on the handle, or press the handle and choose where the wish goes. The last one
+// needs neither a drag nor a keyboard. The list shows the move at once; the order is saved whole.
 const wishList = useTemplateRef<HTMLElement>('wishList')
 const { order } = edit
 const shownWishes = computed(() => {
@@ -346,11 +365,93 @@ const shownWishes = computed(() => {
   const byId = new Map(wishes.value.map(wish => [wish.id, wish]))
   return order.value.flatMap(id => byId.get(id) ?? [])
 })
-const drag = useDragReorder({ list: wishList, order, move: edit.move, onDrop: () => edit.saveOrder() })
+const drag = useDragReorder({
+  list: wishList,
+  order,
+  move: edit.move,
+  onDrop: () => edit.saveOrder(),
+  // After the press that ended it: opened inside that press, the menu would count it as a
+  // press outside itself and close again.
+  onTap: id => setTimeout(() => openMoveMenu(id, false)),
+})
 
 function onHandleDown(wishId: number, event: PointerEvent) {
-  drag.start(wishId, event)
+  drag.start(wishId, event, { tap: true })
 }
+
+// Pressing a handle opens a small menu under it: to the top, one up, one down, to the bottom.
+// One menu serves every row; it hangs from the handle that opened it (Gesso's .menu.anchored).
+// A pointer's press comes from the drag (onTap); Enter or Space on the handle is a click
+// without a pointer.
+const MOVES = ['moveTop', 'moveUp', 'moveDown', 'moveBottom'] as const
+type Move = typeof MOVES[number]
+const moveMenu = useTemplateRef<HTMLElement>('moveMenu')
+const movingId = ref<number | null>(null)
+const moveMenuOpen = ref(false)
+const movingWish = computed(() => wishes.value.find(wish => wish.id === movingId.value) ?? null)
+const handleOf = (wishId: number) => document.querySelector<HTMLElement>(`#wish-${wishId} .wish-handle`)
+
+/** Where a choice of the menu would put the wish, or null when it is there already. */
+function moveTarget(wishId: number, how: Move): number | null {
+  const from = order.value.indexOf(wishId)
+  const last = order.value.length - 1
+  const to = { moveTop: 0, moveUp: from - 1, moveDown: from + 1, moveBottom: last }[how]
+  return from === -1 || to === from || to < 0 || to > last ? null : to
+}
+
+async function openMoveMenu(wishId: number, byKeyboard: boolean) {
+  const menu = moveMenu.value
+  if (!menu || !editing.value) return
+  if (menu.matches(':popover-open')) {
+    const same = movingId.value === wishId
+    menu.hidePopover()
+    if (same) return
+  }
+  movingId.value = wishId
+  // The handle gets the anchor's name first, so the menu opens under it.
+  await nextTick()
+  const handle = handleOf(wishId)
+  if (!handle) return
+  menu.showPopover({ source: handle })
+  // A keyboard goes into the menu; a pointer stays where it is.
+  if (byKeyboard) menu.querySelector<HTMLElement>('button:not([aria-disabled="true"])')?.focus()
+}
+
+function onHandleClick(wishId: number, event: MouseEvent) {
+  if (event.detail === 0) openMoveMenu(wishId, true)
+}
+
+function onMoveMenuToggle(event: Event) {
+  moveMenuOpen.value = (event as ToggleEvent).newState === 'open'
+}
+
+/** Moves a wish in the order on screen, saves, says where it is now, and keeps the focus on its handle. */
+async function moveWish(wish: WishView, to: number, focusVisible = true) {
+  edit.move(wish.id, to)
+  edit.saveOrder({ delay: 400 })
+  announcePlace(wish)
+  await nextTick()
+  // Moving the row can take the focus off its handle.
+  const handle = handleOf(wish.id)
+  handle?.closest('li')?.scrollIntoView({ block: 'nearest' })
+  if (handle && document.activeElement !== handle) handle.focus({ preventScroll: true, focusVisible } as FocusOptions)
+}
+
+function chooseMove(how: Move, event: MouseEvent) {
+  const wish = movingWish.value
+  const to = wish ? moveTarget(wish.id, how) : null
+  if (!wish || to === null) return
+  // Back to the handle before the menu goes, so the focus is never inside something hidden;
+  // without a ring after a pointer, which did not come from the keyboard.
+  handleOf(wish.id)?.focus({ preventScroll: true, focusVisible: event.detail === 0 } as FocusOptions)
+  moveMenu.value?.hidePopover()
+  moveWish(wish, to, event.detail === 0)
+}
+
+// The menu belongs to edit mode, and to a wish that is still on the list.
+watch([editing, movingWish], ([on, wish]) => {
+  if ((!on || !wish) && moveMenu.value?.matches(':popover-open')) moveMenu.value.hidePopover()
+})
 
 // Holding a wish starts edit mode with it chosen, and keeps going as a drag if the finger moves.
 const longPress = useLongPress(wishList, {
@@ -388,14 +489,7 @@ async function onHandleKey(wish: WishView, event: KeyboardEvent) {
   const to = from + step
   // At the top or the bottom there is nowhere to go: nothing moves and nothing is sent.
   if (from === -1 || to < 0 || to >= order.value.length) return
-  edit.move(wish.id, to)
-  edit.saveOrder({ delay: 400 })
-  announcePlace(wish)
-  await nextTick()
-  // Moving the row can take the focus off its handle.
-  const handle = document.querySelector<HTMLElement>(`#wish-${wish.id} .wish-handle`)
-  handle?.closest('li')?.scrollIntoView({ block: 'nearest' })
-  if (handle && document.activeElement !== handle) handle.focus({ preventScroll: true })
+  await moveWish(wish, to)
 }
 
 const editDeleteDialog = useTemplateRef<HTMLDialogElement>('editDeleteDialog')
@@ -494,33 +588,23 @@ async function addWish(title: string) {
             <p v-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           </template>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>
-          <div v-if="editing" class="joint-bar" role="group" :aria-label="t('listEdit.label')">
+          <div v-if="editing" ref="editBar" class="joint-bar" role="group" :aria-label="t('listEdit.label')">
             <p ref="editCount" class="joint-bar-count" role="status" tabindex="-1">
               {{ wishes.length ? t('listEdit.selected', { n: selected.size }, selected.size) : t('list.empty') }}
             </p>
             <art-button size="s">
               <button type="button" @click="stopEditing">{{ t('listEdit.done') }}</button>
             </art-button>
-            <div class="joint-bar-actions">
-              <template v-if="wishes.length">
-                <art-button variant="secondary" size="s">
-                  <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="askToDeleteChosen">{{ t('listEdit.delete') }}</button>
-                </art-button>
-                <art-button variant="secondary" size="s">
-                  <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="share">{{ t('joint.make') }}</button>
-                </art-button>
-              </template>
-              <!-- About the whole list, not the chosen wishes: quieter, at the far end, and it asks first. -->
-              <art-button class="joint-bar-list" variant="quiet" size="s">
-                <button type="button" :aria-disabled="relinking || undefined" @click="askForNewLink">{{ t('list.newLink') }}</button>
+            <div v-if="wishes.length" class="joint-bar-actions">
+              <art-button variant="secondary" size="s">
+                <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="askToDeleteChosen">{{ t('listEdit.delete') }}</button>
               </art-button>
-              <art-button variant="quiet" size="s">
-                <button type="button" :aria-disabled="deleting || undefined" @click="askToDeleteOrLeave">{{ shared ? t('list.leave') : t('list.delete') }}</button>
+              <art-button variant="secondary" size="s">
+                <button type="button" :aria-disabled="!selected.size || edit.busy.value || undefined" @click="share">{{ t('joint.make') }}</button>
               </art-button>
             </div>
             <p v-if="edit.error.value" class="form-message" role="alert">{{ edit.error.value }}</p>
             <p v-if="edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
-            <p v-if="listError" class="form-message" role="alert">{{ listError }}</p>
           </div>
           <p v-if="!editing && edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
           <p v-if="editing" class="visually-hidden" role="status">{{ orderStatus }}</p>
@@ -566,10 +650,14 @@ async function addWish(title: string) {
                   class="wish-handle"
                   :aria-label="t('listEdit.move', { title: wish.title })"
                   aria-describedby="order-help"
+                  aria-controls="move-menu"
+                  :aria-expanded="moveMenuOpen && movingId === wish.id ? 'true' : 'false'"
+                  :style="movingId === wish.id ? 'anchor-name: --move-handle' : undefined"
                   @pointerdown="event => onHandleDown(wish.id, event)"
+                  @click="event => onHandleClick(wish.id, event)"
                   @keydown="event => onHandleKey(wish, event)"
                 >
-                  <span aria-hidden="true">⠿</span>
+                  <AppIcon name="grip" />
                 </button>
               </template>
               <!-- In edit mode the tick makes way for the box that chooses the wish. -->
@@ -591,11 +679,46 @@ async function addWish(title: string) {
               <QuickAdd :label="t('list.add')" :field-label="t('list.newWish')" :pending="adding" :error="addError" @add="addWish" />
             </li>
           </ul>
+          <!-- About the whole list, not the chosen wishes: under the list, away from the bar's
+               buttons, and it asks first. -->
+          <div v-if="editing" class="list-actions">
+            <p v-if="listError" class="form-message" role="alert">{{ listError }}</p>
+            <art-button variant="quiet" size="s">
+              <button type="button" :aria-disabled="relinking || undefined" @click="askForNewLink">{{ t('list.newLink') }}</button>
+            </art-button>
+            <art-button variant="quiet" size="s" :class="{ danger: !shared }">
+              <button type="button" :aria-disabled="deleting || undefined" @click="askToDeleteOrLeave">{{ shared ? t('list.leave') : t('list.delete') }}</button>
+            </art-button>
+          </div>
         </div>
       </div>
     </section>
 
     <TickWarning v-if="hasOwnWishes" ref="warning" />
+
+    <!-- The choices a handle opens. A group of buttons, not a menu in ARIA's sense: Tab walks
+         them like any buttons, and Escape or a press beside it closes it. -->
+    <div
+      v-if="canManage"
+      id="move-menu"
+      ref="moveMenu"
+      class="menu anchored end"
+      popover
+      role="group"
+      :aria-label="movingWish ? t('listEdit.move', { title: movingWish.title }) : undefined"
+      style="position-anchor: --move-handle"
+      @toggle="onMoveMenuToggle"
+    >
+      <button
+        v-for="how in MOVES"
+        :key="how"
+        type="button"
+        :aria-disabled="movingId === null || moveTarget(movingId, how) === null || undefined"
+        @click="event => chooseMove(how, event)"
+      >
+        {{ t(`listEdit.${how}`) }}
+      </button>
+    </div>
 
     <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 
@@ -622,7 +745,7 @@ async function addWish(title: string) {
         <art-button variant="secondary">
           <button value="cancel" autofocus>{{ t('listEdit.deleteCancel') }}</button>
         </art-button>
-        <art-button>
+        <art-button class="danger">
           <button value="delete">{{ t('listEdit.deleteConfirm') }}</button>
         </art-button>
       </form>
@@ -651,7 +774,7 @@ async function addWish(title: string) {
         <art-button variant="secondary">
           <button value="cancel" autofocus>{{ t('list.deleteCancel') }}</button>
         </art-button>
-        <art-button>
+        <art-button class="danger">
           <button value="delete">{{ t('list.deleteConfirm') }}</button>
         </art-button>
       </form>
