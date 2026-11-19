@@ -103,7 +103,11 @@
     "with": "with {names}",
     "alsoYours": "also yours",
     "viewOn": "View on {host}",
-    "close": "Close {title}"
+    "close": "Close {title}",
+    "deleteTitle": "Delete “{title}”?",
+    "deleteBody": "It disappears from your list. You can’t undo that.",
+    "deleteBodyElsewhere": "It is on another list too, and only disappears from this one.",
+    "deleted": "“{title}” was taken off your list."
   },
   "joint": {
     "sharedWith": "Shared with",

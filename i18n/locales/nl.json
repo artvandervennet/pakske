@@ -103,7 +103,11 @@
     "with": "met {names}",
     "alsoYours": "ook van jou",
     "viewOn": "Bekijk op {host}",
-    "close": "{title} sluiten"
+    "close": "{title} sluiten",
+    "deleteTitle": "“{title}” verwijderen?",
+    "deleteBody": "Hij verdwijnt van je lijst. Dat kun je niet ongedaan maken.",
+    "deleteBodyElsewhere": "Hij staat ook op een andere lijst en verdwijnt alleen van deze.",
+    "deleted": "“{title}” is van je lijst gehaald."
   },
   "joint": {
     "sharedWith": "Samen met",

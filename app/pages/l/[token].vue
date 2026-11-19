@@ -105,6 +105,17 @@ async function onAddRemoved(wish: WishView) {
   keepFocus(wish.id)
 }
 
+// "Verwijderen" in an owner's card took the wish off the list, and its row with the focus in it.
+// The list says which one went, and the focus goes to the heading above the wishes.
+async function onWishDeleted(wish: WishView) {
+  open.delete(wish.id)
+  rowMessage.value = null
+  goneNotice.value = t('wish.deleted', { title: wish.title })
+  await refresh()
+  await nextTick()
+  wishesTitle.value?.focus()
+}
+
 // Renaming: the title in the head band is the control. Activated, it turns into a field in
 // the title's own type; leaving it or Enter saves, Escape puts the name back. The address stays.
 const renaming = ref(false)
@@ -485,6 +496,7 @@ async function addWish(title: string) {
               @added="landed => onAdded(wish, landed)"
               @removed="onAddRemoved(wish)"
               @share="openShare([wish.id])"
+              @deleted="onWishDeleted(wish)"
             >
               <template #message>
                 <!-- Always there in an open row, so the words are announced when they appear. -->

@@ -42,6 +42,7 @@ const emit = defineEmits<{
   added: [list: { token: string, title: string }]
   removed: []
   share: []
+  deleted: []
 }>()
 
 const { t } = useI18n()
@@ -234,7 +235,7 @@ defineExpose({ settle })
         <div v-if="canAdd" :id="addId" class="wish-card-add" :hidden="!adding">
           <AddToMyList v-if="adding && wish.role === 'buyer'" :wish="wish" :token="token" :can-link="hasOwners" @added="onAdded" @removed="emit('removed')" />
         </div>
-        <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :tick="tick" @changed="emit('changed')" />
+        <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :tick="tick" :can-delete="viewerOwnsList" @changed="emit('changed')" @deleted="emit('deleted')" />
         <WishBuyerDetails v-else :wish="wish" :token="token" :owners="owners" :tick="tick" @changed="emit('changed')" />
       </template>
     </div>

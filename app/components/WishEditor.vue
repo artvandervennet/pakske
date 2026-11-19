@@ -8,13 +8,14 @@ import type { WishTickState } from '~/composables/useWishTick'
 // cancel. Three columns on a wide screen: the photo, the description with the amount, and the
 // links; one under the other on a phone. Under them, what the owner has of it themselves, and
 // who else the wish belongs to.
-// Sharing is the button in the card's head, and deleting lives in the list's edit mode, so
-// nothing here can be pressed by mistake for "save".
+// Sharing is the button in the card's head. Deleting is a quiet button at the card's end, which
+// asks first, so it can't be pressed by mistake for "save"; edit mode deletes several at once.
+// `canDelete` is false on a list the viewer doesn't own: a wish comes off one's own list only.
 // The editor only has the owner's view of the wish, so nothing in it can depend on buyers:
 // unlinking goes the same way whatever they did.
 // `tick` is the row's own tick (useWishTick), shown here with its full stepper.
-const props = defineProps<{ wish: OwnerWish, saving: WishSave, tick: WishTickState }>()
-const emit = defineEmits<{ changed: [] }>()
+const props = defineProps<{ wish: OwnerWish, saving: WishSave, tick: WishTickState, canDelete: boolean }>()
+const emit = defineEmits<{ changed: [], deleted: [] }>()
 
 const { t } = useI18n()
 const { parse } = useApiError()
@@ -23,7 +24,7 @@ const id = useId()
 
 const saveDescription = (text: string, saved: string) => props.saving.save(fieldChange('description', text, saved))
 
-// One request at a time: unlinking stays unavailable while one runs.
+// One request at a time: unlinking and deleting stay unavailable while one runs.
 const busy = ref(false)
 const actionError = ref('')
 
@@ -59,6 +60,31 @@ async function onUnlinkClose() {
     busy.value = false
   }
 }
+
+const deleteDialog = useTemplateRef<HTMLDialogElement>('deleteDialog')
+
+function askToDelete() {
+  if (!busy.value) deleteDialog.value?.showModal()
+}
+
+async function onDeleteClose() {
+  const dialog = deleteDialog.value
+  const choice = dialog?.returnValue ?? ''
+  if (dialog) dialog.returnValue = ''
+  if (choice !== 'delete' || busy.value) return
+  busy.value = true
+  actionError.value = ''
+  try {
+    await $fetch<unknown>(props.saving.url(), { method: 'DELETE' })
+    emit('deleted')
+  }
+  catch (error) {
+    actionError.value = parse(error).message
+  }
+  finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
@@ -86,6 +112,9 @@ async function onUnlinkClose() {
     <WishGive :wish="wish" :tick="tick" />
     <!-- Always there, so the words are announced when they appear. -->
     <p class="wish-saved" role="status">{{ saving.saved.value ? t('edit.saved') : '' }}</p>
+    <art-button v-if="canDelete" class="wish-delete" variant="quiet" size="s">
+      <button type="button" :aria-disabled="busy || undefined" @click="askToDelete">{{ t('listEdit.delete') }}</button>
+    </art-button>
   </div>
 
   <div v-if="wish.coOwners.length" class="wish-card-owners">
@@ -110,6 +139,19 @@ async function onUnlinkClose() {
       </art-button>
       <art-button>
         <button value="unlink">{{ t('unlink.confirm') }}</button>
+      </art-button>
+    </form>
+  </dialog>
+
+  <dialog v-if="canDelete" ref="deleteDialog" class="dialog" :aria-labelledby="`${id}-delete-title`" :aria-describedby="`${id}-delete-text`" @close="onDeleteClose">
+    <h2 :id="`${id}-delete-title`">{{ t('wish.deleteTitle', { title: wish.title }) }}</h2>
+    <p :id="`${id}-delete-text`">{{ wish.alsoElsewhere ? t('wish.deleteBodyElsewhere') : t('wish.deleteBody') }}</p>
+    <form method="dialog" class="actions">
+      <art-button variant="secondary">
+        <button value="cancel" autofocus>{{ t('listEdit.deleteCancel') }}</button>
+      </art-button>
+      <art-button>
+        <button value="delete">{{ t('listEdit.deleteConfirm') }}</button>
       </art-button>
     </form>
   </dialog>
