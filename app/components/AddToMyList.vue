@@ -9,7 +9,9 @@ import type { BuyerWish, MyLists } from '#shared/schemas/list'
 // fetched each time it opens: an add can make a new list.
 // `added` says where the wish went; the row folds this again and the page says so and
 // refreshes. `removed` means the wish left this list meanwhile.
-const props = defineProps<{ wish: BuyerWish, token: string }>()
+// `canLink` is false for a wish nobody owns any more (its owner's account is gone): there is
+// nobody to share it with, so only the copy is offered.
+const props = defineProps<{ wish: BuyerWish, token: string, canLink: boolean }>()
 const emit = defineEmits<{ added: [list: { token: string, title: string }], removed: [] }>()
 
 const { t } = useI18n()
@@ -71,7 +73,7 @@ async function add(way: 'link' | 'copy') {
     <template v-if="mine">
       <ListChooser ref="chooser" v-model="target" :lists="mine.lists" :last="mine.last" :legend="t('add.which')" :error="nameError" />
       <ul class="add-to-list-ways">
-        <li>
+        <li v-if="canLink">
           <art-button size="s">
             <button type="button" :aria-describedby="`${id}-linked`" :aria-disabled="busy || undefined" @click="add('link')">{{ t('add.linked') }}</button>
           </art-button>

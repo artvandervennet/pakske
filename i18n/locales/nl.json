@@ -75,6 +75,7 @@
     "empty": "Er staat nog niets op deze lijst.",
     "deleted": "{names} heeft deze lijst verwijderd. Wat al gekocht was, blijft hier staan. | {names} hebben deze lijst verwijderd. Wat al gekocht was, blijft hier staan.",
     "deletedNobody": "Deze lijst is verwijderd. Wat al gekocht was, blijft hier staan.",
+    "ownerless": "Het account achter deze lijst is verwijderd. De lijst blijft staan zoals hij was.",
     "gone": "Deze lijst bestaat niet meer.",
     "rename": "Naam wijzigen",
     "renameLabel": "Naam van de lijst",
@@ -304,13 +305,16 @@
     "schemeLight": "Licht",
     "schemeDark": "Donker",
     "deleteTitle": "Account verwijderen",
-    "deleteIntro": "Je account, je lijsten en alles wat je aanvinkte verdwijnen voorgoed.",
+    "deleteIntro": "Je account verdwijnt voorgoed. Je lijsten en je notities blijven staan, zonder je naam.",
     "deleteOpen": "Account verwijderen",
     "deleteDialogTitle": "Je account verwijderen?",
     "deleteGone": "Dit verdwijnt voorgoed:",
-    "deleteLists": "Je lijsten en de wensen erop. Een lijst die je met iemand deelt, blijft van die persoon. Wat iemand al voor je kocht, blijft die koper zien.",
-    "deleteGiving": "Wat je aanvinkte op de lijsten van anderen, en je notities daar.",
-    "deleteLogin": "Je account zelf. Je kunt er niet meer mee inloggen.",
+    "deleteLogin": "Je account zelf, met je naam en je e-mailadres. Je kunt er niet meer mee inloggen.",
+    "deleteGiving": "Wat je aanvinkte op de lijsten van anderen.",
+    "deleteStays": "Dit blijft staan, zonder je naam:",
+    "deleteLists": "Je lijsten en de wensen erop. Wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Wil je een lijst weg, verwijder hem dan eerst. Een lijst die je met iemand deelt, blijft van die persoon.",
+    "deleteNotes": "Je notities op de lijsten van anderen. Daar staat dan “Iemand anders” bij.",
+    "deleteAgain": "Maak je later opnieuw een account, ook met hetzelfde e-mailadres, dan begin je leeg: hiervan krijg je niets terug.",
     "deleteConfirm": "Account verwijderen",
     "deleteCancel": "Annuleren"
   },
@@ -322,7 +326,7 @@
   "privacy": {
     "title": "Privacy",
     "lead": "Wat deze site over je bewaart, wie het te zien krijgt en hoe je het weer weghaalt.",
-    "updated": "Laatst gewijzigd op 18 november 2026.",
+    "updated": "Laatst gewijzigd op 19 november 2026.",
     "who": {
       "title": "Wie je gegevens bewaart",
       "named": "{operator} beheert deze site, beslist wat er gebeurt met wat je erop zet, en is daar verantwoordelijk voor.",
@@ -375,9 +379,10 @@
     "keep": {
       "title": "Hoe lang het bewaard blijft",
       "until": "Tot je het weghaalt. Je lijsten, wensen, vinkjes en notities wijzig en verwijder je zelf, en je account verwijder je bij Instellingen.",
-      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, samen met wat je aanvinkte en schreef op de lijsten van anderen, je bezochte lijsten, je links en je meldingen. Een lijst die je met iemand deelt, blijft van die persoon.",
+      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, met je naam en je e-mailadres, wat je aanvinkte op de lijsten van anderen, je bezochte lijsten, je links en je meldingen.",
+      "stays": "Je lijsten en de wensen erop blijven staan, zonder je naam: wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Verwijder ze eerst als je dat niet wilt. Een lijst die je met iemand deelt, blijft van die persoon. Ook je notities op de lijsten van anderen blijven staan, met “Iemand anders” waar je naam stond. Een account dat je later maakt, ook met hetzelfde e-mailadres, krijgt hier niets van.",
       "deleted": "Een verwijderde lijst of wens wordt niet gewist. Hij blijft in de database staan, gemarkeerd als verwijderd. Wie een wens van jou had aangevinkt, blijft die wens zien, met je naam zolang je account bestaat. Niemand anders ziet hem.",
-      "erase": "Vraag aan wie de site beheert om verwijderde lijsten en wensen ook uit de database te wissen.",
+      "erase": "Vraag aan wie de site beheert om verwijderde lijsten en wensen ook uit de database te wissen. Dat geldt ook voor wat van een verwijderd account bleef staan.",
       "backups": "Wie de site beheert, kan back-ups maken. Wat je verwijderde, blijft in een back-up staan tot die vervangen is."
     },
     "rights": {

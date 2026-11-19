@@ -145,6 +145,9 @@ function openDelete() {
   removal.message.value = ''
   removal.errors.value = {}
   deleteDialog.value?.showModal()
+  // Cancel has the focus, and on a small screen the browser scrolls it into view: past what
+  // goes and what stays. The dialog opens where that starts.
+  deleteDialog.value?.scrollTo(0, 0)
 }
 </script>
 
@@ -311,10 +314,15 @@ function openDelete() {
       <h2 id="delete-dialog-title">{{ t('settings.deleteDialogTitle') }}</h2>
       <p>{{ t('settings.deleteGone') }}</p>
       <ul class="settings-gone">
-        <li>{{ t('settings.deleteLists') }}</li>
-        <li>{{ t('settings.deleteGiving') }}</li>
         <li>{{ t('settings.deleteLogin') }}</li>
+        <li>{{ t('settings.deleteGiving') }}</li>
       </ul>
+      <p>{{ t('settings.deleteStays') }}</p>
+      <ul class="settings-gone">
+        <li>{{ t('settings.deleteLists') }}</li>
+        <li>{{ t('settings.deleteNotes') }}</li>
+      </ul>
+      <p>{{ t('settings.deleteAgain') }}</p>
       <form :ref="removal.form" class="form" method="post" novalidate aria-labelledby="delete-dialog-title" @submit.prevent="removal.run">
         <p v-if="removal.message.value" class="form-message" role="alert">{{ removal.message.value }}</p>
         <template v-if="hasPassword">

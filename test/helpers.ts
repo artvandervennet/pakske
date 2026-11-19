@@ -78,18 +78,18 @@ export function ownerIds(db: Db, wishId: number): number[] {
 /**
  * Checks the rule every action must leave behind, worked out here on its own rather than with
  * the code under test: a wish belongs to the owners of the live lists that show it, and it is
- * deleted exactly when that is nobody.
+ * deleted exactly when no live list shows it. A list nobody owns (its owner's account is gone)
+ * shows its wishes like any other.
  */
 export function expectOwnersSettled(db: Db): void {
   for (const wish of db.select({ id: wishes.id, deletedAt: wishes.deletedAt }).from(wishes).all()) {
-    const shownBy = db.selectDistinct({ userId: listOwners.userId }).from(listWishes)
+    const shownOn = db.select({ listId: lists.id, userId: listOwners.userId }).from(listWishes)
       .innerJoin(lists, eq(lists.id, listWishes.listId))
-      .innerJoin(listOwners, eq(listOwners.listId, lists.id))
+      .leftJoin(listOwners, eq(listOwners.listId, lists.id))
       .where(and(eq(listWishes.wishId, wish.id), isNull(listWishes.removedAt), isNull(lists.deletedAt)))
       .all()
-      .map(row => row.userId)
-      .sort((a, b) => a - b)
+    const shownBy = [...new Set(shownOn.flatMap(row => row.userId ?? []))].sort((a, b) => a - b)
     expect(ownerIds(db, wish.id), `owners of wish ${wish.id}`).toEqual(shownBy)
-    expect(wish.deletedAt !== null, `wish ${wish.id} deleted`).toBe(shownBy.length === 0)
+    expect(wish.deletedAt !== null, `wish ${wish.id} deleted`).toBe(shownOn.length === 0)
   }
 }

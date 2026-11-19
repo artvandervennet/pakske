@@ -4,9 +4,10 @@ import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { count, eq } from 'drizzle-orm'
 import { openDb } from '../server/db/client'
-import { linkChanges, listOwners, lists, purchases, users, wishes } from '../server/db/schema'
+import { linkChanges, listOwners, lists, notes, purchases, users, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
 import { LIST_TOKEN } from '../server/domain/tokens'
+import { deleteUser } from '../server/domain/users'
 
 const all = resolve('server/db/migrations')
 const dirs: string[] = []
@@ -54,6 +55,9 @@ function oldDb(last: number) {
     },
     purchase: (wishId: number, userId: number) => {
       sql.prepare(`INSERT INTO purchases (wish_id, user_id, quantity, created_at, updated_at) VALUES (?, ?, 1, ?, ?)`).run(wishId, userId, now, now)
+    },
+    note: (wishId: number, userId: number, body: string) => {
+      sql.prepare(`INSERT INTO notes (id, wish_id, user_id, body, created_at) VALUES (?, ?, ?, ?, ?)`).run(`note-${wishId}-${userId}`, wishId, userId, body, now)
     },
     /** The wish's one link, in the column it had while a wish had one. */
     link: (wishId: number, url: string) => {
@@ -138,5 +142,24 @@ describe('upgrading a database that has data in it', () => {
     expect(getListView(after, 'A'.repeat(22), null)!.wishes.map(wish => wish.urls)).toEqual([
       ['https://example.test/lamp?kleur=rood&maat=3'], [], ['https://example.test/vaas'],
     ])
+  })
+
+  it('keeps every note when the notes table is rebuilt, and from then on a note outlives its writer', () => {
+    // Before a note could stay behind: deleting an account deleted its notes.
+    const before = oldDb(7)
+    const art = before.user('art')
+    const mom = before.user('mom')
+    const lot = before.user('lot')
+    const lamp = before.wish(art, before.list(art, 'A'.repeat(22)), 'Lamp')
+    before.note(lamp, mom, 'Ik haal hem zaterdag.')
+    before.note(lamp, lot, 'Ik doe mee.')
+    before.close()
+
+    const after = openDb(before.file)
+    const written = () => after.select({ userId: notes.userId, body: notes.body }).from(notes).orderBy(notes.userId).all()
+    expect(written()).toEqual([{ userId: mom, body: 'Ik haal hem zaterdag.' }, { userId: lot, body: 'Ik doe mee.' }])
+    deleteUser(after, mom)
+    expect(written()).toEqual([{ userId: null, body: 'Ik haal hem zaterdag.' }, { userId: lot, body: 'Ik doe mee.' }])
+    expect(after.$client.pragma('foreign_key_check')).toEqual([])
   })
 })

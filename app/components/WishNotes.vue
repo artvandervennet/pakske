@@ -14,7 +14,7 @@ const { parse } = useApiError()
 const body = ref('')
 // Several rows can be open at once, each with its own form.
 const fieldId = computed(() => `note-${props.wish.id}`)
-// A deleted list whose owners' accounts are gone has nobody to hide the notes from.
+// A list whose owners' accounts are gone has nobody to hide the notes from.
 const hint = computed(() => props.hiddenFrom.length
   ? t('notes.hint', { names: names(props.hiddenFrom) }, props.hiddenFrom.length)
   : undefined)
@@ -50,7 +50,8 @@ async function remove(id: string) {
     <ul v-if="wish.notes.length" class="wish-notes-list" :aria-labelledby="`${fieldId}-title`">
       <li v-for="note in wish.notes" :key="note.id" class="note">
         <header>
-          <strong>{{ note.mine ? t('purchase.you') : note.author }}</strong>
+          <!-- No author: the account that wrote it is deleted. -->
+          <strong>{{ note.mine ? t('purchase.you') : note.author ?? t('purchase.someone') }}</strong>
           <NuxtTime :datetime="note.createdAt" :locale="locale" date-style="medium" time-style="short" />
           <button
             v-if="note.mine"

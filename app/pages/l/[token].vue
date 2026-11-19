@@ -14,7 +14,7 @@ const { list, gone, refresh } = await useListView(token)
 useHead({ title: () => list.value.title })
 
 const names = useNames()
-// Empty for a deleted list whose owners' accounts are gone too: the page then names nobody.
+// Empty for a list whose owners' accounts are gone: the page then names nobody.
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
@@ -433,7 +433,11 @@ async function addWish(title: string) {
           <p v-if="list.deleted" class="form-message">
             {{ owners ? t('list.deleted', { names: owners }, list.owners.length) : t('list.deletedNobody') }}
           </p>
-          <p v-else-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
+          <template v-else>
+            <!-- Its only owner deleted their account: the list stays, and nobody manages it. -->
+            <p v-if="!list.owners.length" class="form-message">{{ t('list.ownerless') }}</p>
+            <p v-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
+          </template>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>
           <div v-if="editing" class="joint-bar" role="group" :aria-label="t('listEdit.label')">
             <p ref="editCount" class="joint-bar-count" role="status" tabindex="-1">

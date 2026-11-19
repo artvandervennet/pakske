@@ -57,7 +57,7 @@ export function privacyOutline(operator: Operator): LegalSection[] {
     section('privacy', 'where', ['server', 'firebase', 'passwords', 'google', ...(operator.network ? ['network'] : []), 'shops', 'nobody']),
     section('privacy', 'cookies', ['intro', ['login', 'opened', 'google', 'scheme']]),
     section('privacy', 'why', ['service', 'safety']),
-    section('privacy', 'keep', ['until', 'account', 'deleted', 'erase', 'backups']),
+    section('privacy', 'keep', ['until', 'account', 'stays', 'deleted', 'erase', 'backups']),
     section('privacy', 'rights', ['self', 'ask', 'authority']),
   ]
 }

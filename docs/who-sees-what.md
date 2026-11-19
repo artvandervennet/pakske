@@ -12,7 +12,9 @@ The server decides this per wish, not per list. A wish's owners are in `wish_own
 
 - A visitor gets the wishes from `server/domain/public-wishes.ts`. That file only reads wishes and the list they are on.
 - An owner gets the same wishes and their own purchase. The purchases table is read for the viewer's own rows only.
-- Anyone who owns neither the wish nor the list gets every purchase with name and number ("someone else" instead of the name when that buyer chose to give anonymously; the name never leaves the server), the notes, and the wishes that left the list after someone bought them.
+- Anyone who owns neither the wish nor the list gets every purchase with name and number ("someone else" instead of the name when that buyer chose to give anonymously; the name never leaves the server), the notes, and the wishes that left the list after someone bought them. A note whose writer deleted their account stays, also as "someone else": the note no longer points at an account.
+
+A list whose only owner deleted their account has no owners. Everyone who is logged in is a buyer on it, and nobody gets an owner's row, unless they share one of its wishes through a list of their own.
 
 Every viewer sees who else a wish belongs to: a row on Art's list that he shares with Lotte says "with Lotte". An owner also sees the other owners in the opened wish, under "Shared with".
 
@@ -31,7 +33,7 @@ An owner can tick their own wish. Before every tick or higher number the site as
 
 Rules that keep an owner from finding out by a detour:
 
-- Taking a wish off your list ("Delete" in the list's edit mode, the only place that has it) always answers 204, whatever buyers did. A wish nobody owns any more is marked deleted; its row and image stay. Buyers who bought it still see it, marked as taken off.
+- Taking a wish off your list ("Delete" in the list's edit mode, the only place that has it) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted; its row and image stay. Buyers who bought it still see it, marked as taken off.
 - Lowering an amount below what is bought is always accepted. Buyers then see that none are left.
 - Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it. A list with more than one owner can't be deleted, whatever is on it.
 - Linking, copying, unlinking, undo, share links and leaving a list never read purchases or notes, so they answer the same whatever was bought. An already bought wish can be linked or copied like any other.

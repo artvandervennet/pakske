@@ -123,7 +123,8 @@ function buyerWishes(
   const written = db
     .select({ id: notes.id, wishId: notes.wishId, userId: notes.userId, author: users.displayName, body: notes.body, createdAt: notes.createdAt })
     .from(notes)
-    .innerJoin(users, eq(users.id, notes.userId))
+    // A note outlives its writer's account: it stays, and its author is null from then on.
+    .leftJoin(users, eq(users.id, notes.userId))
     .where(inArray(notes.wishId, ids))
     .orderBy(asc(notes.createdAt), asc(notes.id))
     .all()
@@ -157,7 +158,8 @@ function buyerWishes(
 /**
  * A list as this viewer may see it, or undefined when there is nothing for them. A deleted list
  * is undefined for its owners and for visitors who aren't logged in, the same as a token that
- * matches nothing, whatever was bought on it.
+ * matches nothing, whatever was bought on it. A list whose only owner deleted their account is
+ * not deleted: it has no owners, and everyone gets it as a visitor or a buyer.
  */
 export function getListView(db: Db, token: string, viewerId: number | null): ListView | undefined {
   const list = db.select().from(lists).where(eq(lists.token, token)).get()

@@ -58,8 +58,8 @@ export function updateWish(db: Db, userId: number, token: string, wishId: number
 }
 
 /**
- * Takes the wish off this list of the person's own. It is deleted only when that leaves it with
- * no owners; a joint wish stays on the other lists. The row and its image stay, in every case.
+ * Takes the wish off this list of the person's own. It is deleted only when no other list shows
+ * it; a joint wish stays on the other lists. The row and its image stay, in every case.
  */
 export function deleteWish(db: Db, userId: number, token: string, wishId: number): void {
   db.transaction((tx) => {

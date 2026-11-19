@@ -3,8 +3,9 @@ import { deleteAccount } from '../../domain/accounts'
 
 const WINDOW = 15 * 60 * 1000
 
-// Deletes the account for good: at Firebase, then here, with its own lists and everything it
-// ticked and wrote on other people's. Then the login cookie goes, and Firebase's token with it.
+// Deletes the account for good: at Firebase, then here, with everything it ticked on other
+// people's lists. Its own lists and its notes stay, without a name. Then the login cookie goes,
+// and Firebase's token with it.
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const key = `delete:${user.id}`

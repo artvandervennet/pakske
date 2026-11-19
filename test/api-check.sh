@@ -562,8 +562,10 @@ req mom PUT "/api/lists/$WEGLIST/wishes/$BIKE/purchase" '{"quantity":1}'; check 
 req mom POST "/api/lists/$MOMLIST/wishes" '{"title":"Thee"}'; check "mom adds a wish to her own list" 201; TEA=$(json .id)
 req weg PATCH /api/me '{"anonymousDefault":true}'; check "wendy gives without her name by default" 200
 req weg PUT "/api/lists/$MOMLIST/wishes/$TEA/purchase" '{"quantity":1}'; check "wendy buys mom's tea, saying nothing about her name" 204
+req weg POST "/api/lists/$MOMLIST/wishes/$TEA/notes" '{"body":"Ik haal de thee."}'; check "… and writes a note about it" 201
 req sis GET "/api/lists/$MOMLIST"; same "sis sees that someone has it" ".wishes.find(w=>w.id===$TEA).bought" 1
 same "… and not who" ".wishes.find(w=>w.id===$TEA).purchases[0].name" null
+same "… and who wrote the note" ".wishes.find(w=>w.id===$TEA).notes[0].author" Wendy
 req anon DELETE /api/me; check "deleting an account needs a login" 401
 req weg DELETE /api/me '{"currentPassword":"wrong wrong wrong"}'; check "a wrong password deletes nothing" 403; has "… and is called wrong" wrong_password
 req weg DELETE /api/me '{}'; check "… and neither does leaving it out" 403
@@ -571,11 +573,25 @@ req weg GET /api/me; check "wendy is still there" 200
 req weg DELETE /api/me '{"currentPassword":"correct horse battery"}'; check "with her password, wendy deletes her account" 204
 req weg GET /api/me; check "her login went with it" 401
 login weg2 weg; check "… and nobody logs into it again" 401
-req anon GET "/api/lists/$WEGLIST"; check "a visitor no longer gets her list" 404
-req mom GET "/api/lists/$WEGLIST"; check "mom, who bought from it, still gets it" 200; has "… marked as deleted" '"deleted":true'
+# Her list stays where it is, as nobody's.
+req anon GET "/api/lists/$WEGLIST"; check "a visitor still gets her list" 200; has "… with nobody's name on it" '"owners":[]'; has "… and its wish" '"title":"Fiets"'
+req mom GET "/api/lists/$WEGLIST"; check "mom, who bought from it, gets it as before" 200; has "… not marked as deleted" '"deleted":false'
 same "… with what she bought" ".wishes.find(w=>w.id===$BIKE).mine" 1
+req mom PATCH "/api/lists/$WEGLIST" '{"title":"Van mij"}'; check "nobody can rename it" 404
+req mom PATCH "/api/lists/$WEGLIST/wishes/$BIKE" '{"title":"Step"}'; check "… or change a wish on it" 404
+req sis POST "/api/lists/$WEGLIST/wishes/$BIKE/link" "{\"list\":\"$SISLIST\"}"; check "… or make a wish on it theirs, with nobody there to undo that" 403
+req sis POST "/api/lists/$WEGLIST/wishes/$BIKE/copy" "{\"list\":\"$SISLIST\"}"; check "sis can take a copy of the wish" 201
+# What she ticked goes, and what she wrote stays without her name.
 req sis GET "/api/lists/$MOMLIST"; same "what wendy was getting from mom's list is free again" ".wishes.find(w=>w.id===$TEA).bought" 0
+same "… and her note is still there" ".wishes.find(w=>w.id===$TEA).notes[0].body" "Ik haal de thee."
+same "… written by nobody" ".wishes.find(w=>w.id===$TEA).notes[0].author" null
 req mom GET "/api/lists/$MOMLIST"; same "… and mom's own page says what it said" ".wishes.find(w=>w.id===$TEA).mine" 0
+# An account made again with the same address has nothing to do with the old one.
+register weg Wendy; check "wendy registers again with the same address" 201
+req weg GET /api/me/lists; lacks "her old list is not among her lists" "$WEGLIST"; same "… she starts with one list" ".lists.length" 1
+req weg GET "/api/lists/$WEGLIST"; check "she opens the old one like anyone else" 200; has "… as someone who doesn't own it" '"viewerOwnsList":false'
+req weg GET "/api/lists/$MOMLIST"; same "her old note is not hers" ".wishes.find(w=>w.id===$TEA).notes[0].mine" false
+same "… and what she ticked is not back" ".wishes.find(w=>w.id===$TEA).mine" 0
 
 echo "── guard rails"
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -X POST -b "$TMP/mom.jar" -H 'Origin: https://evil.example' -H 'Content-Type: application/json' --data '{"title":"x"}' "$BASE/api/lists"); check "a request from another site is refused" 403

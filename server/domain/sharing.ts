@@ -24,7 +24,9 @@ function wishToAdd(db: Db, userId: number, token: string, wishId: number) {
 
 /**
  * Linked: the same wish goes on the person's list and they own it at once. The owners it had
- * are told, and the link is remembered so they can undo it.
+ * are told, and the link is remembered so they can undo it. A wish nobody owns (its owner's
+ * account is gone) can only be copied: linking would let the linker change it on the list it
+ * stays on, with nobody there to undo that.
  */
 export function linkWish(db: Db, userId: number, token: string, wishId: number, target: ListTarget): Landed {
   return db.transaction((tx) => {
@@ -32,6 +34,7 @@ export function linkWish(db: Db, userId: number, token: string, wishId: number, 
     const list = targetListId(tx, userId, target)
     assertRoom(tx, list.id)
     const earlier = tx.select({ userId: wishOwners.userId }).from(wishOwners).where(eq(wishOwners.wishId, wishId)).all()
+    if (earlier.length === 0) throw new DomainError('forbidden')
     putOnList(tx, list.id, wishId)
     // A link made before (and later taken off the list) stays the same link, with what it remembers.
     tx.insert(wishLinks).values({ wishId, userId }).onConflictDoNothing().run()

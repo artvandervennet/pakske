@@ -9,11 +9,11 @@ import { listMyLists, listOwnedLists } from '../server/domain/lists'
 import { addNote } from '../server/domain/notes'
 import { listNotices } from '../server/domain/notices'
 import { setPurchase } from '../server/domain/purchases'
-import { linkWish } from '../server/domain/sharing'
+import { copyWish, linkWish } from '../server/domain/sharing'
 import { createUser, findUserById } from '../server/domain/users'
-import { setWishImage } from '../server/domain/wishes'
+import { deleteWish, setWishImage, updateWish } from '../server/domain/wishes'
 import { fakeIdentity, googleCredential } from './fake-identity'
-import { addList, addOwner, addWishTo, expectOwnersSettled, makeDb, ownerIds, purchaseRows, titles, wishIn } from './helpers'
+import { addList, addOwner, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, purchaseRows, titles, wishIn } from './helpers'
 
 const PASSWORD = 'correct horse'
 const legacyCheck = async (hash: string, password: string) => hash === `hash:${password}`
@@ -45,7 +45,7 @@ async function setup() {
   return { db, ...fake, art, lot, mom, remove }
 }
 
-/** Live lists nobody owns: there must never be one. */
+/** Live lists nobody owns: only a list whose one owner deleted their account. */
 function ownerlessLists(db: Db): string[] {
   return db.select({ title: lists.title, owner: listOwners.userId }).from(lists)
     .leftJoin(listOwners, eq(listOwners.listId, lists.id))
@@ -73,7 +73,7 @@ describe('deleting an account', () => {
     expect(listOwnedLists(db, art.id)).toHaveLength(1)
   })
 
-  it('takes along what the person was getting for others, and what they wrote about it', async () => {
+  it('takes along what the person was getting for others, and leaves what they wrote about it without a name', async () => {
     const { db, art, lot, mom, remove } = await setup()
     const book = addWishTo(db, mom.id, mom.first, 'Boek', 3)
     setPurchase(db, mom.first, book.id, art.id, 2)
@@ -82,10 +82,20 @@ describe('deleting an account', () => {
     addNote(db, mom.first, book.id, lot.id, 'Ik neem de derde.')
     await remove(art)
     expect(purchaseRows(db, book.id)).toEqual([{ userId: lot.id, quantity: 1 }])
-    expect(db.select({ body: notes.body }).from(notes).all()).toEqual([{ body: 'Ik neem de derde.' }])
+    expect(db.select({ body: notes.body, userId: notes.userId }).from(notes).orderBy(notes.createdAt).all()).toEqual([
+      { body: 'Ik haal ze in de stad.', userId: null },
+      { body: 'Ik neem de derde.', userId: lot.id },
+    ])
     // Mom's own page is as it was, and Lotte sees room for two again.
     expect(wishIn(getListView(db, mom.first, mom.id), book.id)).toMatchObject({ role: 'owner', mine: 0 })
-    expect(wishIn(getListView(db, mom.first, lot.id), book.id)).toMatchObject({ bought: 1, purchases: [{ name: 'Lotte', quantity: 1 }] })
+    expect(wishIn(getListView(db, mom.first, lot.id), book.id)).toMatchObject({
+      bought: 1,
+      purchases: [{ name: 'Lotte', quantity: 1 }],
+      notes: [
+        { author: null, body: 'Ik haal ze in de stad.', mine: false },
+        { author: 'Lotte', body: 'Ik neem de derde.', mine: true },
+      ],
+    })
   })
 
   it('leaves a list it shares to the other owners, with its wishes', async () => {
@@ -100,30 +110,41 @@ describe('deleting an account', () => {
     expect(ownerIds(db, mand.id)).toEqual([lot.id])
     expect(listOwnedLists(db, lot.id).map(list => list.title)).toEqual(['Samen', 'Verlanglijst'])
     expectOwnersSettled(db)
-    expect(ownerlessLists(db)).toEqual([])
+    // Only the list Art had alone is nobody's now.
+    expect(ownerlessLists(db)).toEqual(['Verlanglijst'])
   })
 
-  it('deletes a list it owns alone: gone for visitors, and marked deleted for buyers when someone was getting something from it', async () => {
+  it('leaves a list it owns alone where it is, with its wishes and nobody\'s name', async () => {
     const { db, art, lot, mom, remove } = await setup()
     const sokken = addWishTo(db, art.id, art.first, 'Sokken')
     const trui = addWishTo(db, art.id, art.first, 'Trui')
     setPurchase(db, art.first, sokken.id, mom.id, 1)
+    addNote(db, art.first, sokken.id, mom.id, 'Maat 43.')
     await remove(art)
-    expect(getListView(db, art.first, null)).toBeUndefined()
-    // As with any deleted list: what someone was getting stays for the buyers, the rest is gone.
+    // Whoever has the link still opens it, logged in or not.
+    const forVisitor = getListView(db, art.first, null)!
+    expect(forVisitor).toMatchObject({ deleted: false, owners: [], viewerOwnsList: false })
+    expect(titles(forVisitor)).toEqual(['Sokken', 'Trui'])
+    // The buyers go on as before: what Mom is getting and what she wrote are still there.
     const forMom = getListView(db, art.first, mom.id)!
-    expect(forMom).toMatchObject({ deleted: true, owners: [] })
-    expect(forMom.wishes).toMatchObject([{ id: sokken.id, removed: true, mine: 1 }])
-    expect(getListView(db, art.first, lot.id)!.wishes).toMatchObject([{ id: sokken.id, removed: true, mine: 0, bought: 1 }])
-    const row = (id: number) => db.select().from(wishes).where(eq(wishes.id, id)).get()!
-    expect(row(sokken.id).deletedAt).not.toBeNull()
-    expect(row(trui.id).deletedAt).not.toBeNull()
+    expect(forMom).toMatchObject({ deleted: false, owners: [], viewerOwnsList: false })
+    expect(forMom.wishes).toMatchObject([
+      { id: sokken.id, role: 'buyer', removed: false, mine: 1, sharedWith: [], notes: [{ author: 'Mom', body: 'Maat 43.' }] },
+      { id: trui.id, role: 'buyer', removed: false, mine: 0, bought: 0 },
+    ])
+    expect(wishIn(getListView(db, art.first, lot.id), sokken.id)).toMatchObject({ bought: 1, purchases: [{ name: 'Mom' }] })
+    setPurchase(db, art.first, trui.id, lot.id, 1)
+    // Nobody owns the wishes, and nobody can change them or the list.
+    expect(ownerIds(db, sokken.id)).toEqual([])
+    expect(codeOf(() => updateWish(db, lot.id, art.first, trui.id, { title: 'Broek' }))).toBe('not_found')
+    expect(codeOf(() => deleteWish(db, lot.id, art.first, trui.id))).toBe('not_found')
+    expect(listOwnedLists(db, lot.id).map(list => list.title)).toEqual(['Verlanglijst'])
     expectOwnersSettled(db)
-    expect(ownerlessLists(db)).toEqual([])
+    expect(ownerlessLists(db)).toEqual(['Verlanglijst'])
   })
 
-  it('leaves a wish it shares with someone on that person\'s list, and deletes the wishes only it had', async () => {
-    const { db, art, lot, remove } = await setup()
+  it('leaves a wish it shares with someone to that person, on both lists', async () => {
+    const { db, art, lot, mom, remove } = await setup()
     const spel = addWishTo(db, art.id, art.first, 'Bordspel')
     const eigen = addWishTo(db, art.id, art.first, 'Alleen van Art')
     linkWish(db, lot.id, art.first, spel.id, { list: lot.first })
@@ -131,10 +152,61 @@ describe('deleting an account', () => {
     await remove(art)
     expect(ownerIds(db, spel.id)).toEqual([lot.id])
     expect(wishIn(getListView(db, lot.first, lot.id), spel.id)).toMatchObject({ role: 'owner', title: 'Bordspel', coOwners: [] })
-    expect(db.select().from(wishes).where(eq(wishes.id, eigen.id)).get()!.deletedAt).not.toBeNull()
-    expect(db.select().from(wishes).where(eq(wishes.id, spel.id)).get()!.deletedAt).toBeNull()
+    // On the list Art left behind it is Lotte's wish, and the one only he had is nobody's.
+    expect(getListView(db, art.first, mom.id)!.wishes).toMatchObject([
+      { id: spel.id, role: 'buyer', sharedWith: ['Lotte'] },
+      { id: eigen.id, role: 'buyer', sharedWith: [] },
+    ])
+    expect(ownerIds(db, eigen.id)).toEqual([])
     expectOwnersSettled(db)
-    expect(ownerlessLists(db)).toEqual([])
+
+    // Lotte takes it off her own list: it stays on the list that still shows it.
+    deleteWish(db, lot.id, lot.first, spel.id)
+    expect(db.select().from(wishes).where(eq(wishes.id, spel.id)).get()!.deletedAt).toBeNull()
+    expect(titles(getListView(db, art.first, null))).toEqual(['Bordspel', 'Alleen van Art'])
+    expect(ownerIds(db, spel.id)).toEqual([])
+    expectOwnersSettled(db)
+  })
+
+  it('lets a wish nobody owns be copied, not linked: nobody is there to undo a link', async () => {
+    const { db, art, lot, remove } = await setup()
+    const sokken = addWishTo(db, art.id, art.first, 'Sokken')
+    await remove(art)
+    expect(codeOf(() => linkWish(db, lot.id, art.first, sokken.id, { list: lot.first }))).toBe('forbidden')
+    expect(ownerIds(db, sokken.id)).toEqual([])
+    const copy = copyWish(db, lot.id, art.first, sokken.id, { list: lot.first })
+    expect(copy.wishId).not.toBe(sokken.id)
+    expect(titles(getListView(db, lot.first, lot.id))).toEqual(['Sokken'])
+    expect(titles(getListView(db, art.first, null))).toEqual(['Sokken'])
+    expectOwnersSettled(db)
+  })
+
+  it('gives an account made again with the same address nothing of the old one', async () => {
+    const { db, identity, art, mom, remove } = await setup()
+    const sokken = addWishTo(db, art.id, art.first, 'Sokken')
+    const book = addWishTo(db, mom.id, mom.first, 'Boek')
+    setPurchase(db, mom.first, book.id, art.id, 1)
+    addNote(db, mom.first, book.id, art.id, 'Ik haal het in de stad.')
+    await remove(art)
+
+    const again = await register(db, identity, { email: 'art@example.test', displayName: 'Art', password: PASSWORD })
+    expect(again.user.id).not.toBe(art.id)
+    // Its own first list, and none of the old ones.
+    const mine = listOwnedLists(db, again.user.id)
+    expect(mine).toMatchObject([{ title: 'Verlanglijst', wishes: 0 }])
+    expect(mine[0]!.token).not.toBe(art.first)
+    // The old list is nobody's, also to him: he opens it as a buyer would.
+    const old = getListView(db, art.first, again.user.id)!
+    expect(old).toMatchObject({ owners: [], viewerOwnsList: false })
+    expect(wishIn(old, sokken.id)).toMatchObject({ role: 'buyer' })
+    expect(ownerIds(db, sokken.id)).toEqual([])
+    // The note he wrote before is nobody's, and what he ticked is not back.
+    expect(wishIn(getListView(db, mom.first, again.user.id), book.id)).toMatchObject({
+      mine: 0,
+      bought: 0,
+      notes: [{ author: null, mine: false }],
+    })
+    expect(listNotices(db, again.user.id)).toEqual([])
   })
 
   it('hands back the pictures nothing points at any more', async () => {
@@ -203,7 +275,7 @@ describe('deleting an account', () => {
     // No password can check out any more, and none is needed: the account at Firebase is gone.
     await remove(art, null)
     expect(findUserById(db, art.id)).toBeUndefined()
-    expect(getListView(db, art.first, null)).toBeUndefined()
+    expect(getListView(db, art.first, null)).toMatchObject({ owners: [] })
     // Someone else's cookie finishes nothing of Art's, and their own account still needs its password.
     expect(await rejection(remove(lot, null))).toBe('wrong_password')
     expect(findUserById(db, lot.id)).toBeDefined()
@@ -218,10 +290,10 @@ describe('deleting an account', () => {
     expect(findUserById(db, old.id)).toBeDefined()
     await deleteAccount(db, silent, old, undefined, PASSWORD, legacyCheck)
     expect(findUserById(db, old.id)).toBeUndefined()
-    expect(db.select().from(lists).where(isNull(lists.deletedAt)).all()).toEqual([])
+    expect(ownerlessLists(db)).toEqual(['Verlanglijst'])
   })
 
-  it('never reads what buyers did: the tables empty themselves when the account\'s row goes', () => {
+  it('never reads what buyers did: the database sees to their rows when the account\'s row goes', () => {
     for (const file of ['users.ts', 'accounts.ts']) {
       expect(readFileSync(`server/domain/${file}`, 'utf8')).not.toMatch(/purchases|notes/i)
     }

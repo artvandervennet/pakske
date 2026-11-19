@@ -83,7 +83,8 @@ export const buyerWishSchema = z.strictObject({
   })),
   notes: z.array(z.strictObject({
     id: z.string(),
-    author: z.string(),
+    /** Null when the writer's account is deleted. */
+    author: z.string().nullable(),
     body: z.string(),
     createdAt: z.string(),
     mine: z.boolean(),
@@ -99,7 +100,7 @@ export type WishView = AnonWish | OwnerWish | BuyerWish
 export interface ListView {
   token: string
   title: string
-  /** Display names of the list's owners. */
+  /** Display names of the list's owners. Empty once the account of its only owner is deleted. */
   owners: string[]
   viewerOwnsList: boolean
   /** Only a logged-in non-owner ever gets a deleted list, with the removed wishes someone bought. */

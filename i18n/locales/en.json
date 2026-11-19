@@ -75,6 +75,7 @@
     "empty": "There is nothing on this list yet.",
     "deleted": "{names} deleted this list. What was already bought stays here. | {names} deleted this list. What was already bought stays here.",
     "deletedNobody": "This list was deleted. What was already bought stays here.",
+    "ownerless": "The account behind this list was deleted. The list stays as it was.",
     "gone": "This list no longer exists.",
     "rename": "Change name",
     "renameLabel": "Name of the list",
@@ -304,13 +305,16 @@
     "schemeLight": "Light",
     "schemeDark": "Dark",
     "deleteTitle": "Delete account",
-    "deleteIntro": "Your account, your lists and everything you ticked are gone for good.",
+    "deleteIntro": "Your account is gone for good. Your lists and your notes stay, without your name.",
     "deleteOpen": "Delete account",
     "deleteDialogTitle": "Delete your account?",
     "deleteGone": "This is gone for good:",
-    "deleteLists": "Your lists and the wishes on them. A list you share with someone stays theirs. What someone already bought for you, that buyer keeps seeing.",
-    "deleteGiving": "What you ticked on other people’s lists, and your notes there.",
-    "deleteLogin": "Your account itself. You can no longer log in with it.",
+    "deleteLogin": "Your account itself, with your name and your email address. You can no longer log in with it.",
+    "deleteGiving": "What you ticked on other people’s lists.",
+    "deleteStays": "This stays, without your name:",
+    "deleteLists": "Your lists and the wishes on them. Anyone who has the link can keep opening them, and nobody can change them any more. If you want a list gone, delete it first. A list you share with someone stays theirs.",
+    "deleteNotes": "Your notes on other people’s lists. They read “Someone else” from then on.",
+    "deleteAgain": "If you make an account again later, even with the same email address, you start empty: you get none of this back.",
     "deleteConfirm": "Delete account",
     "deleteCancel": "Cancel"
   },
@@ -322,7 +326,7 @@
   "privacy": {
     "title": "Privacy",
     "lead": "What this site keeps about you, who gets to see it, and how you take it away again.",
-    "updated": "Last changed on 18 November 2026.",
+    "updated": "Last changed on 19 November 2026.",
     "who": {
       "title": "Who keeps your data",
       "named": "{operator} runs this site, decides what happens with what you put on it, and is responsible for it.",
@@ -375,9 +379,10 @@
     "keep": {
       "title": "How long it is kept",
       "until": "Until you take it away. You change and delete your lists, wishes, ticks and notes yourself, and you delete your account under Settings.",
-      "account": "Deleting your account removes it here and at Firebase, together with what you ticked and wrote on other people’s lists, your visited lists, your links and your notices. A list you share with someone stays theirs.",
+      "account": "Deleting your account removes it here and at Firebase, with your name and your email address, what you ticked on other people’s lists, your visited lists, your links and your notices.",
+      "stays": "Your lists and the wishes on them stay, without your name: anyone who has the link can keep opening them, and nobody can change them any more. Delete them first if you don’t want that. A list you share with someone stays theirs. Your notes on other people’s lists stay too, with “Someone else” where your name was. An account you make later, even with the same email address, gets none of this.",
       "deleted": "A deleted list or wish is not erased. It stays in the database, marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish, with your name for as long as your account exists. Nobody else sees it.",
-      "erase": "Ask whoever runs the site to have deleted lists and wishes erased from the database as well.",
+      "erase": "Ask whoever runs the site to have deleted lists and wishes erased from the database as well. The same goes for what stayed behind of a deleted account.",
       "backups": "Whoever runs the site can make backups. Something you deleted stays in a backup until that backup is replaced."
     },
     "rights": {

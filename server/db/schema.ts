@@ -108,7 +108,8 @@ export const notes = sqliteTable('notes', {
   // somewhere they can't look.
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   wishId: integer('wish_id').notNull().references(() => wishes.id, { onDelete: 'cascade' }),
-  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // Null once the writer's account is deleted: the note stays for the other buyers, without a name.
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
   body: text('body').notNull(),
   createdAt: createdAt(),
 }, t => [

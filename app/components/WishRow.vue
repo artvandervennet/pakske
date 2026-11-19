@@ -90,6 +90,9 @@ function toggle() {
 
 // "Op mijn lijst": the card's button unfolds the choice of a list at the top of the card.
 const canAdd = computed(() => props.wish.role === 'buyer' && !props.wish.removed)
+// A list's owners own every wish on it, and `sharedWith` names the owners beyond them. Neither:
+// the wish is on a list whose owner's account is gone.
+const hasOwners = computed(() => props.owners.length > 0 || props.wish.sharedWith.length > 0)
 const adding = ref(false)
 const addButton = useTemplateRef<HTMLButtonElement>('addButton')
 
@@ -232,7 +235,7 @@ defineExpose({ settle })
       <template v-if="open">
         <slot name="message" />
         <div v-if="canAdd" :id="addId" class="wish-card-add" :hidden="!adding">
-          <AddToMyList v-if="adding && wish.role === 'buyer'" :wish="wish" :token="token" @added="onAdded" @removed="emit('removed')" />
+          <AddToMyList v-if="adding && wish.role === 'buyer'" :wish="wish" :token="token" :can-link="hasOwners" @added="onAdded" @removed="emit('removed')" />
         </div>
         <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :tick="tick" @changed="emit('changed')" />
         <WishBuyerDetails v-else :wish="wish" :token="token" :owners="owners" :tick="tick" @changed="emit('changed')" />

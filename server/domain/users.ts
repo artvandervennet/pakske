@@ -1,8 +1,8 @@
-import { and, count, eq, isNull } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { linkChanges, listOwners, lists, notices, users, wishLinks } from '../db/schema'
+import { linkChanges, notices, users, wishLinks } from '../db/schema'
 import { DomainError } from './errors'
-import { deleteList, insertList, leaveList, ownersOfList } from './lists'
+import { insertList } from './lists'
 import { dismissNotice, unusedImages } from './undo'
 
 export interface NewUser {
@@ -79,11 +79,13 @@ export function setPasswordHash(db: Db, userId: number, passwordHash: string) {
 }
 
 /**
- * Removes an account and everything that was only its own. Its lists go the way they do by
- * hand, so every wish ends up with the owners it should have: a list it shares is left to the
- * others, with its wishes; a list it owns alone is deleted, and a wish on it that is on nobody
- * else's list with it. Then the account's row goes, and the database takes along whatever hangs
- * on that row. Returns the pictures nothing points at any more, for the caller to remove.
+ * Removes an account and leaves what it made, without a name. Its lists stay as they are, with
+ * their wishes: a list it shares is the other owners' from then on, and a list it owns alone
+ * stays open at its link, owned by nobody, so nobody can change it any more. What it wrote on
+ * other people's wishes stays too, written by nobody. Then the account's row goes, and the
+ * database does the rest for whatever hangs on that row. Nothing keeps the address or the name,
+ * so an account made later with the same address starts with nothing of this one. Returns the
+ * pictures nothing points at any more, for the caller to remove.
  */
 export function deleteUser(db: Db, userId: number): { unused: string[] } {
   return db.transaction((tx) => {
@@ -94,21 +96,14 @@ export function deleteUser(db: Db, userId: number): { unused: string[] } {
       unused.push(...dismissNotice(tx, userId, notice.id).unused)
     }
 
-    const mine = tx.select({ id: lists.id, token: lists.token }).from(lists)
-      .innerJoin(listOwners, eq(listOwners.listId, lists.id))
-      .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
-      .all()
-    for (const list of mine) {
-      if (ownersOfList(tx, list.id).length > 1) leaveList(tx, userId, list.token)
-      else deleteList(tx, userId, list.token)
-    }
-
     // The links they made go with their row, and so does what those remembered for an undo.
     const kept = tx.select({ before: linkChanges.before }).from(linkChanges)
       .innerJoin(wishLinks, eq(wishLinks.id, linkChanges.linkId))
       .where(and(eq(wishLinks.userId, userId), eq(linkChanges.field, 'imageFile')))
       .all()
       .map(row => JSON.parse(row.before) as string | null)
+    // With the row go the account's places among the owners of its lists and wishes. Every list
+    // stays live, so every wish stays where it is, with the owners of the lists that show it.
     tx.delete(users).where(eq(users.id, userId)).run()
     return { unused: [...unused, ...unusedImages(tx, kept)] }
   }, { behavior: 'immediate' })
