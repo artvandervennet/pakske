@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { friendLinks, friendRequests, friendships, listFriends as shownRows } from '../server/db/schema'
+import { eq } from 'drizzle-orm'
+import { friendLinks, friendRequests, friendships, listFriends as shownRows, lists } from '../server/db/schema'
 import {
   acceptFriendLink, answerRequest, areFriends, askFriend, countFreshRequests, FRIEND_LINK_DAYS, getFriendLink, hideShownList,
   isShownTo, listFriends, listFriendsForList, listRequests, listShownLists, makeFriendLink, markRequestsSeen, MAX_FRIENDS, ownersToBefriend,
@@ -34,6 +35,8 @@ function setup() {
 }
 
 const requestRows = (db: ReturnType<typeof makeDb>) => db.select().from(friendRequests).all()
+/** The address a list has now, by its title: after a new link the one a test started with is old. */
+const currentToken = (db: ReturnType<typeof makeDb>, title: string) => db.select({ token: lists.token }).from(lists).where(eq(lists.title, title)).get()!.token
 const friendshipRows = (db: ReturnType<typeof makeDb>) => db.select().from(friendships).all()
 
 /** Makes two people friends the short way: one asks, the other accepts. */
@@ -105,6 +108,46 @@ describe('asking to be friends', () => {
     expect(areFriends(db, art.id, mom.id)).toBe(true)
     expect(requestRows(db)).toEqual([])
     expect(listNotices(db, mom.id)).toMatchObject([{ kind: 'friend_accepted', actor: 'Art' }])
+  })
+
+  it('gives a sender who takes a request back and asks again the same to see, declined or not', () => {
+    // Two worlds that differ only in whether Art declined. In both, Mom then asks Lotte, takes
+    // her request to Art back and asks him again. What she can see must be the same in both.
+    const seen = [false, true].map((declined) => {
+      const { db, art, lot, mom, kerst } = setup()
+      askFriend(db, mom.id, kerst, art.id)
+      const first = listRequests(db, mom.id).outgoing[0]!.id
+      if (declined) answerRequest(db, art.id, listRequests(db, art.id).incoming[0]!.id, false)
+      later()
+      askFriend(db, mom.id, addList(db, lot.id), lot.id)
+      later()
+      withdrawRequest(db, mom.id, first)
+      expect(listRequests(db, mom.id).outgoing.map(row => row.to)).toEqual(['Lot'])
+      later()
+      expect(askFriend(db, mom.id, kerst, art.id)).toBe('asked')
+      const outgoing = listRequests(db, mom.id).outgoing
+      return { order: outgoing.map(row => row.to), sameId: outgoing.some(row => row.id === first), reachedArt: listRequests(db, art.id).incoming.length }
+    })
+    expect(seen[0]).toMatchObject({ order: ['Art', 'Lot'], sameId: false })
+    expect(seen[1]).toMatchObject({ order: ['Art', 'Lot'], sameId: false })
+    // The one difference is on Art's side: a request he declined doesn't come back to him.
+    expect(seen.map(world => world.reachedArt)).toEqual([1, 0])
+  })
+
+  it('does not count a declined request its sender took back as still wanting it', () => {
+    const { db, art, mom, kerst, momList } = setup()
+    askFriend(db, mom.id, kerst, art.id)
+    const request = listRequests(db, art.id).incoming[0]!
+    answerRequest(db, art.id, request.id, false)
+    withdrawRequest(db, mom.id, request.id)
+    // Art asks her after all. She took hers back, so this is a request like any other: hers to answer.
+    expect(askFriend(db, art.id, momList, mom.id)).toBe('asked')
+    expect(areFriends(db, art.id, mom.id)).toBe(false)
+    expect(listNotices(db, mom.id)).toEqual([])
+    expect(listRequests(db, mom.id)).toMatchObject({ incoming: [{ fromId: art.id, from: 'Art' }], outgoing: [] })
+    expect(requestRows(db)).toHaveLength(1)
+    expect(answerRequest(db, mom.id, listRequests(db, mom.id).incoming[0]!.id, true)).toEqual({ friendId: art.id })
+    expect(areFriends(db, art.id, mom.id)).toBe(true)
   })
 
   it('makes friends of two people who ask each other, once, with nothing left over', () => {
@@ -198,6 +241,10 @@ describe('asking to be friends', () => {
     // The deleted list is no longer named; the moved one still is.
     expect(listRequests(db, art.id).incoming).toMatchObject([{ fromId: mom.id, via: null }])
     expect(listRequests(db, lot.id).incoming).toMatchObject([{ fromId: mom.id, via: 'Samen' }])
+    // A list the receiver no longer owns isn't named either: its title may have changed since,
+    // and is no longer theirs to read.
+    leaveList(db, lot.id, currentToken(db, 'Samen'))
+    expect(listRequests(db, lot.id).incoming).toMatchObject([{ fromId: mom.id, via: null }])
     expect(answerRequest(db, art.id, listRequests(db, art.id).incoming[0]!.id, true)).toEqual({ friendId: mom.id })
     expect(answerRequest(db, lot.id, listRequests(db, lot.id).incoming[0]!.id, false)).toBeNull()
   })
@@ -417,10 +464,18 @@ describe('showing a list to a friend', () => {
   })
 
   it('never lists a list under a friend who owns it', () => {
-    const { db, art, mom, kerst } = friends()
+    const { db, art, lot, mom, kerst } = friends()
+    befriend(db, lot.id, kerst, art.id)
     setShownTo(db, art.id, kerst, [mom.id])
     addOwner(db, kerst, mom.id)
     expect(listShownLists(db, mom.id)).toEqual([])
+    // There is no switch for her on that list: it would do nothing. The other friend keeps theirs.
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: lot.id, name: 'Lot', shown: false }])
+    expect(listFriends(db, art.id).find(friend => friend.id === mom.id)!.shows.map(list => list.title)).toEqual([])
+    expect(listFriends(db, art.id).find(friend => friend.id === lot.id)!.shows.map(list => list.title)).toEqual(['Kerst'])
+    // Saving the switches that are offered leaves hers as it was.
+    setShownTo(db, art.id, kerst, [lot.id])
+    setShownLists(db, art.id, mom.id, [])
     // Ticking an owner does nothing: the list is theirs already.
     setShownTo(db, art.id, kerst, [mom.id])
     // She leaves; Art still ticks it for her, so it is shown again.

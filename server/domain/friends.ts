@@ -57,9 +57,13 @@ function waitingFor(db: Db, userId: number): number {
  * and theirs, or the answer is "not found". Answers `friends` when that is what they are now.
  *
  * A request the asker already has out to this person, whatever became of it, is all there will
- * be: asking again shows it on their page again and reaches nobody, so a decline stays silent
- * and can't be pushed past. A request the other way, also one this asker declined before, means
- * both want it: they are friends at once, and the one who asked first is told.
+ * be: asking again reaches nobody, so a decline stays silent and can't be pushed past. A declined
+ * one the asker had taken back comes back on their page as a request made now, with a new id and
+ * a new place in the order, exactly as a waiting one they took back and sent again would.
+ *
+ * A request the other way that its sender still stands by, also one this asker declined before,
+ * means both want it: they are friends at once, and the one who asked first is told. One its
+ * sender took back is gone: this request then waits for their answer like any other.
  */
 export function askFriend(db: Db, userId: number, listToken: string, ownerId: number): 'asked' | 'friends' {
   return db.transaction((tx) => {
@@ -75,16 +79,20 @@ export function askFriend(db: Db, userId: number, listToken: string, ownerId: nu
     if (mine) {
       if (mine.hidden) {
         if (waitingFor(tx, userId) >= MAX_WAITING_REQUESTS) throw new DomainError('request_limit')
-        tx.update(friendRequests).set({ hidden: false }).where(eq(friendRequests.id, mine.id)).run()
+        tx.update(friendRequests)
+          .set({ id: crypto.randomUUID(), createdAt: new Date(), listId: list.id, hidden: false })
+          .where(eq(friendRequests.id, mine.id)).run()
       }
       return 'asked'
     }
 
-    if (tx.select({ id: friendRequests.id }).from(friendRequests).where(between(ownerId, userId)).get()) {
+    const theirs = tx.select().from(friendRequests).where(between(ownerId, userId)).get()
+    if (theirs && !theirs.hidden) {
       makeFriends(tx, userId, ownerId)
       addNotice(tx, { userId: ownerId, kind: 'friend_accepted', actorId: userId, title: '' })
       return 'friends'
     }
+    if (theirs) tx.delete(friendRequests).where(eq(friendRequests.id, theirs.id)).run()
 
     if (waitingFor(tx, userId) >= MAX_WAITING_REQUESTS) throw new DomainError('request_limit')
     tx.insert(friendRequests).values({ fromUser: userId, toUser: ownerId, listId: list.id }).run()
@@ -150,10 +158,13 @@ export function withdrawRequest(db: Db, userId: number, requestId: string): void
 
 export function listRequests(db: Db, userId: number): RequestsView {
   const newestFirst = [desc(friendRequests.createdAt), desc(sql`${friendRequests}.rowid`)]
-  const incoming = db.select({ request: friendRequests, from: users.displayName, title: lists.title, deletedAt: lists.deletedAt })
+  // The list a request came from is named while it exists and is still the receiver's: a list
+  // they left may have another title by now, which is no longer theirs to read.
+  const incoming = db.select({ request: friendRequests, from: users.displayName, title: lists.title, deletedAt: lists.deletedAt, owner: listOwners.userId })
     .from(friendRequests)
     .innerJoin(users, eq(users.id, friendRequests.fromUser))
     .leftJoin(lists, eq(lists.id, friendRequests.listId))
+    .leftJoin(listOwners, and(eq(listOwners.listId, friendRequests.listId), eq(listOwners.userId, friendRequests.toUser)))
     .where(and(eq(friendRequests.toUser, userId), eq(friendRequests.status, 'pending')))
     .orderBy(...newestFirst)
     .all()
@@ -164,11 +175,11 @@ export function listRequests(db: Db, userId: number): RequestsView {
     .orderBy(...newestFirst)
     .all()
   return {
-    incoming: incoming.map(({ request, from, title, deletedAt }) => ({
+    incoming: incoming.map(({ request, from, title, deletedAt, owner }) => ({
       id: request.id,
       fromId: request.fromUser,
       from,
-      via: title !== null && deletedAt === null ? title : null,
+      via: title !== null && deletedAt === null && owner !== null ? title : null,
       fresh: request.seenAt === null,
     })),
     outgoing,
@@ -295,32 +306,55 @@ function tick(db: Db, ownerId: number, list: { id: number, title: string }, frie
   }
 }
 
-/** Which of the person's own lists one friend finds: exactly these. */
+/** The ids of the lists a person owns, deleted ones included. */
+function listsOwnedBy(db: Db, userId: number): Set<number> {
+  return new Set(db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, userId)).all().map(row => row.listId))
+}
+
+/**
+ * Which of the person's own lists one friend finds: exactly these. A list the friend owns too
+ * has no switch (it is theirs already) and is left as it is.
+ */
 export function setShownLists(db: Db, ownerId: number, friendId: number, listTokens: string[]): void {
   db.transaction((tx) => {
     if (!areFriends(tx, ownerId, friendId)) throw new DomainError('not_friends')
     const chosen = new Set(listTokens.map(token => ownedListId(tx, ownerId, token)))
-    for (const list of ownLists(tx, ownerId)) tick(tx, ownerId, list, friendId, chosen.has(list.id))
+    const theirs = listsOwnedBy(tx, friendId)
+    for (const list of ownLists(tx, ownerId)) {
+      if (!theirs.has(list.id)) tick(tx, ownerId, list, friendId, chosen.has(list.id))
+    }
   }, { behavior: 'immediate' })
 }
 
-/** The person's friends, each with whether they find this list of the person's own. */
+/**
+ * The person's friends who can be shown this list of the person's own, each with whether they
+ * are. A friend who owns the list too isn't among them: it is on their own lists already.
+ */
 export function listFriendsForList(db: Db, ownerId: number, listToken: string): { id: number, name: string, shown: boolean }[] {
   const listId = ownedListId(db, ownerId, listToken)
+  const owners = new Set(ownersOfList(db, listId).map(owner => owner.userId))
   const ticked = new Set(db.select({ userId: shown.userId }).from(shown)
     .where(and(eq(shown.listId, listId), eq(shown.shownBy, ownerId))).all().map(row => row.userId))
-  return friendsOf(db, ownerId).map(friend => ({ ...friend, shown: ticked.has(friend.id) }))
+  return friendsOf(db, ownerId)
+    .filter(friend => !owners.has(friend.id))
+    .map(friend => ({ ...friend, shown: ticked.has(friend.id) }))
 }
 
-/** Which of the person's friends find this list of the person's own: exactly these. */
+/**
+ * Which of the person's friends find this list of the person's own: exactly these. A friend who
+ * owns the list too has no switch and is left as they are.
+ */
 export function setShownTo(db: Db, ownerId: number, listToken: string, friendIds: number[]): void {
   db.transaction((tx) => {
     const listId = ownedListId(tx, ownerId, listToken)
     const list = tx.select({ id: lists.id, title: lists.title }).from(lists).where(eq(lists.id, listId)).get()!
+    const owners = new Set(ownersOfList(tx, listId).map(owner => owner.userId))
     const friends = friendsOf(tx, ownerId)
     const chosen = new Set(friendIds)
     if ([...chosen].some(id => !friends.some(friend => friend.id === id))) throw new DomainError('not_friends')
-    for (const friend of friends) tick(tx, ownerId, list, friend.id, chosen.has(friend.id))
+    for (const friend of friends) {
+      if (!owners.has(friend.id)) tick(tx, ownerId, list, friend.id, chosen.has(friend.id))
+    }
   }, { behavior: 'immediate' })
 }
 
@@ -330,7 +364,7 @@ export function setShownTo(db: Db, ownerId: number, listToken: string, friendIds
  * they own themselves. Oldest tick first.
  */
 function ticksFor(db: Db, userId: number) {
-  const mine = new Set(db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, userId)).all().map(row => row.listId))
+  const mine = listsOwnedBy(db, userId)
   return db.select({ listId: lists.id, token: lists.token, title: lists.title, by: shown.shownBy, name: users.displayName, addedAt: shown.addedAt })
     .from(shown)
     .innerJoin(lists, eq(lists.id, shown.listId))
@@ -384,11 +418,16 @@ export function listFriends(db: Db, userId: number): FriendView[] {
   const own = ownLists(db, userId)
   const given = db.select({ listId: shown.listId, friendId: shown.userId }).from(shown).where(eq(shown.shownBy, userId)).all()
   const got = ticksFor(db, userId)
-  return friendsOf(db, userId).map(friend => ({
-    ...friend,
-    shows: own.map(list => ({ token: list.token, title: list.title, shown: given.some(row => row.listId === list.id && row.friendId === friend.id) })),
-    sees: got.filter(row => row.by === friend.id).map(row => ({ token: row.token, title: row.title })),
-  }))
+  return friendsOf(db, userId).map((friend) => {
+    const theirs = listsOwnedBy(db, friend.id)
+    return {
+      ...friend,
+      // Not the lists this friend owns too: those are theirs already, and have no switch.
+      shows: own.filter(list => !theirs.has(list.id))
+        .map(list => ({ token: list.token, title: list.title, shown: given.some(row => row.listId === list.id && row.friendId === friend.id) })),
+      sees: got.filter(row => row.by === friend.id).map(row => ({ token: row.token, title: row.title })),
+    }
+  })
 }
 
 /**

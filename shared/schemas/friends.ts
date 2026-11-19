@@ -10,7 +10,7 @@ export interface RequestsView {
 export interface FriendView {
   id: number
   name: string
-  /** Every live list of the asker's own, with whether this friend finds it. */
+  /** Every live list of the asker's own that isn't this friend's too, with whether this friend finds it. */
   shows: { token: string, title: string, shown: boolean }[]
   /** The lists this friend shows the asker, without the ones the asker took off their page. */
   sees: { token: string, title: string }[]
