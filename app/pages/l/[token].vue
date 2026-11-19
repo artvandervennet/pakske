@@ -4,7 +4,7 @@ import type { RowControl } from '~/composables/useListEdit'
 import type { AskTickWarning } from '~/composables/useTickWarning'
 
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const { parse } = useApiError()
 
@@ -263,17 +263,54 @@ async function onRemoveOwnerClose() {
 
 // Someone who opened a list may ask its owners to be friends, one button per owner. That is how
 // people find each other here: there is no search, and the request names the list it came from.
-// The button stands beside "Delen". Once pressed it stays where it is and says the request
-// went, so the focus has somewhere to be; the server says the same after a reload, also for a
-// request that was declined, which its sender must not be able to tell.
+// It is asked from the owner's name, in the line under the title ("van Art en Lotte"): a name
+// that can be asked is a button, and pressing it opens a small card with that one thing to do.
+// So the title band needs no button per owner. The card says what became of it; the server
+// says the same after a reload, also for a request that was declined, which its sender must
+// not be able to tell.
 type Befriendable = NonNullable<typeof list.value.ownersToBefriend>[number]
-// An owner who is a friend already isn't named here: there is nothing to ask, and nothing to say.
-const befriendable = computed(() => (list.value.old ? [] : list.value.ownersToBefriend ?? []).filter(owner => befriendState(owner) !== 'friends' || asked.has(owner.id)))
 const asked = reactive(new Map<number, 'asked' | 'friends'>())
 const befriendState = (owner: Befriendable) => asked.get(owner.id) ?? owner.state
 const befriending = ref(false)
-// What the button did, for a screen reader: its own words change while the focus is on it.
-const befriendStatus = ref('')
+
+// The names as the page writes them ("Art, Lotte en Moeke"), cut into names and what stands
+// between them, each name with the owner behind it. The owners to befriend are in the order
+// of the names; there are none for someone logged out, an owner, or a list that is deleted.
+// A friend's name is just a name: there is nothing to ask.
+const ownerParts = computed(() => {
+  const askable = list.value.old ? [] : list.value.ownersToBefriend ?? []
+  let nth = 0
+  return new Intl.ListFormat(locale.value, { type: 'conjunction' }).formatToParts(list.value.owners).map((part) => {
+    const owner = part.type === 'element' ? askable[nth++] : undefined
+    return { text: part.value, owner: owner && (befriendState(owner) !== 'friends' || asked.has(owner.id)) ? owner : null }
+  })
+})
+// "van {names}", around the names.
+const ownersFrame = computed(() => t('list.owners', { names: '\u0000' }).split('\u0000'))
+
+const ownerCard = useTemplateRef<HTMLElement>('ownerCard')
+const cardOwner = ref<Befriendable | null>(null)
+const cardState = useTemplateRef<HTMLElement>('cardState')
+
+async function openOwnerCard(owner: Befriendable, event: MouseEvent) {
+  const card = ownerCard.value
+  // Kept now: an event forgets what it was on once its handler has waited for something.
+  const name = event.currentTarget as HTMLElement
+  const byKeyboard = event.detail === 0
+  if (!card) return
+  if (card.matches(':popover-open')) {
+    const same = cardOwner.value?.id === owner.id
+    card.hidePopover()
+    if (same) return
+  }
+  cardOwner.value = owner
+  bandError.value = ''
+  // The name gets the anchor's name first, so the card opens under it.
+  await nextTick()
+  card.showPopover({ source: name })
+  // A keyboard goes into the card; a pointer stays where it is.
+  if (byKeyboard) card.querySelector<HTMLElement>('button, [tabindex]')?.focus()
+}
 
 async function befriend(owner: Befriendable) {
   if (befriending.value) return
@@ -282,7 +319,9 @@ async function befriend(owner: Befriendable) {
   try {
     const answered = await $fetch<{ state: 'asked' | 'friends' }>(`/api/lists/${token.value}/friend-requests`, { method: 'POST', body: { owner: owner.id } })
     asked.set(owner.id, answered.state)
-    befriendStatus.value = t(answered.state === 'asked' ? 'list.befriendAsked' : 'list.befriendFriends', { name: owner.name })
+    // The button is gone; the line that took its place gets the focus and is read out.
+    await nextTick()
+    cardState.value?.focus()
   }
   catch (error) {
     bandError.value = parse(error).message
@@ -605,7 +644,21 @@ async function addWish(title: string) {
 
 <template>
   <div>
-    <PageHead :title="list.title" :lead="list.viewerOwnsList || !owners ? null : t('list.owners', { names: owners })">
+    <PageHead :title="list.title">
+      <!-- Whose list it is, for everyone but its owners. A name that can be asked to be friends
+           is a button that opens a small card (see openOwnerCard). -->
+      <template v-if="!list.viewerOwnsList && owners" #lead>
+        <p class="lead">
+          {{ ownersFrame[0] }}<template v-for="(part, index) in ownerParts" :key="index"><button
+            v-if="part.owner"
+            type="button"
+            class="owner-name"
+            aria-haspopup="dialog"
+            :style="cardOwner?.id === part.owner.id ? 'anchor-name: --owner-name' : undefined"
+            @click="openOwnerCard(part.owner, $event)"
+          >{{ part.text }}</button><template v-else>{{ part.text }}</template></template>{{ ownersFrame[1] }}
+        </p>
+      </template>
       <template v-if="canManage" #title>
         <h1 v-if="!renaming">
           <button ref="renameButton" type="button" class="title-edit" aria-describedby="list-rename-hint" @click="startRenaming">{{ list.title }}</button>
@@ -631,18 +684,6 @@ async function addWish(title: string) {
         <art-button v-if="!list.deleted && !list.old" variant="secondary">
           <button type="button" @click="openListShare('share', $event)"><AppIcon name="share" />{{ t('share.open') }}</button>
         </art-button>
-        <art-button v-for="owner in befriendable" :key="owner.id" variant="secondary">
-          <button
-            type="button"
-            :aria-disabled="befriending || befriendState(owner) !== 'none' || undefined"
-            @click="befriendState(owner) === 'none' && befriend(owner)"
-          >
-            <template v-if="befriendState(owner) === 'none'">{{ t('list.befriend', { name: owner.name }) }}</template>
-            <template v-else><AppIcon name="check" />{{ befriendState(owner) === 'asked' ? t('list.befriendAsked', { name: owner.name }) : t('list.befriendFriends', { name: owner.name }) }}</template>
-          </button>
-        </art-button>
-        <p v-if="befriendable.length" class="visually-hidden" role="status">{{ befriendStatus }}</p>
-        <p v-if="bandError && !canManage" class="form-message" role="alert">{{ bandError }}</p>
         <template v-if="canManage">
           <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
           <art-button v-if="!editing" variant="secondary">
@@ -790,6 +831,30 @@ async function addWish(title: string) {
     </section>
 
     <TickWarning v-if="hasOwnWishes" ref="warning" />
+
+    <!-- One card serves every owner's name; it hangs from the name that opened it. -->
+    <div
+      ref="ownerCard"
+      class="menu anchored owner-card"
+      popover
+      role="dialog"
+      :aria-label="cardOwner?.name"
+      style="position-anchor: --owner-name"
+    >
+      <template v-if="cardOwner">
+        <div class="owner-card-who">
+          <PersonPicture :person="{ id: cardOwner.id, picture: null }" />
+          <strong>{{ cardOwner.name }}</strong>
+        </div>
+        <art-button v-if="befriendState(cardOwner) === 'none'" size="s">
+          <button type="button" :aria-disabled="befriending || undefined" @click="befriend(cardOwner)">{{ t('list.befriendDo') }}</button>
+        </art-button>
+        <p v-else ref="cardState" class="owner-card-state" tabindex="-1">
+          <AppIcon name="check" />{{ befriendState(cardOwner) === 'asked' ? t('list.befriendAsked', { name: cardOwner.name }) : t('list.befriendFriends', { name: cardOwner.name }) }}
+        </p>
+        <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
+      </template>
+    </div>
 
     <!-- The choices a handle opens. A group of buttons, not a menu in ARIA's sense: Tab walks
          them like any buttons, and Escape or a press beside it closes it. -->

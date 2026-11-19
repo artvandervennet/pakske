@@ -137,7 +137,7 @@
     "oldLinkDone": "Je hebt hier niets meer aangevinkt.",
     "newLinkBodyFriends": "De vriend die hem bij “Van anderen” vindt, krijgt de nieuwe link vanzelf. | De {n} vrienden die hem bij “Van anderen” vinden, krijgen de nieuwe link vanzelf.",
     "newLinkBodyInvite": "Een uitnodigingslink stopt ook met werken.",
-    "befriend": "Vrienden worden met {name}",
+    "befriendDo": "Vrienden worden",
     "befriendAsked": "Verzoek verstuurd naar {name}",
     "befriendFriends": "Jij en {name} zijn nu vrienden"
   },

@@ -137,7 +137,7 @@
     "oldLinkDone": "You have nothing ticked here any more.",
     "newLinkBodyFriends": "The friend who finds it under “From others” gets the new link by itself. | The {n} friends who find it under “From others” get the new link by itself.",
     "newLinkBodyInvite": "An invitation link stops working too.",
-    "befriend": "Become friends with {name}",
+    "befriendDo": "Become friends",
     "befriendAsked": "Request sent to {name}",
     "befriendFriends": "You and {name} are friends now"
   },

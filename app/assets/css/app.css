@@ -65,6 +65,16 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 .page-head .inner { padding-block: var(--space-12) var(--space-8); }
 .page-head h1 { font-size: var(--step-4); line-height: var(--leading-tight); text-wrap: balance; }
 .page-head .lead { margin-block-start: var(--space-4); }
+/* An owner's name in that line, when there is something to do with it: it stays the line's
+   own words, underlined, and opens a small card. */
+.owner-name { all: unset; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; border-radius: 2px; }
+.owner-name:hover { text-decoration-thickness: 2px; }
+.owner-name:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.owner-card { min-inline-size: 14rem; max-inline-size: min(20rem, calc(100vw - 2 * var(--gutter))); padding: var(--space-4); }
+.owner-card:popover-open { display: grid; gap: var(--space-3); justify-items: start; }
+.owner-card-who { display: flex; align-items: center; gap: var(--space-3); overflow-wrap: anywhere; }
+.owner-card-state { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--step--1); font-weight: var(--weight-medium); }
+.owner-card-state:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 .page-head .actions { margin-block-start: var(--space-6); }
 
 /* Candidate for Gesso: a page's title that is the control to rename it. At rest it reads as

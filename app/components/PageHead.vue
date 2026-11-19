@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The band in the deep paint that opens every page. <art-header> takes its paint from the
 // first band, so without this one the header would not be deep. The title slot replaces the
-// heading, for a page that lets you rename what it shows. The band ends in paint running
+// heading, for a page that lets you rename what it shows, and the lead slot the line under it,
+// for a page whose line has something to press in it. The band ends in paint running
 // down, like the home page's hero; <art-header> takes those drips along on scroll.
 defineProps<{ title: string, lead?: string | null }>()
 </script>
@@ -12,7 +13,9 @@ defineProps<{ title: string, lead?: string | null }>()
       <slot name="title">
         <h1>{{ title }}</h1>
       </slot>
-      <p v-if="lead" class="lead">{{ lead }}</p>
+      <slot name="lead">
+        <p v-if="lead" class="lead">{{ lead }}</p>
+      </slot>
       <div v-if="$slots.actions" class="actions">
         <slot name="actions" />
       </div>
