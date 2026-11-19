@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { notes } from '../server/db/schema'
 import { addNote, deleteNote } from '../server/domain/notes'
 import { setPurchase } from '../server/domain/purchases'
@@ -16,6 +16,8 @@ function setup() {
   const noteRows = () => db.select({ userId: notes.userId, body: notes.body }).from(notes).where(eq(notes.wishId, wish.id)).all()
   return { db, art, mom, sis, token, wish, noteRows }
 }
+
+afterEach(() => vi.useRealTimers())
 
 describe('notes between buyers', () => {
   it('stores a buyer\'s note with who wrote it', () => {
@@ -45,6 +47,19 @@ describe('notes between buyers', () => {
     deleteWish(db, art.id, token, wish.id)
     addNote(db, token, wish.id, mom.id, 'Wie houdt hem?')
     expect(noteRows()).toEqual([{ userId: mom.id, body: 'Wie houdt hem?' }])
+  })
+
+  it('finds nothing for a deleted wish thirty days after it left the list, also for whoever bought it', () => {
+    const { db, token, wish, art, mom, noteRows } = setup()
+    setPurchase(db, token, wish.id, mom.id, 1)
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-12-01T10:00:00Z'))
+    deleteWish(db, art.id, token, wish.id)
+    vi.setSystemTime(new Date('2026-12-31T09:59:59Z'))
+    addNote(db, token, wish.id, mom.id, 'Nog net.')
+    vi.setSystemTime(new Date('2026-12-31T10:00:00Z'))
+    expect(codeOf(() => addNote(db, token, wish.id, mom.id, 'Te laat.'))).toBe('not_found')
+    expect(noteRows()).toEqual([{ userId: mom.id, body: 'Nog net.' }])
   })
 
   it('finds nothing for a deleted wish the person bought none of, whoever else did', () => {

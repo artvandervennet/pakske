@@ -82,7 +82,7 @@ function enlarge(event: MouseEvent) {
     <img v-else-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
     <div class="wish-card-column">
       <p v-if="wish.role === 'buyer' && wish.removed && !bare" class="form-message">
-        {{ owners.length ? t('wish.removedIntro', { names: names(owners) }, owners.length) : t('wish.removedIntroNobody') }}
+        {{ owners.length ? t('wish.removedIntro', { names: names(owners), days: KEPT_FOR_BUYERS_DAYS }, owners.length) : t('wish.removedIntroNobody', { days: KEPT_FOR_BUYERS_DAYS }) }}
       </p>
       <p v-if="wish.description" class="wish-text">{{ wish.description }}</p>
       <ul v-if="wish.urls.length" class="wish-links">

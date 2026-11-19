@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getListView, oldLinkView } from '../server/domain/list-view'
 import { deleteList, relinkList } from '../server/domain/lists'
 import { addNote } from '../server/domain/notes'
 import { removePurchase, setPurchase } from '../server/domain/purchases'
 import { copyWish, linkWish } from '../server/domain/sharing'
+import { deleteWish } from '../server/domain/wishes'
 import type { ListView } from '../shared/schemas/list'
 import { buyerWishSchema } from '../shared/schemas/list'
 import { addList, addUser, addWishTo, codeOf, makeDb, purchaseRows, titles, wishIn } from './helpers'
@@ -34,7 +35,23 @@ function setup() {
   return { db, art, mom, sis, lot, old, token, momList, sokken, glazen, boek }
 }
 
+afterEach(() => vi.useRealTimers())
+
 describe('the old address of a list that got a new link', () => {
+  it('drops a tick on a wish that left the list thirty days ago, and keeps the ticks on wishes still there', () => {
+    const { db, art, mom, old, token, sokken } = setup()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-12-01T10:00:00Z'))
+    deleteWish(db, art.id, token, sokken.id)
+    vi.setSystemTime(new Date('2026-12-31T09:59:59Z'))
+    expect(titles(oldLinkView(db, old, mom.id) as ListView)).toEqual(['Sokken', 'Glazen'])
+    vi.setSystemTime(new Date('2026-12-31T10:00:00Z'))
+    expect(titles(oldLinkView(db, old, mom.id) as ListView)).toEqual(['Glazen'])
+    // A year on, the glasses are still on the list, so the tick on them is still hers to take back.
+    vi.setSystemTime(new Date('2027-12-31T10:00:00Z'))
+    expect(titles(oldLinkView(db, old, mom.id) as ListView)).toEqual(['Glazen'])
+  })
+
   it('is nothing for a visitor and for someone who ticked nothing there', () => {
     const { db, lot, old } = setup()
     expect(oldLinkView(db, old, null)).toBeUndefined()

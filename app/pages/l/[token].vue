@@ -702,7 +702,7 @@ async function addWish(title: string) {
                back the address answers nothing any more, and the page says why it is empty. -->
           <p v-if="list.old" class="form-message" role="status">{{ gone ? t('list.oldLinkDone') : t('list.oldLink') }}</p>
           <p v-else-if="list.deleted" class="form-message">
-            {{ owners ? t('list.deleted', { names: owners }, list.owners.length) : t('list.deletedNobody') }}
+            {{ owners ? t('list.deleted', { names: owners, days: KEPT_FOR_BUYERS_DAYS }, list.owners.length) : t('list.deletedNobody', { days: KEPT_FOR_BUYERS_DAYS }) }}
           </p>
           <template v-else>
             <!-- Its only owner deleted their account: the list stays, and nobody manages it. -->

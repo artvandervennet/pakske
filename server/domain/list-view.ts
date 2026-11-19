@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, min, ne } from 'drizzle-orm'
 import type { AnonWish, BuyerWish, ListView, OwnerWish, WishView } from '../../shared/schemas/list'
+import { keptForBuyers, leftListAt } from '../../shared/utils/kept-for-buyers'
 import type { Db } from '../db/client'
 import { listOldTokens, listOwners, lists, listWishes, notes, purchases, users, wishOwners, wishes } from '../db/schema'
 import { onListNow } from './placement'
@@ -105,6 +106,7 @@ function ownerWishes(
  * the notes. A wish that is no longer on the list (taken off, deleted, or on a deleted list) stays
  * for whoever bought it, so they can see it went and take back their purchase, and for nobody
  * else: someone who bought none of it has nothing to settle and no reason to see what was deleted.
+ * The caller leaves out the ones that left too long ago (`keptForBuyers`).
  */
 function buyerWishes(
   db: Db,
@@ -187,14 +189,19 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
     .where(eq(listWishes.listId, list.id))
     .orderBy(asc(listWishes.position), asc(wishes.createdAt), asc(wishes.id))
     .all()
-    .map(row => ({ wish: row.wish, owns: row.ownerId !== null, live: !deleted && row.removedAt === null && row.wish.deletedAt === null }))
+    .map((row) => {
+      const leftAt = leftListAt(row.removedAt, row.wish.deletedAt, list.deletedAt)
+      return { wish: row.wish, owns: row.ownerId !== null, live: leftAt === null, leftAt }
+    })
   const owned = rows.filter(row => row.live && row.owns).map(row => row.wish)
   // Buyer rows go only to someone who owns neither the wish nor the list, so a wish that left the
   // list reads the same to both kinds of owner whatever buyers did: also to whoever stopped owning
   // it by taking it off, and for wishes deleted in step one, which kept their owners. A list's
-  // owners own every wish it shows, so they lose nothing here.
+  // owners own every wish it shows, so they lose nothing here. A wish that left the list is a
+  // buyer's for a while and then nobody's: the clock decides that, not what anyone bought.
+  const now = new Date()
   const forBuyers = rows
-    .filter(row => !row.owns && !viewerOwnsList)
+    .filter(row => !row.owns && !viewerOwnsList && (row.leftAt === null || keptForBuyers(row.leftAt, now)))
     .map(row => ({ wish: row.wish, removed: !row.live }))
 
   const joint = jointDetails(db, list.id, [...owned.map(wish => wish.id), ...forBuyers.map(row => row.wish.id)])
@@ -212,8 +219,9 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
  * opens the list. An owner of the list, while it exists, is told where it is now. Anyone else
  * who is logged in and was giving something from it gets only those wishes, each with their own
  * purchase alone: no other buyers, no notes, no other wishes, and not the new address. That is
- * enough to lower or take back what they ticked. Everyone else gets nothing, like an address
- * that never existed.
+ * enough to lower or take back what they ticked. A wish that has left the list since is among
+ * them for as long as it would be on the list's own page (`keptForBuyers`). Everyone else gets
+ * nothing, like an address that never existed.
  *
  * Who owns the list is all that decides an owner's answer, and a visitor's is always nothing, so
  * both come out the same whatever buyers did.
@@ -230,7 +238,8 @@ export function oldLinkView(db: Db, token: string, viewerId: number | null): Lis
     .where(and(eq(listOwners.listId, list.id), eq(listOwners.userId, viewerId))).get() !== undefined
   if (owns) return list.deletedAt === null ? { movedTo: list.token } : undefined
 
-  const given = db.select({ wish: wishes, name: users.displayName, quantity: purchases.quantity, anonymous: purchases.anonymous })
+  const now = new Date()
+  const given = db.select({ wish: wishes, removedAt: listWishes.removedAt, name: users.displayName, quantity: purchases.quantity, anonymous: purchases.anonymous })
     .from(listWishes)
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
     .innerJoin(purchases, and(eq(purchases.wishId, wishes.id), eq(purchases.userId, viewerId)))
@@ -238,6 +247,10 @@ export function oldLinkView(db: Db, token: string, viewerId: number | null): Lis
     .where(eq(listWishes.listId, list.id))
     .orderBy(asc(listWishes.position), asc(wishes.createdAt), asc(wishes.id))
     .all()
+    .filter((row) => {
+      const leftAt = leftListAt(row.removedAt, row.wish.deletedAt, list.deletedAt)
+      return leftAt === null || keptForBuyers(leftAt, now)
+    })
   if (given.length === 0) return undefined
 
   return {

@@ -22,7 +22,7 @@ A wish with several owners:
 
 - Each owner sees only their own purchase. When Lotte ticks the board game she shares with Art, Art's page doesn't change. When there aren't enough left, the refusal is the same as on a wish of your own.
 - Buyers see one shared state. Mom buying through Art's list and Sis buying through Lotte's list see the same total, the same names and the same notes.
-- A wish taken off a list stays on that list for the people who have a purchase on it, marked "Taken off the list", and for nobody else: someone who bought none of it no longer gets it, whoever else did. A buyer can lower or withdraw their own purchase there and write notes, but not buy more; once they withdraw it the wish is gone for them too. The same goes for the wishes of a deleted list. The list's owners and the wish's owners never get that row.
+- A wish taken off a list stays on that list for the people who have a purchase on it, marked "Taken off the list", and for nobody else: someone who bought none of it no longer gets it, whoever else did. A buyer can lower or withdraw their own purchase there and write notes, but not buy more; once they withdraw it the wish is gone for them too. Thirty days after it left the list it is gone for them anyway (`keptForBuyers` in `shared/utils/kept-for-buyers.ts`), so a list someone tidies up after a birthday is a clean page again for the people who gave. The purchase stays in the database and nobody is shown it. The same goes for the wishes of a deleted list, counted from the day it was deleted. The list's owners and the wish's owners never get that row.
 - Someone who stops owning a wish (by taking it off their list, leaving a list, being removed from one or being unlinked) is a buyer of it again wherever they can still open a list that shows it, and sees its purchases and notes there.
 
 Friends change nothing on a list. A friend who opens a list is a buyer like anyone who has its link, unless they own a wish there. Switching a list on for a friend only puts it on their Lists page. `getListView` knows nothing about friends; the list's route adds who the viewer may ask to be friends beside it. `server/domain/friends.ts` reads neither purchases nor notes, and a test reads its source to keep it that way.
@@ -45,9 +45,9 @@ An owner can tick their own wish. Before every tick or higher number the site as
 
 Rules that keep an owner from finding out by a detour:
 
-- Taking a wish off your list ("Delete" in the list's edit mode or in the wish's own card) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted; its row and image stay. Buyers who bought it still see it, marked as taken off.
+- Taking a wish off your list ("Delete" in the list's edit mode or in the wish's own card) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted; its row and image stay. Buyers who bought it still see it for thirty days, marked as taken off.
 - Lowering an amount below what is bought is always accepted. Buyers then see that none are left.
-- Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it. A list with more than one owner can't be deleted, whatever is on it.
+- Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it, for thirty days. A list with more than one owner can't be deleted, whatever is on it.
 - Linking, copying, unlinking, undo, share links and leaving a list never read purchases or notes, so they answer the same whatever was bought. An already bought wish can be linked or copied like any other.
 - Notices are about who owns what: a wish linked or unlinked, wishes made joint through a link, a new co-owner. Buying, ticking and writing notes never make one. Neither does a copy, by button or by link: it changes nothing for the owners of the original.
 - Buying and writing notes never change a wish's `updatedAt` or its place in the list.

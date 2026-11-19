@@ -208,6 +208,40 @@ it('answers undefined for an unknown token', () => {
   }
 })
 
+describe('thirty days after a wish left the list', () => {
+  const DAY = 24 * 60 * 60 * 1000
+  // `world` deletes the socks an hour after its start.
+  const socksLeft = START.getTime() + 3_600_000
+
+  it('is gone for whoever bought it too, and was there until then', () => {
+    const { db, token, mom, socks } = world(true)
+    vi.setSystemTime(socksLeft + 30 * DAY - 1)
+    expect(wishIn(getListView(db, token, mom.id), socks.id)).toMatchObject({ removed: true, mine: 1 })
+    vi.setSystemTime(socksLeft + 30 * DAY)
+    expect(wishIn(getListView(db, token, mom.id), socks.id)).toBeUndefined()
+    expect(titles(getListView(db, token, mom.id))).toEqual(['Slimme stekkers', 'Puzzels', 'Boek'])
+  })
+
+  it('still reads the same to the owner and to a logged-out visitor, whatever was bought', () => {
+    const quiet = world(false)
+    const busy = world(true)
+    vi.setSystemTime(socksLeft + 30 * DAY)
+    expect(getListView(busy.db, busy.token, busy.art.id)).toEqual(getListView(quiet.db, quiet.token, quiet.art.id))
+    expect(getListView(busy.db, busy.token, null)).toEqual(getListView(quiet.db, quiet.token, null))
+  })
+
+  it('keeps nothing of a deleted list for its buyers either', () => {
+    const { db, token, art, mom } = world(true)
+    vi.setSystemTime(START.getTime() + 10 * DAY)
+    deleteList(db, art.id, token)
+    // The socks left twenty days before the list did, so they go first.
+    vi.setSystemTime(socksLeft + 30 * DAY)
+    expect(titles(getListView(db, token, mom.id))).toEqual(['Slimme stekkers'])
+    vi.setSystemTime(START.getTime() + 40 * DAY)
+    expect(getListView(db, token, mom.id)).toMatchObject({ deleted: true, wishes: [] })
+  })
+})
+
 describe('a deleted list', () => {
   it('is gone for its owner and for logged-out visitors, whatever was bought', () => {
     for (const { db, token, art } of [world(false), world(true)]) {
