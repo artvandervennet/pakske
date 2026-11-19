@@ -281,38 +281,26 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   translate: 0 -0.2em;
   color: var(--ink-muted);
 }
-/* The line under the title stays one line: a tape for what you give, then the rest, cut off
-   with an ellipsis where the row ends. */
+/* The line under the title stays one line, cut off with an ellipsis where the row ends. */
 .wish-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--step--1);
   color: var(--ink-muted);
 }
-.wish-line > art-tape { flex: none; }
-.wish-line-rest { min-inline-size: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .wish-tags { flex: none; display: flex; flex-direction: column; align-items: end; gap: var(--space-1); }
 /* Taken off the list: quieter, unless it is one you give. */
 .wish-row.removed:not(.mine) .wish-title { color: var(--ink-muted); }
 
 /* Candidate for Gesso: a row that is yours among rows that are not. What you give has an edge
-   in the accent at its start and your part of the line on a tape in the partner pigment, the
-   yellow of the title band's buttons; the ink on it is the darkest neutral in both schemes
-   (about 13:1). It is never greyed, even when the wish is fully taken. */
+   in the accent at its start, beside its tick. It is never greyed, even when the wish is fully
+   taken. */
 .wish-row.mine:not(.open) {
   margin-inline-start: calc(-1 * var(--space-3));
   padding-inline-start: var(--space-3);
   box-shadow: inset 4px 0 0 var(--accent);
-}
-.tape-mine { --tape: var(--pigment-partner); --on-tape: var(--neutral-950); }
-/* Before the tape upgrades it is plain text: give it its colours, so the line doesn't flash. */
-art-tape.tape-mine:not(:defined) {
-  padding: 0.15em 0.6em;
-  background: var(--pigment-partner);
-  color: var(--neutral-950);
-  font-weight: var(--weight-medium);
 }
 /* Taken by others: everything asked for is given and none of it by you. The title is crossed
    and greyed and the picture fades; the tick keeps its own look. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnonWish, BuyerWish, OwnerWish } from '../shared/schemas/list'
-import { linkNames, wishLine, wishLineParts, wishOwnerTag, type Translate } from '../shared/utils/wish-line'
+import { linkNames, wishLine, wishOwnerTag, type Translate } from '../shared/utils/wish-line'
 
 // Writes out the key and its arguments instead of a sentence, so a test can see which strings
 // a line is made of without depending on the wording in the locale files.
@@ -66,26 +66,27 @@ describe("a row's second line", () => {
     expect(wishLine(owner(3, 0, { urls: ['https://www.coolblue.be/x', 'https://www.bol.com/y'] }), t)).toBe('coolblue.be')
   })
 
-  it('names who gives, your own part first, and leaves what is left to the stepper', () => {
+  it('names who else gives, and leaves what you give to the tick and what is left to the stepper', () => {
     const line = wishLine(buyer(4, [
       { name: 'Moeke', quantity: 1, mine: false },
       { name: 'Art', quantity: 2, mine: true },
+      { name: null, quantity: 1, mine: false },
     ]), t)
-    expect(line).toBe('[purchase.youGive n=2] · [purchase.gives name=Moeke n=1]')
+    expect(line).toBe('[purchase.gives name=Moeke n=1] · [purchase.someoneGives n=1]')
   })
 
   it('leaves the numbers out next to the names when only one was asked for', () => {
     expect(wishLine(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toBe('[purchase.givesThis name=Moeke]')
-    expect(wishLine(buyer(1, [{ name: 'Art', quantity: 1, mine: true }]), t)).toBe('[purchase.youGiveThis]')
+    expect(wishLine(buyer(1, [{ name: null, quantity: 1, mine: false, anonymous: true }]), t)).toBe('[purchase.someoneGivesThis]')
   })
 
-  it('says "someone" for a buyer who stays anonymous, and keeps your own name as "you"', () => {
-    const line = wishLine(buyer(4, [
-      { name: null, quantity: 1, mine: false, anonymous: true },
-      { name: 'Art', quantity: 2, mine: true, anonymous: true },
-    ]), t)
-    expect(line).toBe('[purchase.youGive n=2] · [purchase.someoneGives n=1]')
-    expect(wishLine(buyer(1, [{ name: null, quantity: 1, mine: false, anonymous: true }]), t)).toBe('[purchase.someoneGivesThis]')
+  it("reads as the wish's own text, or its shop, when you are the only one who gives", () => {
+    const mine = [{ name: 'Art', quantity: 1, mine: true }]
+    expect(wishLine(buyer(1, mine, { description: 'Rood' }), t)).toBe('Rood')
+    expect(wishLine(buyer(3, mine, { urls: ['https://www.bol.com/y'] }), t)).toBe('bol.com')
+    expect(wishLine(buyer(1, mine), t)).toBe('')
+    // The same as before anyone gave.
+    expect(wishLine(buyer(1, [], { description: 'Rood' }), t)).toBe('Rood')
   })
 
   it('says nothing about what is left to a buyer when the wish is unlimited', () => {
@@ -98,33 +99,6 @@ describe("a row's second line", () => {
       expect(line).not.toContain('wish.left')
       expect(line).toContain('Moeke')
     }
-  })
-})
-
-describe("a row's second line in parts", () => {
-  it("sets a buyer's own part apart from what the others give", () => {
-    const wish = buyer(4, [
-      { name: 'Moeke', quantity: 1, mine: false },
-      { name: 'Art', quantity: 2, mine: true },
-      { name: null, quantity: 1, mine: false },
-    ])
-    expect(wishLineParts(wish, t)).toEqual({
-      mine: '[purchase.youGive n=2]',
-      rest: '[purchase.gives name=Moeke n=1] · [purchase.someoneGives n=1]',
-    })
-  })
-
-  it('has only your part when nobody else gives', () => {
-    expect(wishLineParts(buyer(1, [{ name: 'Art', quantity: 1, mine: true }]), t)).toEqual({ mine: '[purchase.youGiveThis]', rest: '' })
-  })
-
-  it('has no part of your own when only others give, or nobody', () => {
-    expect(wishLineParts(buyer(1, [{ name: 'Moeke', quantity: 1, mine: false }]), t)).toEqual({ mine: null, rest: '[purchase.givesThis name=Moeke]' })
-    expect(wishLineParts(buyer(1, [], { description: 'Rood' }), t)).toEqual({ mine: null, rest: 'Rood' })
-  })
-
-  it("never sets an owner's own tick apart: it reads as before", () => {
-    expect(wishLineParts(owner(3, 2), t)).toEqual({ mine: null, rest: '[wish.yours 2]' })
   })
 })
 

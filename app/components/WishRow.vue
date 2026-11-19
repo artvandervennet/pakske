@@ -45,12 +45,12 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { lineParts, amountTag } = useWishStatus()
+const { line: lineOf, amountTag } = useWishStatus()
 const names = useNames()
 
 const detailsId = computed(() => `wish-${props.wish.id}-details`)
 const addId = computed(() => `wish-${props.wish.id}-add`)
-const line = computed(() => lineParts(props.wish))
+const line = computed(() => lineOf(props.wish))
 const amount = computed(() => amountTag(props.wish))
 const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed)
 const mine = computed(() => givenByMe(props.wish))
@@ -154,7 +154,7 @@ defineExpose({ settle })
       <!-- In edit mode the whole row is the label of its box, so tapping it ticks the box. -->
       <label v-if="editMode" class="wish-toggle" :for="`pick-${wish.id}`">
         <span class="wish-title">{{ wish.title }}</span>
-        <span v-if="line.rest" class="wish-line"><span class="wish-line-rest">{{ line.rest }}</span></span>
+        <span v-if="line" class="wish-line">{{ line }}</span>
       </label>
       <button
         v-else
@@ -166,10 +166,7 @@ defineExpose({ settle })
         @click="toggle"
       >
         <span class="wish-title">{{ wish.title }}</span>
-        <span v-if="line.mine || line.rest" class="wish-line">
-          <art-tape v-if="line.mine" class="tape-mine" :seed="`mine-${wish.id}`">{{ line.mine }}</art-tape>
-          <span v-if="line.rest" class="wish-line-rest">{{ line.rest }}</span>
-        </span>
+        <span v-if="line" class="wish-line">{{ line }}</span>
       </button>
       <div v-if="amount || removed || ownerTag" class="wish-tags">
         <art-tape v-if="removed" pigment="complement" :seed="`removed-${wish.id}`">{{ t('wish.removed') }}</art-tape>

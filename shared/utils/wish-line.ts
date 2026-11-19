@@ -33,38 +33,27 @@ export function linkNames(urls: readonly string[]): string[] {
 }
 
 /**
- * The line under a wish's title, in two parts. `mine` is what a buyer gives themselves ("Jij
- * geeft dit"), which the row shows as a tape of its own; it is null for everyone else. `rest`
- * is, for a buyer, who else gives; how many are left is in the stepper (`tickCeiling`). For an
- * owner who has it themselves, that they do, and never how many are left: that would tell them
- * what others bought. Otherwise the start of the text, or the shop's name from the first link
- * when there is no text.
+ * The line under a wish's title. For a buyer: who else gives. What they give themselves is not
+ * in it, since the tick at the start of the row says that already; how many are left is in the
+ * stepper (`tickCeiling`). For an owner who has it themselves, that they do, and never how many
+ * are left: that would tell them what others bought. Otherwise the start of the text, or the
+ * shop's name from the first link when there is no text.
  */
-export function wishLineParts(wish: WishView, t: Translate): { mine: string | null, rest: string } {
-  if (wish.role === 'owner' && wish.mine > 0) return { mine: null, rest: t('wish.yours', wish.mine) }
-  if (wish.role === 'buyer' && wish.purchases.length > 0) {
-    const own = wish.purchases.find(purchase => purchase.mine)
-    return {
-      mine: own ? givingWords(wish, own, t) : null,
-      rest: wish.purchases.filter(purchase => !purchase.mine).map(purchase => givingWords(wish, purchase, t)).join(' · '),
-    }
+export function wishLine(wish: WishView, t: Translate): string {
+  if (wish.role === 'owner' && wish.mine > 0) return t('wish.yours', wish.mine)
+  if (wish.role === 'buyer') {
+    const others = wish.purchases.filter(purchase => !purchase.mine)
+    if (others.length > 0) return others.map(purchase => givingWords(wish, purchase, t)).join(' · ')
   }
   const text = wish.description?.replace(/\s+/g, ' ').trim()
   // The row cuts the line off with an ellipsis; this only keeps the payload small.
-  return { mine: null, rest: text ? text.slice(0, 160) : (hostOf(wish.urls[0]) ?? '') }
+  return text ? text.slice(0, 160) : (hostOf(wish.urls[0]) ?? '')
 }
 
-/** The same line as one sentence, your own part first: "Jij geeft er 2 · Moeke geeft er 1". */
-export function wishLine(wish: WishView, t: Translate): string {
-  const { mine, rest } = wishLineParts(wish, t)
-  return [mine, rest].filter(Boolean).join(' · ')
-}
-
-/** "Jij geeft er 2", "Moeke geeft er 1", "Iemand anders geeft er 1"; "Moeke geeft dit" for a wish asked for once. */
+/** "Moeke geeft er 1", "Iemand anders geeft er 1"; "Moeke geeft dit" for a wish asked for once. */
 function givingWords(wish: BuyerWish, purchase: BuyerWish['purchases'][number], t: Translate): string {
   // With one asked for, a number after every name says nothing.
   const once = wish.quantity === 1
-  if (purchase.mine) return once ? t('purchase.youGiveThis', {}) : t('purchase.youGive', { n: purchase.quantity })
   if (purchase.name === null) return once ? t('purchase.someoneGivesThis', {}) : t('purchase.someoneGives', { n: purchase.quantity })
   return once ? t('purchase.givesThis', { name: purchase.name }) : t('purchase.gives', { name: purchase.name, n: purchase.quantity })
 }

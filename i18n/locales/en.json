@@ -176,8 +176,6 @@
     "you": "You",
     "gives": "{name} is giving {n}",
     "givesThis": "{name} is giving this",
-    "youGive": "You’re giving {n}",
-    "youGiveThis": "You’re giving this",
     "youAnonymous": "You (anonymous)",
     "someone": "Someone else",
     "someoneGives": "Someone else is giving {n}",

@@ -176,8 +176,6 @@
     "you": "Jij",
     "gives": "{name} geeft er {n}",
     "givesThis": "{name} geeft dit",
-    "youGive": "Jij geeft er {n}",
-    "youGiveThis": "Jij geeft dit",
     "youAnonymous": "Jij (anoniem)",
     "someone": "Iemand anders",
     "someoneGives": "Iemand anders geeft er {n}",
