@@ -60,7 +60,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
             <PasswordField id="password" v-model="password" :label="t('auth.password')" autocomplete="current-password" :error="errors.password" />
             <div class="actions wide">
               <art-button>
-                <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.login') }}</button>
+                <button type="submit" :aria-disabled="pending || undefined">{{ pending ? t('auth.busy') : t('auth.login') }}</button>
               </art-button>
             </div>
             <NuxtLink class="forgot-link" :to="{ path: localePath('/forgot'), query: email ? { email } : {} }">{{ t('auth.forgotLink') }}</NuxtLink>

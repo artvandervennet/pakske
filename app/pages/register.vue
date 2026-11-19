@@ -82,7 +82,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
           </i18n-t>
           <div class="actions wide">
             <art-button>
-              <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.register') }}</button>
+              <button type="submit" :aria-disabled="pending || undefined">{{ pending ? t('auth.busy') : t('auth.register') }}</button>
             </art-button>
           </div>
           <GoogleLogin :from="route.path" :next="next" :label="t('auth.google')" :or="t('auth.or')" />

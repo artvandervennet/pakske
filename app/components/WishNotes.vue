@@ -85,7 +85,7 @@ async function remove(id: string) {
       </FormField>
       <div class="actions">
         <art-button size="s">
-          <button type="submit" :disabled="pending">{{ t('notes.add') }}</button>
+          <button type="submit" :aria-disabled="pending || undefined">{{ t('notes.add') }}</button>
         </art-button>
       </div>
     </form>

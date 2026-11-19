@@ -133,6 +133,10 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   padding-inline-start: var(--space-3);
 }
 .form-message:empty { display: none; }
+/* A status line stays rendered while it is empty: a live region that was hidden may not be
+   announced when its words arrive. Out of the flow, so it takes no row and no gap of a form. */
+.form-message[role="status"]:empty { display: block; position: absolute; padding: 0; border: 0; }
+
 
 /* ── Rows ─────────────────────────────────────────────────────────────────
    Candidate for Gesso: a list of things as rows between thin rules, each a name with a

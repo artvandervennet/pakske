@@ -40,7 +40,7 @@ const { form, pending, message, errors, run } = useForm(async () => {
           </FormField>
           <div class="actions">
             <art-button>
-              <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : t('auth.forgotSend') }}</button>
+              <button type="submit" :aria-disabled="pending || undefined">{{ pending ? t('auth.busy') : t('auth.forgotSend') }}</button>
             </art-button>
           </div>
           <p class="form-message" role="status">{{ sent }}</p>

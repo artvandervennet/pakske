@@ -177,7 +177,7 @@ function openDelete() {
               </FormField>
               <div class="actions">
                 <art-button>
-                  <button type="submit" :disabled="profile.pending.value">{{ t('settings.save') }}</button>
+                  <button type="submit" :aria-disabled="profile.pending.value || undefined">{{ t('settings.save') }}</button>
                 </art-button>
               </div>
               <p class="form-message" role="status">{{ profileSaved }}</p>
@@ -209,7 +209,7 @@ function openDelete() {
               <PasswordField v-if="hasPassword" id="email-current-password" v-model="emailPassword" :label="t('settings.currentPassword')" autocomplete="current-password" :error="emailChange.errors.value.currentPassword" />
               <div class="actions">
                 <art-button>
-                  <button type="submit" :disabled="emailChange.pending.value">{{ t('settings.changeEmail') }}</button>
+                  <button type="submit" :aria-disabled="emailChange.pending.value || undefined">{{ t('settings.changeEmail') }}</button>
                 </art-button>
               </div>
               <p class="form-message" role="status">{{ emailSent }}</p>
@@ -229,7 +229,7 @@ function openDelete() {
               <PasswordField id="new-password" v-model="newPassword" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')" autocomplete="new-password" :minlength="8" :error="password.errors.value.newPassword" />
               <div class="actions">
                 <art-button>
-                  <button type="submit" :disabled="password.pending.value">{{ t('settings.changePassword') }}</button>
+                  <button type="submit" :aria-disabled="password.pending.value || undefined">{{ t('settings.changePassword') }}</button>
                 </art-button>
                 <NuxtLink class="actions-link" :to="localePath('/forgot')">{{ t('auth.forgotLink') }}</NuxtLink>
               </div>
@@ -239,7 +239,7 @@ function openDelete() {
               <p v-if="passwordMail.message.value" class="form-message" role="alert">{{ passwordMail.message.value }}</p>
               <div class="actions">
                 <art-button>
-                  <button type="submit" :disabled="passwordMail.pending.value">{{ t('settings.passwordMail') }}</button>
+                  <button type="submit" :aria-disabled="passwordMail.pending.value || undefined">{{ t('settings.passwordMail') }}</button>
                 </art-button>
               </div>
               <p class="form-message" role="status">{{ mailSent }}</p>
@@ -256,7 +256,7 @@ function openDelete() {
               <template v-if="me?.google">
                 <p>{{ t('settings.googleOn') }}</p>
                 <art-button v-if="me.hasPassword" variant="secondary">
-                  <button type="button" :disabled="unlinking" @click="unlinkGoogle">{{ t('settings.googleUnlink') }}</button>
+                  <button type="button" :aria-disabled="unlinking || undefined" @click="unlinkGoogle">{{ t('settings.googleUnlink') }}</button>
                 </art-button>
               </template>
               <GoogleLogin v-else :from="route.path" link :label="t('settings.googleLink')" />
@@ -335,7 +335,7 @@ function openDelete() {
             <button type="button" autofocus @click="deleteDialog?.close()">{{ t('settings.deleteCancel') }}</button>
           </art-button>
           <art-button class="danger">
-            <button type="submit" :disabled="removal.pending.value">{{ t('settings.deleteConfirm') }}</button>
+            <button type="submit" :aria-disabled="removal.pending.value || undefined">{{ t('settings.deleteConfirm') }}</button>
           </art-button>
         </div>
       </form>

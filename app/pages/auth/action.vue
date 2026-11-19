@@ -105,7 +105,7 @@ useHead({ title })
             </template>
             <div class="actions">
               <art-button>
-                <button type="submit" :disabled="pending">{{ pending ? t('auth.busy') : action }}</button>
+                <button type="submit" :aria-disabled="pending || undefined">{{ pending ? t('auth.busy') : action }}</button>
               </art-button>
             </div>
           </form>
