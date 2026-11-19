@@ -5,7 +5,7 @@ import { friendLinks, friendRequests, friendships, listFriends as shownRows, lis
 import {
   acceptFriendLink, answerRequest, areFriends, askFriend, countFreshRequests, FRIEND_LINK_DAYS, getFriendLink, hideShownList,
   isShownTo, listFriends, listFriendsForList, listRequests, listShownLists, makeFriendLink, markRequestsSeen, MAX_FRIENDS, ownersToBefriend,
-  MAX_OPEN_FRIEND_LINKS, MAX_WAITING_REQUESTS, removeFriend, setShownLists, setShownTo, withdrawRequest,
+  MAX_OPEN_FRIEND_LINKS, MAX_WAITING_REQUESTS, removeFriend, setShownLists, setShownTo, setShownToOne, withdrawRequest,
 } from '../server/domain/friends'
 import { LIST_TOKEN } from '../server/domain/tokens'
 import { deleteList, leaveList, ownedListId, relinkList } from '../server/domain/lists'
@@ -382,7 +382,35 @@ describe('showing a list to a friend', () => {
     return world
   }
   const shownTo = (db: ReturnType<typeof makeDb>, userId: number) => listShownLists(db, userId).map(list => list.title)
+  const shownRows_ = (db: ReturnType<typeof makeDb>) => db.select().from(shownRows).all().length
   const shownNotices = (db: ReturnType<typeof makeDb>, userId: number) => listNotices(db, userId).filter(notice => notice.kind === 'list_shown')
+
+  it('switches one friend without touching another', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    acceptFriendLink(db, lot.id, makeFriendLink(db, art.id).token)
+    setShownToOne(db, art.id, kerst, mom.id, true)
+    setShownToOne(db, art.id, kerst, lot.id, true)
+    expect(shownTo(db, mom.id)).toEqual(['Kerst'])
+    expect(shownTo(db, lot.id)).toEqual(['Kerst'])
+    expect(shownNotices(db, mom.id)).toHaveLength(1)
+    // On again changes nothing and tells nobody twice.
+    setShownToOne(db, art.id, kerst, mom.id, true)
+    expect(shownNotices(db, mom.id)).toHaveLength(1)
+    setShownToOne(db, art.id, kerst, mom.id, false)
+    expect(shownTo(db, mom.id)).toEqual([])
+    expect(shownNotices(db, mom.id)).toEqual([])
+    expect(shownTo(db, lot.id)).toEqual(['Kerst'])
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: lot.id, shown: true }, { id: mom.id, shown: false }])
+  })
+
+  it('refuses to switch someone who is no friend, a list that isn\'t theirs, and leaves a co-owner alone', () => {
+    const { db, art, lot, mom, kerst, momList } = friends()
+    expect(codeOf(() => setShownToOne(db, art.id, kerst, lot.id, true))).toBe('not_friends')
+    expect(codeOf(() => setShownToOne(db, art.id, momList, mom.id, true))).toBe('not_found')
+    addOwner(db, kerst, mom.id)
+    setShownToOne(db, art.id, kerst, mom.id, true)
+    expect(shownRows_(db)).toBe(0)
+  })
 
   it('shows nothing just by being friends', () => {
     const { db, art, mom } = friends()

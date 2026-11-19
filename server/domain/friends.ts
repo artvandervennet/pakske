@@ -359,6 +359,19 @@ export function setShownTo(db: Db, ownerId: number, listToken: string, friendIds
 }
 
 /**
+ * Whether one friend finds this list of the person's own: one switch, which leaves every other
+ * friend's as it is. A friend who owns the list too has no switch and is left alone.
+ */
+export function setShownToOne(db: Db, ownerId: number, listToken: string, friendId: number, on: boolean): void {
+  db.transaction((tx) => {
+    const listId = ownedListId(tx, ownerId, listToken)
+    if (!areFriends(tx, ownerId, friendId)) throw new DomainError('not_friends')
+    const list = tx.select({ id: lists.id, title: lists.title }).from(lists).where(eq(lists.id, listId)).get()!
+    tick(tx, ownerId, list, friendId, on)
+  }, { behavior: 'immediate' })
+}
+
+/**
  * Every tick that puts a list on this person's page now: not one they took off themselves, of a
  * list that exists, by someone who still owns it and is still their friend, and never a list
  * they own themselves. Oldest tick first.

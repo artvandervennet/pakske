@@ -607,8 +607,20 @@ req mom GET "/api/lists/$FLIST"; lacks "… and neither does the list" "Zus"
 
 echo "── sending to a friend"
 req art POST "/api/lists/$FLIST/wishes" '{"title":"Kaarsen"}'; check "art adds a wish to send" 201; SENDW=$(json .id)
-req art GET "/api/lists/$FLIST"; same "his list says how many friends it could be sent to" ".friendsToSend" 2
-req mom GET "/api/lists/$FLIST"; same "… and says that to nobody else" ".friendsToSend" 0
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"shown":false}'; check "art switches the list off for mom alone" 204
+req art GET "/api/lists/$FLIST/friends"; same "… and it is off for her" ".friends.find(f=>f.id===$FMOM).shown" false
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"shown":true}'; check "… and on again" 204
+req mom GET /api/lists; same "it is on mom's page" ".opened.filter(l=>l.token==='$FLIST').length" 1
+req art PUT "/api/lists/$FLIST/friends/$LOT_ID" '{"shown":true}'; check "he cannot switch it on for lot, who is no friend" 404; has "… with the code not_friends" not_friends
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{}'; check "a switch has to say which way" 422
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"shown":true,"invited":true}'; check "… and only one thing at a time" 422
+req sis PUT "/api/lists/$FLIST/friends/$FMOM" '{"shown":true}'; check "sis cannot switch anything on art's list" 404
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"invited":true}'; check "art invites mom to manage the list" 204
+req mom GET /api/home; has "mom has the invitation" '"kind":"sent_list"'
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"invited":false}'; check "art takes it back" 204
+req mom GET /api/home; lacks "… and it is gone for mom" sent_list
+req art PUT "/api/lists/$FLIST/friends/$FMOM" '{"invited":false}'; check "taking back nothing answers the same" 204
+req art PUT "/api/lists/$FLIST/friends/$LOT_ID" '{"invited":false}'; check "… also for someone who is no friend" 204
 req art POST "/api/lists/$FLIST/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$SENDW],\"friends\":[$FMOM]}"; check "art sends the wish to mom" 201; same "… and hears how many it went to" ".sent" 1; lacks "… without a link to pass on" '"invite"'
 req art POST "/api/lists/$FLIST/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$SENDW],\"friends\":[$LOT_ID]}"; check "he cannot send it to lot, who is no friend" 404; has "… with the code not_friends" not_friends
 req art POST "/api/lists/$FLIST/invites" '{"kind":"list","friends":[]}'; check "sending to nobody is refused" 422

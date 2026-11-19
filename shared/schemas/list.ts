@@ -118,8 +118,6 @@ export interface ListView {
   ownersToBefriend?: { id: number, name: string, state: 'none' | 'asked' | 'friends' }[]
   /** For an owner: the other owners, in the order they joined, and whether this viewer may remove each. */
   coOwners?: { id: number, name: string, canRemove: boolean }[]
-  /** For an owner: how many friends of theirs don't own this list too, and so can be sent it or wishes on it. */
-  friendsToSend?: number
 }
 
 /** A list someone else owns that is on this person's page: a friend shows it to them, or they opened its link. */

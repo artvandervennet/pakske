@@ -80,6 +80,15 @@ export const shownListsInput = z.strictObject({
 /** Which of the person's friends find a list: all of them. */
 export const shownFriendsInput = z.strictObject({ friends: z.array(accountId, 'required').max(100, 'too_long') })
 
+/**
+ * One switch for one friend on one list: whether they find it, or whether they are invited to
+ * co-own it. Exactly one of the two.
+ */
+export const listFriendInput = z.union([
+  z.strictObject({ shown: z.boolean('invalid') }),
+  z.strictObject({ invited: z.boolean('invalid') }),
+])
+
 /** Where a wish from someone else's list should land: one of the person's lists, or a new one. */
 export const targetInput = z.union([
   z.strictObject({ list: z.string('required').min(1, 'required').max(64, 'too_long') }),

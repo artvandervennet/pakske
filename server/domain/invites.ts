@@ -221,6 +221,18 @@ export function sendInvite(db: Db, userId: number, token: string, input: InviteI
   }, { behavior: 'immediate' })
 }
 
+/**
+ * Takes back the invitation to co-own this list that the person sent one friend, with the
+ * notice about it. The friend isn't told. It answers the same whether or not anything waited,
+ * and whoever the other person is, so it can't be used to find out what became of a send.
+ */
+export function withdrawSend(db: Db, userId: number, token: string, friendId: number): void {
+  db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    tx.delete(invites).where(and(eq(invites.listId, listId), eq(invites.kind, 'list'), eq(invites.createdBy, userId), eq(invites.sentTo, friendId))).run()
+  }, { behavior: 'immediate' })
+}
+
 /** Whether a link or send is about exactly these wishes. */
 function sameWishes(db: Db, inviteId: number, wishIds: number[]): boolean {
   const theirs = db.select({ wishId: inviteWishes.wishId }).from(inviteWishes).where(eq(inviteWishes.inviteId, inviteId)).all()

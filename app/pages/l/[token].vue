@@ -344,8 +344,7 @@ async function onNewLinkClose() {
 // is first asked whether it goes to some of them; the line under the buttons says who it went to.
 const sendListDialog = useTemplateRef<{ open: () => Promise<void> }>('sendListDialog')
 function startInvite() {
-  if (list.value.friendsToSend) void sendListDialog.value?.open()
-  else void inviteCoOwner()
+  void sendListDialog.value?.open()
 }
 function onListSent(to: string[]) {
   friendsStatus.value = t('list.sent', { names: names(to) }, to.length)
