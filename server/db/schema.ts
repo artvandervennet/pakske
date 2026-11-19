@@ -32,6 +32,17 @@ export const lists = sqliteTable('lists', {
   deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
 })
 
+// The addresses a list had before an owner gave it a new link. An old one no longer opens the
+// list. It only still lets someone who was giving something from it lower that or take it back,
+// so nobody is left with a tick they can't undo (`oldLinkView` in server/domain/list-view.ts).
+export const listOldTokens = sqliteTable('list_old_tokens', {
+  token: text('token').primaryKey(),
+  listId: integer('list_id').notNull().references(() => lists.id, { onDelete: 'cascade' }),
+  replacedAt: integer('replaced_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+}, t => [
+  index('list_old_tokens_list_idx').on(t.listId),
+])
+
 export const listOwners = sqliteTable('list_owners', {
   listId: integer('list_id').notNull().references(() => lists.id, { onDelete: 'cascade' }),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

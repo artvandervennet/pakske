@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invites, inviteUses, listOwners, lists, notices, wishes } from '../server/db/schema'
 import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, MAX_OPEN_INVITES } from '../server/domain/invites'
 import { getListView } from '../server/domain/list-view'
-import { createList, deleteList, leaveList, listOwnedLists, ownedListId } from '../server/domain/lists'
+import { createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { putOnList } from '../server/domain/placement'
 import { setPurchase } from '../server/domain/purchases'
@@ -572,3 +572,19 @@ describe('a joint list', () => {
 it('server/domain/invites.ts never touches purchases or notes', () => {
   expect(readFileSync('server/domain/invites.ts', 'utf8')).not.toMatch(/purchases|notes/i)
 })
+
+describe('share links of a list that got a new link', () => {
+  it('still work, and lead to the new address', () => {
+    const { db, art, lot, mom, A, game, L } = setup()
+    const forList = createInvite(db, art.id, A, { kind: 'list' }).invite
+    const forWishes = createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }).invite
+    const { token } = relinkList(db, art.id, A)
+    expect(getInviteView(db, forWishes, lot.id)).toMatchObject({ state: 'open', wishes: [{ title: 'Bordspel' }] })
+    expect(acceptInvite(db, lot.id, forWishes, { list: L })).toEqual({ token: L })
+    expect(acceptInvite(db, mom.id, forList, null)).toEqual({ token })
+    expect(getListView(db, token, mom.id)).toMatchObject({ viewerOwnsList: true })
+    // What the link's use tells Art points at the list where it is now.
+    expect(listNotices(db, art.id).find(notice => notice.kind === 'list_joined')).toMatchObject({ token })
+  })
+})
+

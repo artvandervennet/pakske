@@ -1,9 +1,10 @@
-import { and, asc, count, desc, eq, isNull, max, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNull, max, notInArray, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listOwners, lists, listVisits, listWishes, users, wishes } from '../db/schema'
+import { listOldTokens, listOwners, lists, listVisits, listWishes, users, wishes } from '../db/schema'
 import type { ListTarget } from '../../shared/schemas/input'
 import type { MyLists, OwnedList } from '../../shared/schemas/list'
 import { DomainError } from './errors'
+import { addNotice } from './notices'
 import { onListNow, settleOwners, takeOffList } from './placement'
 import { newListToken } from './tokens'
 
@@ -108,6 +109,30 @@ export function leaveList(db: Db, userId: number, token: string): void {
     if (ownersOfList(tx, listId).length === 1) throw new DomainError('last_owner')
     tx.delete(listOwners).where(and(eq(listOwners.listId, listId), eq(listOwners.userId, userId))).run()
     settleOwners(tx, wishesMarkedOn(tx, listId))
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * Gives the list a new address; the one it had stops opening it for everyone. The list, its
+ * wishes, its owners and its open share links stay as they are. Whoever doesn't own it loses it
+ * from their visited lists, or those would hand them the new address; an owner sends it to whom
+ * they choose. The other owners are told. The old address is kept, for the one thing it is
+ * still good for (see `listOldTokens`). Nothing here looks at what buyers did, so it answers the
+ * same whatever they did.
+ */
+export function relinkList(db: Db, userId: number, token: string): { token: string } {
+  return db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    const list = tx.select({ title: lists.title }).from(lists).where(eq(lists.id, listId)).get()!
+    const owners = ownersOfList(tx, listId).map(owner => owner.userId)
+    const fresh = newListToken()
+    tx.insert(listOldTokens).values({ token, listId }).run()
+    tx.update(lists).set({ token: fresh }).where(eq(lists.id, listId)).run()
+    tx.delete(listVisits).where(and(eq(listVisits.listId, listId), notInArray(listVisits.userId, owners))).run()
+    for (const owner of owners) {
+      if (owner !== userId) addNotice(tx, { userId: owner, kind: 'list_relinked', actorId: userId, title: list.title, listId })
+    }
+    return { token: fresh }
   }, { behavior: 'immediate' })
 }
 

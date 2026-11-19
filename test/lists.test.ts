@@ -1,11 +1,13 @@
+import { readFileSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { listWishes, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
-import { createList, deleteList, leaveList, listOwnedLists, ownedListId, renameList } from '../server/domain/lists'
+import { createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList, renameList } from '../server/domain/lists'
+import { listNotices } from '../server/domain/notices'
 import { putOnList } from '../server/domain/placement'
 import { LIST_TOKEN } from '../server/domain/tokens'
-import { forgetList, rememberList } from '../server/domain/visits'
+import { forgetList, listOpenedLists, rememberList } from '../server/domain/visits'
 import { deleteWish } from '../server/domain/wishes'
 import { addList, addOwner, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds, titles } from './helpers'
 
@@ -231,3 +233,55 @@ describe('the order of a person\'s own lists', () => {
     expect(order(art)).toEqual(['Kerst', 'Verjaardag'])
   })
 })
+
+describe('a new link for a list', () => {
+  it('gives the list another address and keeps everything on it', () => {
+    const { db, art } = setup()
+    const old = addList(db, art.id, 'Kerst')
+    addWishTo(db, art.id, old, 'Sokken')
+    const { token } = relinkList(db, art.id, old)
+    expect(token).toMatch(LIST_TOKEN)
+    expect(token).not.toBe(old)
+    expect(titles(getListView(db, token, art.id))).toEqual(['Sokken'])
+    expect(getListView(db, old, null)).toBeUndefined()
+    expect(listOwnedLists(db, art.id).map(list => list.token)).toEqual([token])
+  })
+
+  it('is only for an owner of a live list', () => {
+    const { db, art, mom } = setup()
+    const token = addList(db, art.id)
+    expect(codeOf(() => relinkList(db, mom.id, token))).toBe('not_found')
+    deleteList(db, art.id, token)
+    expect(codeOf(() => relinkList(db, art.id, token))).toBe('not_found')
+  })
+
+  it('takes the list off the visited lists of everyone who does not own it, and tells the other owners', () => {
+    const { db, art, mom } = setup()
+    const sis = addUser(db, 'sis')
+    const old = addList(db, art.id, 'Kerst')
+    addOwner(db, old, sis.id)
+    rememberList(db, mom.id, old)
+    rememberList(db, sis.id, old)
+    const { token } = relinkList(db, art.id, old)
+    expect(listOpenedLists(db, mom.id)).toEqual([])
+    expect(listOwnedLists(db, sis.id).map(list => list.token)).toEqual([token])
+    expect(listNotices(db, sis.id)).toMatchObject([{ kind: 'list_relinked', actor: 'Art', title: 'Kerst', token }])
+    expect(listNotices(db, art.id)).toEqual([])
+  })
+
+  it('can be done again, and no earlier address comes back', () => {
+    const { db, art } = setup()
+    const first = addList(db, art.id, 'Kerst')
+    const second = relinkList(db, art.id, first).token
+    const third = relinkList(db, art.id, second).token
+    expect(new Set([first, second, third]).size).toBe(3)
+    expect(getListView(db, first, null)).toBeUndefined()
+    expect(getListView(db, second, null)).toBeUndefined()
+    expect(getListView(db, third, null)).toMatchObject({ title: 'Kerst' })
+  })
+
+  it('never reads what buyers did', () => {
+    expect(readFileSync('server/domain/lists.ts', 'utf8')).not.toMatch(/purchases|notes/i)
+  })
+})
+

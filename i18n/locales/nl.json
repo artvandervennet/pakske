@@ -44,6 +44,7 @@
     "wish_unlinked": "{actor} heeft je losgekoppeld van “{title}”. Je hebt nu een eigen kopie.",
     "joint_link_used": "{actor} gebruikte je link. “{title}” is nu ook van {actor}. | {actor} gebruikte je link. “{title}” en nog {n} andere wens zijn nu ook van {actor}. | {actor} gebruikte je link. “{title}” en nog {n} andere wensen zijn nu ook van {actor}.",
     "list_joined": "{actor} is nu mede-eigenaar van “{title}”.",
+    "list_relinked": "{actor} gaf “{title}” een nieuwe link. De oude werkt niet meer.",
     "undo": "Ongedaan maken",
     "dismiss": "Sluiten",
     "view": "Bekijken",

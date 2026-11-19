@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteList, leaveList, listOwnedLists } from '../server/domain/lists'
+import { deleteList, leaveList, listOwnedLists, relinkList } from '../server/domain/lists'
 import { newListToken } from '../server/domain/tokens'
 import { describeLists, forgetList, listOpenedLists, mergeVisits, rememberList } from '../server/domain/visits'
 import { parseOpened, withOpened } from '../server/utils/opened-lists'
@@ -118,6 +118,12 @@ describe('opened lists in the account', () => {
 
   it('describes the lists it can find and skips the rest', () => {
     expect(describeLists(db, [newListToken(), token]).map(l => l.token)).toEqual([token])
+  })
+
+  it('no longer finds a list by the address it had before a new link, as a cookie would hold it', () => {
+    const { token: fresh } = relinkList(db, ann, token)
+    expect(describeLists(db, [token])).toEqual([])
+    expect(describeLists(db, [fresh]).map(l => l.title)).toEqual(['Kerst'])
   })
 
   it('describes lists in the given order', () => {
