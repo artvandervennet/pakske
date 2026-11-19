@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, min, ne } from 'drizzle-orm'
 import type { AnonWish, BuyerWish, ListView, OwnerWish, WishView } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { listOwners, lists, listWishes, notes, purchases, users, wishOwners, wishes } from '../db/schema'
+import { listOldTokens, listOwners, lists, listWishes, notes, purchases, users, wishOwners, wishes } from '../db/schema'
 import { onListNow } from './placement'
 import { livePublicWishes, toPublicWish } from './public-wishes'
 import { mayUnlink } from './sharing'
@@ -174,7 +174,7 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
   const deleted = list.deletedAt !== null
   if (deleted && (viewerId === null || viewerOwnsList)) return undefined
 
-  const view = { token: list.token, title: list.title, owners: owners.map(owner => owner.name), viewerOwnsList, deleted }
+  const view = { token: list.token, title: list.title, owners: owners.map(owner => owner.name), viewerOwnsList, deleted, old: false }
   const listOwnerIds = new Set(owners.map(owner => owner.userId))
   if (viewerId === null) return { ...view, wishes: anonWishes(db, list.id, listOwnerIds) }
 
@@ -204,4 +204,59 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
   for (const wish of buyerWishes(db, forBuyers, viewerId, sharedWith)) byId.set(wish.id, wish)
   // Back into the list's order, which is the same for everyone.
   return { ...view, wishes: rows.flatMap(row => byId.get(row.wish.id) ?? []) }
+}
+
+/**
+ * What an address answers that a list had before it got a new link (`relinkList`). It no longer
+ * opens the list. An owner of the list, while it exists, is told where it is now. Anyone else
+ * who is logged in and was giving something from it gets only those wishes, each with their own
+ * purchase alone: no other buyers, no notes, no other wishes, and not the new address. That is
+ * enough to lower or take back what they ticked. Everyone else gets nothing, like an address
+ * that never existed.
+ *
+ * Who owns the list is all that decides an owner's answer, and a visitor's is always nothing, so
+ * both come out the same whatever buyers did.
+ */
+export function oldLinkView(db: Db, token: string, viewerId: number | null): ListView | { movedTo: string } | undefined {
+  if (viewerId === null) return undefined
+  const list = db.select({ list: lists }).from(listOldTokens)
+    .innerJoin(lists, eq(lists.id, listOldTokens.listId))
+    .where(eq(listOldTokens.token, token))
+    .get()?.list
+  if (!list) return undefined
+
+  const owns = db.select({ userId: listOwners.userId }).from(listOwners)
+    .where(and(eq(listOwners.listId, list.id), eq(listOwners.userId, viewerId))).get() !== undefined
+  if (owns) return list.deletedAt === null ? { movedTo: list.token } : undefined
+
+  const given = db.select({ wish: wishes, name: users.displayName, quantity: purchases.quantity, anonymous: purchases.anonymous })
+    .from(listWishes)
+    .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
+    .innerJoin(purchases, and(eq(purchases.wishId, wishes.id), eq(purchases.userId, viewerId)))
+    .innerJoin(users, eq(users.id, purchases.userId))
+    .where(eq(listWishes.listId, list.id))
+    .orderBy(asc(listWishes.position), asc(wishes.createdAt), asc(wishes.id))
+    .all()
+  if (given.length === 0) return undefined
+
+  return {
+    // The address they came by: nothing here gives the new one away.
+    token,
+    title: list.title,
+    owners: [],
+    viewerOwnsList: false,
+    deleted: false,
+    old: true,
+    wishes: given.map(({ wish, name, quantity, anonymous }): BuyerWish => ({
+      ...toPublicWish(wish),
+      role: 'buyer',
+      sharedWith: [],
+      // Not live here: the page offers less or nothing, never more.
+      removed: true,
+      bought: quantity,
+      mine: quantity,
+      purchases: [{ name, quantity, mine: true, anonymous }],
+      notes: [],
+    })),
+  }
 }

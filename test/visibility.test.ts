@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { wishes } from '../server/db/schema'
-import { getListView } from '../server/domain/list-view'
-import { deleteList, listOwnedLists, ownedListId } from '../server/domain/lists'
+import { getListView, oldLinkView } from '../server/domain/list-view'
+import { deleteList, listOwnedLists, ownedListId, relinkList } from '../server/domain/lists'
 import { addNote } from '../server/domain/notes'
 import { listNotices } from '../server/domain/notices'
 import { putOnList } from '../server/domain/placement'
@@ -74,6 +74,24 @@ describe('the owner and visitors who are not logged in', () => {
     const busy = world(true)
     expect(getListView(busy.db, busy.token, busy.art.id)).toEqual(getListView(quiet.db, quiet.token, quiet.art.id))
     expect(getListView(busy.db, busy.token, null)).toEqual(getListView(quiet.db, quiet.token, null))
+  })
+
+  it('answers them the same at the address a list had before a new link', () => {
+    const quiet = world(false)
+    const busy = world(true)
+    // The two new addresses differ (one counter makes them all), so each world has its own.
+    const fresh = { quiet: relinkList(quiet.db, quiet.art.id, quiet.token).token, busy: relinkList(busy.db, busy.art.id, busy.token).token }
+    // The owner is sent on and a visitor finds nothing, whatever buyers did. Mom, who was giving
+    // something in one world only, is the one who gets a different answer.
+    expect(oldLinkView(quiet.db, quiet.token, quiet.art.id)).toEqual({ movedTo: fresh.quiet })
+    expect(oldLinkView(busy.db, busy.token, busy.art.id)).toEqual({ movedTo: fresh.busy })
+    expect(oldLinkView(quiet.db, quiet.token, null)).toBeUndefined()
+    expect(oldLinkView(busy.db, busy.token, null)).toBeUndefined()
+    expect(oldLinkView(quiet.db, quiet.token, quiet.mom.id)).toBeUndefined()
+    expect(oldLinkView(busy.db, busy.token, busy.mom.id)).toMatchObject({ old: true })
+    const at = (view: ReturnType<typeof getListView>) => ({ ...view, token: '' })
+    expect(at(getListView(busy.db, fresh.busy, busy.art.id))).toEqual(at(getListView(quiet.db, fresh.quiet, quiet.art.id)))
+    expect(at(getListView(busy.db, fresh.busy, null))).toEqual(at(getListView(quiet.db, fresh.quiet, null)))
   })
 
   it('gives them wishes with no field about other people', () => {

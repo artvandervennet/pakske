@@ -11,7 +11,9 @@ import { wishOnList } from './placement'
  * click at the same moment are handled one after the other and can't both take the last one.
  *
  * Only an increase is checked. Lowering always works, also when the owner has since lowered
- * the amount, taken the wish off this list, or deleted the wish or the list.
+ * the amount, taken the wish off this list, or deleted the wish or the list. It also works
+ * through an address the list had before a new link, but only for someone who has a purchase
+ * on the wish: for anyone else that address is "not found", like one that never existed.
  *
  * `anonymous` says whether the other buyers see "someone" instead of this person's name. Left
  * out, a purchase keeps what it had, and a new one goes by what the buyer chose in Settings
@@ -21,9 +23,11 @@ export function setPurchase(db: Db, token: string, wishId: number, userId: numbe
   if (!Number.isInteger(quantity) || quantity < 1) throw new DomainError('validation')
 
   db.transaction((tx) => {
-    const { wish, live } = wishOnList(tx, token, wishId)
+    const { wish, live, old } = wishOnList(tx, token, wishId, { old: true })
     const mine = tx.select().from(purchases)
       .where(and(eq(purchases.wishId, wishId), eq(purchases.userId, userId))).get()
+    // Decided by the person's own row alone, so it says nothing about anyone else.
+    if (old && !mine) throw new DomainError('not_found')
 
     if (quantity > (mine?.quantity ?? 0)) {
       // Before anything about other purchases is read, so the answer is the same whether or
@@ -51,7 +55,7 @@ export function setPurchase(db: Db, token: string, wishId: number, userId: numbe
 /** Removing something that isn't there is not an error. */
 export function removePurchase(db: Db, token: string, wishId: number, userId: number): void {
   db.transaction((tx) => {
-    wishOnList(tx, token, wishId)
+    wishOnList(tx, token, wishId, { old: true })
     tx.delete(purchases).where(and(eq(purchases.wishId, wishId), eq(purchases.userId, userId))).run()
   }, { behavior: 'immediate' })
 }

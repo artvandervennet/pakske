@@ -1,6 +1,6 @@
 import { and, count, eq, inArray, isNull, max, min, type SQL } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listOwners, lists, listWishes, wishOwners, wishes } from '../db/schema'
+import { listOldTokens, listOwners, lists, listWishes, wishOwners, wishes } from '../db/schema'
 import { DomainError } from './errors'
 
 // Which lists show a wish, and who owns it because of that. A wish belongs to the owners of the
@@ -21,16 +21,29 @@ export const onListNow: SQL = and(isNull(listWishes.removedAt), isNull(wishes.de
  * or deleted, or on a deleted list, still resolves, because buyers may still lower or take back
  * what they bought there. "Not found" is only a token that matches no list, or a wish that list
  * never showed.
+ *
+ * A list that got a new link has addresses it no longer answers to. With `old`, one of those
+ * still resolves, as a placement that is never live and is marked `old`: for someone taking back
+ * what they were giving there, and for nothing else (see `listOldTokens`). Without `old` such an
+ * address is "not found", like one that never existed.
  */
-export function wishOnList(db: Db, token: string, wishId: number) {
-  const row = db.select({ wish: wishes, list: lists, placement: listWishes }).from(lists)
+export function wishOnList(db: Db, token: string, wishId: number, options: { old?: boolean } = {}) {
+  const onList = (list: SQL) => db.select({ wish: wishes, list: lists, placement: listWishes }).from(lists)
     .innerJoin(listWishes, eq(listWishes.listId, lists.id))
     .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
-    .where(and(eq(lists.token, token), eq(wishes.id, wishId)))
+    .where(and(list, eq(wishes.id, wishId)))
     .get()
-  if (!row) throw new DomainError('not_found')
-  const live = row.placement.removedAt === null && row.wish.deletedAt === null && row.list.deletedAt === null
-  return { ...row, live }
+  const row = onList(eq(lists.token, token))
+  if (row) {
+    const live = row.placement.removedAt === null && row.wish.deletedAt === null && row.list.deletedAt === null
+    return { ...row, live, old: false }
+  }
+  const before = options.old
+    ? db.select({ listId: listOldTokens.listId }).from(listOldTokens).where(eq(listOldTokens.token, token)).get()
+    : undefined
+  const left = before && onList(eq(lists.id, before.listId))
+  if (!left) throw new DomainError('not_found')
+  return { ...left, live: false, old: true }
 }
 
 export function ownsWish(db: Db, wishId: number, userId: number): boolean {

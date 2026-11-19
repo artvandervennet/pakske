@@ -105,6 +105,11 @@ export interface ListView {
   viewerOwnsList: boolean
   /** Only a logged-in non-owner ever gets a deleted list, with the removed wishes someone bought. */
   deleted: boolean
+  /**
+   * The list got a new link and this is what its old address still shows: only the wishes the
+   * viewer was giving, each with their own purchase alone, to lower or take back.
+   */
+  old: boolean
   wishes: WishView[]
 }
 
