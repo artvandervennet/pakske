@@ -605,7 +605,10 @@
     "password_needed": "Set a password first, or you won’t be able to log in any more.",
     "firebase_missing": "Logging in isn’t set up yet. Ask whoever runs the site.",
     "reauth_needed": "Log out and in again, then try once more.",
-    "link_gone": "This link no longer works. It was already used, or it has expired."
+    "link_gone": "This link no longer works. It was already used, or it has expired.",
+    "friend_limit": "No more friends fit: you or the other person already has a hundred.",
+    "request_limit": "You already have twenty requests out. Take one back first, under Friends.",
+    "not_friends": "You are no longer friends. Reload the page."
   },
   "fields": {
     "required": "Fill this in.",

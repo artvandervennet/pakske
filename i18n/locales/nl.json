@@ -605,7 +605,10 @@
     "password_needed": "Stel eerst een wachtwoord in, anders kun je niet meer inloggen.",
     "firebase_missing": "Inloggen is nog niet ingesteld. Vraag het aan wie de site beheert.",
     "reauth_needed": "Log uit en opnieuw in, en probeer het dan nog eens.",
-    "link_gone": "Deze link werkt niet meer. Hij is al gebruikt of verlopen."
+    "link_gone": "Deze link werkt niet meer. Hij is al gebruikt of verlopen.",
+    "friend_limit": "Er kunnen geen vrienden meer bij: jij of de ander heeft er al honderd.",
+    "request_limit": "Je hebt al twintig verzoeken uitstaan. Trek er eerst een in bij Vrienden.",
+    "not_friends": "Jullie zijn geen vrienden meer. Laad de pagina opnieuw."
   },
   "fields": {
     "required": "Vul dit in.",

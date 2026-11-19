@@ -15,6 +15,19 @@ function flatten(messages: Messages, prefix = ''): [string, string][] {
 const nl = flatten(load('nl'))
 const en = flatten(load('en'))
 
+describe('what the server refuses', () => {
+  // A code without a sentence reads as "something went wrong, try again", which is untrue for a
+  // rule: trying again never helps.
+  const codes = [...readFileSync('server/domain/errors.ts', 'utf8').matchAll(/\| '([a-z_]+)'/g)].map(match => match[1]!)
+  // Said by the control it happens on, in that control's own words.
+  const elsewhere = ['quantity_exceeded', 'wish_removed']
+
+  it.each(codes.filter(code => !elsewhere.includes(code)))('%s has a sentence in both languages', (code) => {
+    expect(nl.some(([key]) => key === `errors.${code}`), 'nl').toBe(true)
+    expect(en.some(([key]) => key === `errors.${code}`), 'en').toBe(true)
+  })
+})
+
 describe('the sentences in both languages', () => {
   it('have the same keys, so no page falls back to the other language', () => {
     expect(en.map(([key]) => key)).toEqual(nl.map(([key]) => key))
