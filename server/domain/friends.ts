@@ -92,6 +92,25 @@ export function askFriend(db: Db, userId: number, listToken: string, ownerId: nu
 }
 
 /**
+ * The owners of a list as someone who opened it may befriend them: each with whether this person
+ * asked already (`asked`, also after a decline, which they must not notice) or is their friend.
+ * Nobody for an owner of the list, for a list that is gone, and for a token that matches none.
+ */
+export function ownersToBefriend(db: Db, viewerId: number, listToken: string): { id: number, name: string, state: 'none' | 'asked' | 'friends' }[] {
+  const list = db.select({ id: lists.id }).from(lists).where(and(eq(lists.token, listToken), isNull(lists.deletedAt))).get()
+  if (!list) return []
+  const owners = ownersOfList(db, list.id)
+  if (owners.some(owner => owner.userId === viewerId)) return []
+  const asked = new Set(db.select({ toUser: friendRequests.toUser }).from(friendRequests)
+    .where(and(eq(friendRequests.fromUser, viewerId), eq(friendRequests.hidden, false))).all().map(row => row.toUser))
+  return owners.map(owner => ({
+    id: owner.userId,
+    name: owner.name,
+    state: areFriends(db, viewerId, owner.userId) ? 'friends' : asked.has(owner.userId) ? 'asked' : 'none',
+  }))
+}
+
+/**
  * The receiver's answer to a waiting request. Accepting makes them friends, tells the sender and
  * answers who the new friend is. Declining tells nobody: the request stays, as a declined one
  * only the receiver's side can tell from a waiting one. Anyone else, or a request that is

@@ -14,13 +14,16 @@ function findList(db: Db, userId: number, token: string) {
 }
 
 /**
- * Remembers that this person opened a list, now. A list of someone else's goes on their visited
+ * Remembers that this person opened a list, now. Not a list a friend shows them at that moment. A list of someone else's goes on their visited
  * lists; a list of their own moves to the front of their own lists (`listOwnedLists`), and is
  * never shown as visited while they own it. Unknown tokens are not remembered.
  */
 export function rememberList(db: Db, userId: number, token: string): void {
   const list = findList(db, userId, token)
   if (!list) return
+  // A list a friend shows them is on their page without its link; opening it there is no visit,
+  // or it would stay behind as a visited list after the friend stops showing it.
+  if (!list.owns && shownListIds(db, userId).has(list.id)) return
   db.insert(listVisits).values({ userId, listId: list.id })
     .onConflictDoUpdate({ target: [listVisits.userId, listVisits.listId], set: { openedAt: new Date() } })
     .run()

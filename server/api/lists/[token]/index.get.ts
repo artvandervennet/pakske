@@ -1,3 +1,4 @@
+import { ownersToBefriend } from '../../../domain/friends'
 import { getListView, oldLinkView } from '../../../domain/list-view'
 import { rememberList } from '../../../domain/visits'
 
@@ -22,5 +23,7 @@ export default defineEventHandler(async (event) => {
   // list goes on your visited lists; a list of your own moves to the front of your own.
   if (viewerId === null) writeOpened(event, withOpened(readOpened(event), token))
   else rememberList(db, viewerId, token)
-  return view
+  // Who they may ask to be friends: the owners of a list they opened. Beside the view, not in
+  // it: `getListView` knows nothing about friends.
+  return { ...view, ownersToBefriend: viewerId === null ? [] : ownersToBefriend(db, viewerId, token) }
 })

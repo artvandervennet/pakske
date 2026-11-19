@@ -86,6 +86,13 @@ export function tokenParam(event: H3Event, name = 'token'): string {
   return token
 }
 
+/** The id of a friend request from the route: random, like a note's. Anything else is "not found". */
+export function requestParam(event: H3Event, name = 'id'): string {
+  const id = String(getRouterParam(event, name))
+  if (!/^[0-9a-f-]{36}$/.test(id)) fail(404, 'not_found')
+  return id
+}
+
 /**
  * Logs the browser into an account: its cookie, with Firebase's token kept on the server side
  * of it. The lists opened while logged out move into the account, so their cookie can go.

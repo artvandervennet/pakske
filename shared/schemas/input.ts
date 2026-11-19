@@ -67,6 +67,19 @@ export const accountDeleteInput = z.object({ currentPassword: currentPassword.op
 
 export const listInput = z.object({ title: requiredText(80) })
 
+const accountId = z.number('invalid').int('invalid').positive('invalid')
+
+/** Asking an owner of the list to be friends: which one. */
+export const friendRequestInput = z.strictObject({ owner: accountId })
+
+/** Which of the person's own lists a friend finds: all of them, as their addresses. */
+export const shownListsInput = z.strictObject({
+  lists: z.array(z.string('invalid').min(1, 'invalid').max(64, 'too_long'), 'required').max(50, 'too_long'),
+})
+
+/** Which of the person's friends find a list: all of them. */
+export const shownFriendsInput = z.strictObject({ friends: z.array(accountId, 'required').max(100, 'too_long') })
+
 /** Where a wish from someone else's list should land: one of the person's lists, or a new one. */
 export const targetInput = z.union([
   z.strictObject({ list: z.string('required').min(1, 'required').max(64, 'too_long') }),

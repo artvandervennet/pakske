@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { friendLinks, friendRequests, friendships, listFriends as shownRows } from '../server/db/schema'
 import {
   acceptFriendLink, answerRequest, areFriends, askFriend, countFreshRequests, FRIEND_LINK_DAYS, getFriendLink, hideShownList,
-  isShownTo, listFriends, listFriendsForList, listRequests, listShownLists, makeFriendLink, markRequestsSeen, MAX_FRIENDS,
+  isShownTo, listFriends, listFriendsForList, listRequests, listShownLists, makeFriendLink, markRequestsSeen, MAX_FRIENDS, ownersToBefriend,
   MAX_OPEN_FRIEND_LINKS, MAX_WAITING_REQUESTS, removeFriend, setShownLists, setShownTo, withdrawRequest,
 } from '../server/domain/friends'
 import { LIST_TOKEN } from '../server/domain/tokens'
@@ -215,6 +215,34 @@ describe('asking to be friends', () => {
     // A declined one never counts.
     answerRequest(db, art.id, listRequests(db, art.id).incoming[0]!.id, false)
     expect(countFreshRequests(db, art.id)).toBe(0)
+  })
+})
+
+describe('the owners of a list someone opened', () => {
+  it('can each be asked, and say what has been asked already', () => {
+    const { db, art, lot, mom, kerst } = setup()
+    addOwner(db, kerst, lot.id)
+    expect(ownersToBefriend(db, mom.id, kerst)).toEqual([
+      { id: art.id, name: 'Art', state: 'none' },
+      { id: lot.id, name: 'Lot', state: 'none' },
+    ])
+    askFriend(db, mom.id, kerst, art.id)
+    befriend(db, mom.id, kerst, lot.id)
+    expect(ownersToBefriend(db, mom.id, kerst).map(owner => owner.state)).toEqual(['asked', 'friends'])
+    // A decline reads the same; a declined request she took back reads as not asked.
+    const request = listRequests(db, art.id).incoming[0]!
+    answerRequest(db, art.id, request.id, false)
+    expect(ownersToBefriend(db, mom.id, kerst)[0]).toMatchObject({ state: 'asked' })
+    withdrawRequest(db, mom.id, request.id)
+    expect(ownersToBefriend(db, mom.id, kerst)[0]).toMatchObject({ state: 'none' })
+  })
+
+  it('are nobody for an owner of the list, on a deleted list, and under a token that matches none', () => {
+    const { db, art, mom, kerst } = setup()
+    expect(ownersToBefriend(db, art.id, kerst)).toEqual([])
+    expect(ownersToBefriend(db, mom.id, 'no-such-list-token-000')).toEqual([])
+    deleteList(db, art.id, kerst)
+    expect(ownersToBefriend(db, mom.id, kerst)).toEqual([])
   })
 })
 
@@ -468,6 +496,17 @@ describe('showing a list to a friend', () => {
     const lotList = listFriends(db, lot.id)[0]!.shows[0]!.token
     setShownLists(db, lot.id, mom.id, [lotList])
     expect(shownTo(db, mom.id)).toEqual(['Lijst van lot', 'Kerst'])
+  })
+
+  it('is not remembered as visited when it is opened while shown: no link was needed', () => {
+    const { db, art, mom, kerst } = friends()
+    setShownTo(db, art.id, kerst, [mom.id])
+    rememberList(db, mom.id, kerst)
+    setShownTo(db, art.id, kerst, [])
+    expect(listOpenedLists(db, mom.id)).toEqual([])
+    // Opened by its link when it isn't shown, it is a visited list like any other.
+    rememberList(db, mom.id, kerst)
+    expect(listOpenedLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
   })
 
   it('is not also a visited list while it is shown', () => {

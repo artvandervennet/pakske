@@ -544,6 +544,58 @@ req art DELETE "/api/notices/$NOTICE"; check "art dismisses his own" 204
 req art DELETE "/api/notices/$NOTICE"; check "… and a second time finds nothing" 404
 req lot GET /api/home; has "lot's notice is still there" "\"id\":\"$LOTNOTICE\""
 
+echo "── friends"
+req art POST /api/lists '{"title":"Voor vrienden"}'; check "art makes a list to show to friends" 201; FLIST=$(json .token)
+req anon GET /api/friends; check "the friends page needs a login" 401
+req anon POST /api/friends/links; check "… and so does making a friend link" 401
+req anon POST "/api/lists/$FLIST/friend-requests" '{"owner":1}'; check "… and asking someone" 401
+req anon GET "/api/lists/$FLIST/friends"; check "… and seeing who a list is shown to" 401
+req anon GET "/api/lists/$FLIST"; same "a visitor is offered nobody to befriend" ".ownersToBefriend.length" 0
+req art GET "/api/lists/$FLIST"; same "… and neither is the list's owner" ".ownersToBefriend.length" 0
+req mom GET "/api/lists/$FLIST"; check "mom opens art's list" 200; has "… and may ask its owner" '"name":"Art","state":"none"'; FART=$(json ".ownersToBefriend[0].id")
+req sis GET "/api/lists/$MOMLIST"; FMOM=$(json ".ownersToBefriend[0].id")
+req mom POST "/api/lists/$FLIST/friend-requests" "{\"owner\":$FART}"; check "mom asks art to be friends" 200; has "… and it waits" '"state":"asked"'
+req mom POST "/api/lists/$FLIST/friend-requests" "{\"owner\":$FART}"; check "asking again answers the same" 200; has "… still waiting" '"state":"asked"'
+req mom POST "/api/lists/$FLIST/friend-requests" "{\"owner\":$FMOM}"; check "she cannot ask someone who doesn't own that list" 404
+req mom POST "/api/lists/$FLIST/friend-requests" '{}'; check "… and must say whom" 422
+req mom GET "/api/lists/$FLIST"; has "the list now says she asked" '"state":"asked"'
+req art GET /api/friends; same "art has one request" ".requests.incoming.length" 1; has "… from mom" '"from":"Moeke"'; has "… sent from his list" '"via":"Voor vrienden"'; FREQ=$(json ".requests.incoming[0].id")
+req art GET /api/notices/unseen; same "it counts for the mark in art's header" ".unseen > 0" true
+req sis POST "/api/friends/requests/$FREQ/accept"; check "sis cannot answer art's request" 404
+req art POST "/api/friends/requests/$FREQ/decline"; check "art declines" 204
+req art GET /api/friends; same "it is off art's page" ".requests.incoming.length" 0
+req mom GET /api/friends; same "mom still sees it waiting" ".requests.outgoing.length" 1; same "… and they are no friends" ".friends.length" 0
+req mom GET /api/home; lacks "nothing told mom about the decline" "friend_"
+req art POST "/api/lists/$MOMLIST/friend-requests" "{\"owner\":$FMOM}"; check "art asks mom after all, from her list" 200; has "… and they are friends at once" '"state":"friends"'
+req mom GET /api/friends; same "mom has a friend" ".friends.length" 1; has "… art" '"name":"Art"'; lacks "… without his address" "art@example.test"; same "… and no request left" ".requests.outgoing.length" 0
+req art POST /api/friends/links; check "art makes a friend link" 201; FLINK=$(json .token)
+req art GET "/api/friends/links/$FLINK"; check "it is his own" 200; has "… to send, not to use" '"state":"own"'
+req sis GET "/api/friends/links/$FLINK"; check "sis opens it" 200; has "… from art" '"from":"Art"'; has "… and it is open" '"state":"open"'
+req sis POST "/api/friends/links/$FLINK/accept"; check "sis accepts" 200
+req lot POST "/api/friends/links/$FLINK/accept"; check "the link is spent for lot" 409; has "… with the code invite_closed" invite_closed
+req lot GET "/api/friends/links/$UNKNOWN"; check "a friend link nobody made is not found" 404
+req mom GET /api/lists; same "being friends shows mom nothing of art's" ".shown.length" 0; same "… the list she opened is a visited one" ".opened.some(l=>l.token==='$FLIST')" true
+req art PUT "/api/friends/$FMOM/lists" "{\"lists\":[\"$FLIST\"]}"; check "art ticks his list for mom" 204
+req mom GET /api/lists; same "now it is among the lists friends show her" ".shown.length" 1; has "… shown by art" '"by":["Art"]'; same "… and no longer a visited one as well" ".opened.some(l=>l.token==='$FLIST')" false
+req mom GET /api/home; same "the home page counts it" ".shownTotal" 1
+req sis GET "/api/lists/$FLIST/friends"; check "sis cannot see who art shows his list to" 404
+req sis PUT "/api/lists/$FLIST/friends" '{"friends":[]}'; check "… or change it" 404
+req art GET "/api/lists/$FLIST/friends"; same "art sees his two friends there" ".friends.length" 2; same "… mom ticked" ".friends.find(f=>f.id===$FMOM).shown" true
+req art PUT "/api/lists/$FLIST/friends" "{\"friends\":[$LOT_ID]}"; check "art cannot tick lot, who is no friend" 404; has "… with the code not_friends" not_friends
+req art PUT "/api/friends/$FMOM/lists" "{\"lists\":[\"$MOMLIST\"]}"; check "… or show mom a list that isn't his" 404
+req mom DELETE "/api/friends/shown/$FLIST"; check "mom takes the list off her own page" 204
+req mom GET /api/lists; same "it is gone there" ".shown.length" 0
+req art GET "/api/lists/$FLIST/friends"; same "art's tick is as it was" ".friends.find(f=>f.id===$FMOM).shown" true
+req art PUT "/api/lists/$FLIST/friends" '{"friends":[]}'; check "art unticks everyone" 204
+req art PUT "/api/lists/$FLIST/friends" "{\"friends\":[$FMOM]}"; check "… and ticks mom again" 204
+req mom GET /api/lists; same "it is back on mom's page" ".shown.length" 1
+req mom GET /api/friends; lacks "mom's friends page says nothing of art's other friend" "Zus"
+req mom GET "/api/lists/$FLIST"; lacks "… and neither does the list" "Zus"
+req art DELETE "/api/friends/$FMOM"; check "art removes mom as a friend" 204
+req mom GET /api/lists; same "the list is off her page" ".shown.length" 0
+req mom GET /api/friends; same "… and art off her friends" ".friends.length" 0
+req art DELETE "/api/friends/$FMOM"; check "removing her again finds no friend" 404; has "… with the code not_friends" not_friends
+
 echo "── a new link"
 # On a list of its own, so art's other lists stay as the checks around this expect.
 req art POST /api/lists '{"title":"Nieuwjaar"}'; check "art makes a list for it" 201; RELIST=$(json .token)

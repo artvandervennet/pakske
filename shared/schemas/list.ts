@@ -111,6 +111,11 @@ export interface ListView {
    */
   old: boolean
   wishes: WishView[]
+  /**
+   * The list's owners as this viewer may ask them to be friends, with what was asked already.
+   * Added by the route for someone logged in who doesn't own the list; nobody for anyone else.
+   */
+  ownersToBefriend?: { id: number, name: string, state: 'none' | 'asked' | 'friends' }[]
 }
 
 /** A list someone else owns that this person opened before. */
@@ -208,6 +213,9 @@ export interface HomeView {
   openedTotal: number
   /** Newest first; empty when logged out. */
   notices: NoticeView[]
+  /** The lists friends show the person, the one ticked last first; empty when logged out. */
+  shown: ShownList[]
+  shownTotal: number
 }
 
 /**
@@ -217,4 +225,6 @@ export interface HomeView {
 export interface ListsView {
   owned: OwnedList[]
   opened: OpenedList[]
+  /** The lists friends show the person; empty when logged out. */
+  shown: ShownList[]
 }
