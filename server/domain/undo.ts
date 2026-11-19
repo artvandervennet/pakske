@@ -135,8 +135,14 @@ export function dismissNotice(db: Db, userId: number, noticeId: string): { unuse
     const notice = tx.select().from(notices).where(and(eq(notices.id, noticeId), eq(notices.userId, userId))).get()
     if (!notice) throw new DomainError('not_found')
     tx.delete(notices).where(eq(notices.id, notice.id)).run()
-    // Closing the notice about something a friend sent is the answer "no": what was sent goes.
-    if (notice.inviteId !== null) tx.delete(invites).where(and(eq(invites.id, notice.inviteId), eq(invites.sentTo, userId))).run()
+    // Closing the notice about something a friend sent is the answer "no". Wishes that were
+    // sent go. An invitation to a list stays, marked: its sender sees who is invited, and must
+    // see the same whether this friend said no or said nothing.
+    if (notice.inviteId !== null) {
+      const sent = and(eq(invites.id, notice.inviteId), eq(invites.sentTo, userId))
+      tx.update(invites).set({ declinedAt: new Date() }).where(and(sent, eq(invites.kind, 'list'))).run()
+      tx.delete(invites).where(and(sent, eq(invites.kind, 'wishes'))).run()
+    }
     if (notice.kind !== 'wish_linked' || notice.wishId === null) return { unused: [] }
 
     const others = tx.select({ id: notices.id }).from(notices).where(linkedNotices(notice.wishId, notice.actorId)).get()

@@ -150,7 +150,6 @@ const { removeError, forget } = useForgetList(refresh, () => (loggedIn.value ? t
             @beforematch="show('visited')"
           >
             <div class="lists-panel">
-              <p class="lists-note">{{ t('lists.visitedIntro') }}</p>
               <p v-if="removeError" class="form-message" role="alert">{{ removeError }}</p>
               <ul v-if="visited.length" class="rows">
                 <VisitedListRow v-for="list in visited" :key="list.token" :list="list" @forget="forget" />

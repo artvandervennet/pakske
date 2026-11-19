@@ -9,5 +9,12 @@ export default defineEventHandler(async (event) => {
   const account = user.firebaseUid && refreshToken
     ? await signInMethods(useDb(), useIdentity(), user, refreshToken)
     : { email: user.email, ...knownSignInMethods(user) }
-  return { displayName: user.displayName, anonymousDefault: user.anonymousDefault, ...account }
+  return {
+    // The id is what the page draws a picture from while the person has none of their own.
+    id: user.id,
+    displayName: user.displayName,
+    picture: user.imageFile ? `/uploads/${user.imageFile}` : null,
+    anonymousDefault: user.anonymousDefault,
+    ...account,
+  }
 })

@@ -234,7 +234,6 @@ const paints = computed(() => {
       <div class="inner">
         <div class="section-head">
           <h2 id="opened-title" ref="openedTitle" class="section-title" tabindex="-1">{{ t('home.visited') }}</h2>
-          <p class="intro">{{ t('lists.visitedIntro') }}</p>
         </div>
         <div class="section-body">
           <p v-if="removeError" class="form-message" role="alert">{{ removeError }}</p>

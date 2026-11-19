@@ -93,6 +93,7 @@ async function onRemoveClose() {
   <li :id="`friend-${friend.id}`" class="friend-item">
     <details ref="details" class="friend">
       <summary ref="summary">
+        <PersonPicture :person="friend" />
         <span class="friend-name">{{ friend.name }}</span>
         <span class="row-meta">{{ counts }}</span>
       </summary>

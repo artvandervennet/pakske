@@ -10,6 +10,8 @@ export interface RequestsView {
 export interface FriendView {
   id: number
   name: string
+  /** Their profile picture, or null when they have none and the page draws one from the id. */
+  picture: string | null
   /** Every live list of the asker's own that isn't this friend's too, with whether this friend finds it. */
   shows: { token: string, title: string, shown: boolean }[]
   /** The lists this friend shows the asker, without the ones the asker took off their page. */

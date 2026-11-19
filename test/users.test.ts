@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { lists } from '../server/db/schema'
-import { listMyLists } from '../server/domain/lists'
-import { createUser, findUserByEmail, localeOfPath, sessionBelongsTo, updateProfile } from '../server/domain/users'
+import { acceptFriendLink, listFriends, makeFriendLink } from '../server/domain/friends'
+import { getListView } from '../server/domain/list-view'
+import { listMyLists, listOwnedLists } from '../server/domain/lists'
+import { createUser, deleteUser, findUserByEmail, findUserById, localeOfPath, sessionBelongsTo, setPicture, updateProfile } from '../server/domain/users'
 import { sessionUserOf } from '../server/utils/http'
 import { addUser, codeOf, makeDb } from './helpers'
 
@@ -89,5 +91,38 @@ describe('accounts', () => {
     const db = makeDb()
     const user = updateProfile(db, addUser(db, 'art').id, { anonymousDefault: true })
     expect(sessionUserOf(user)).toEqual({ id: user.id, displayName: 'Art', anonymousDefault: true, createdAt: user.createdAt.getTime() })
+  })
+})
+
+describe('a profile picture', () => {
+  it('is set, replaced and taken away, each time handing back the file it leaves behind', () => {
+    const db = makeDb()
+    const art = createUser(db, { email: 'art@example.test', displayName: 'Art', passwordHash: null })
+    expect(findUserById(db, art.id)!.imageFile).toBeNull()
+    expect(setPicture(db, art.id, 'a'.repeat(32) + '.jpg')).toEqual({ unused: [] })
+    expect(findUserById(db, art.id)!.imageFile).toBe('a'.repeat(32) + '.jpg')
+    expect(setPicture(db, art.id, 'b'.repeat(32) + '.jpg')).toEqual({ unused: ['a'.repeat(32) + '.jpg'] })
+    expect(setPicture(db, art.id, null)).toEqual({ unused: ['b'.repeat(32) + '.jpg'] })
+    expect(setPicture(db, art.id, null)).toEqual({ unused: [] })
+  })
+
+  it('goes with the account', () => {
+    const db = makeDb()
+    const art = createUser(db, { email: 'art@example.test', displayName: 'Art', passwordHash: null })
+    setPicture(db, art.id, 'c'.repeat(32) + '.jpg')
+    expect(deleteUser(db, art.id).unused).toContain('c'.repeat(32) + '.jpg')
+  })
+
+  it('is shown to a friend, and to nobody through a list', () => {
+    const db = makeDb()
+    const art = createUser(db, { email: 'art@example.test', displayName: 'Art', passwordHash: null })
+    const mom = createUser(db, { email: 'mom@example.test', displayName: 'Mom', passwordHash: null })
+    setPicture(db, art.id, 'd'.repeat(32) + '.jpg')
+    acceptFriendLink(db, mom.id, makeFriendLink(db, art.id).token)
+    expect(listFriends(db, mom.id)).toMatchObject([{ name: 'Art', picture: `/uploads/${'d'.repeat(32)}.jpg` }])
+    expect(listFriends(db, art.id)).toMatchObject([{ name: 'Mom', picture: null }])
+    const token = listOwnedLists(db, art.id)[0]!.token
+    expect(JSON.stringify(getListView(db, token, mom.id))).not.toContain('d'.repeat(32))
+    expect(JSON.stringify(getListView(db, token, null))).not.toContain('d'.repeat(32))
   })
 })

@@ -1,8 +1,8 @@
 import { count } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invites, notices } from '../server/db/schema'
-import { acceptFriendLink, makeFriendLink, removeFriend } from '../server/domain/friends'
-import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, listInviteLink, MAX_OPEN_INVITES, MAX_WAITING_SENDS, sendInvite, withdrawSend } from '../server/domain/invites'
+import { acceptFriendLink, listFriendsForList, makeFriendLink, removeFriend } from '../server/domain/friends'
+import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, listInviteLink, MAX_OPEN_INVITES, MAX_WAITING_SENDS, sendInvite, SENT_LIST_DAYS } from '../server/domain/invites'
 import { getListView } from '../server/domain/list-view'
 import { leaveList, listOwnedLists } from '../server/domain/lists'
 import { countUnseen, listNotices } from '../server/domain/notices'
@@ -263,43 +263,73 @@ describe('what was sent and can no longer be taken', () => {
   })
 })
 
-describe('taking an invitation to a list back', () => {
-  it('takes back what waited, with its notice, and nobody is told', () => {
+describe('an invitation to a list that a friend closed', () => {
+  const invitedTo = (db: TestDb, ownerId: number, token: string) => listFriendsForList(db, ownerId, token).filter(friend => friend.invited).map(friend => friend.name)
+
+  it('reads to its sender exactly like one that waits', () => {
     const { db, art, lot, mom, A } = setup()
     sendInvite(db, art.id, A, { kind: 'list' }, [lot.id, mom.id])
-    const token = sent(db, lot.id)[0]!.invite!
-    withdrawSend(db, art.id, A, lot.id)
+    expect(invitedTo(db, art.id, A)).toEqual(['Lot', 'Mom'])
+    const notice = sent(db, lot.id)[0]!
+    dismissNotice(db, lot.id, notice.id)
+    // Lot is rid of it, and it gives her nothing any more.
     expect(sent(db, lot.id)).toEqual([])
     expect(countUnseen(db, lot.id)).toBe(0)
-    expect(getInviteView(db, token, lot.id)).toBeUndefined()
+    expect(getInviteView(db, notice.invite!, lot.id)).toBeUndefined()
+    expect(codeOf(() => acceptInvite(db, lot.id, notice.invite!, null))).toBe('not_found')
+    // Art sees no difference between her and Mom, who said nothing.
+    expect(invitedTo(db, art.id, A)).toEqual(['Lot', 'Mom'])
+    expect(listNotices(db, art.id)).toEqual([])
+  })
+
+  it('isn\'t put before the friend again while its days last, and says nothing about that', () => {
+    const { db, art, lot, A } = setup()
+    sendInvite(db, art.id, A, { kind: 'list' }, [lot.id])
+    dismissNotice(db, lot.id, sent(db, lot.id)[0]!.id)
+    later()
+    expect(sendInvite(db, art.id, A, { kind: 'list' }, [lot.id])).toEqual({ sent: 1 })
+    expect(sent(db, lot.id)).toEqual([])
+    expect(inviteRows(db)).toBe(1)
+  })
+
+  it('ends after 30 days, declined or not, and the friend can be asked again', () => {
+    const { db, art, lot, mom, A } = setup()
+    expect(SENT_LIST_DAYS).toBe(30)
+    sendInvite(db, art.id, A, { kind: 'list' }, [lot.id, mom.id])
+    dismissNotice(db, lot.id, sent(db, lot.id)[0]!.id)
+    later(SENT_LIST_DAYS * 24 * 60 * 60 * 1000 - 5000)
+    expect(invitedTo(db, art.id, A)).toEqual(['Lot', 'Mom'])
     expect(sent(db, mom.id)).toHaveLength(1)
-    expect(noticeRows(db)).toBe(1)
+    later(5000)
+    // Both are back among the people to invite at the same moment.
+    expect(invitedTo(db, art.id, A)).toEqual([])
+    expect(sent(db, mom.id)).toEqual([])
+    sendInvite(db, art.id, A, { kind: 'list' }, [lot.id])
+    expect(sent(db, lot.id)).toMatchObject([{ kind: 'sent_list' }])
+    expect(invitedTo(db, art.id, A)).toEqual(['Lot'])
   })
 
-  it('answers the same when nothing waited', () => {
-    const { db, art, lot, sis, A } = setup()
-    expect(withdrawSend(db, art.id, A, lot.id)).toBeUndefined()
-    // Also for someone who is no friend: the answer says nothing about anyone.
-    expect(withdrawSend(db, art.id, A, sis.id)).toBeUndefined()
-    expect(codeOf(() => withdrawSend(db, lot.id, A, art.id))).toBe('not_found')
+  it('is no longer among the invited once the friend said yes: they own the list', () => {
+    const { db, art, lot, A } = setup()
+    sendInvite(db, art.id, A, { kind: 'list' }, [lot.id])
+    acceptInvite(db, lot.id, sent(db, lot.id)[0]!.invite!, null)
+    expect(listFriendsForList(db, art.id, A).map(friend => friend.name)).toEqual(['Mom'])
   })
 
-  it('leaves a send of wishes alone, and another owner\'s invitation', () => {
-    const { db, art, lot, mom, A, game } = setup()
-    addOwner(db, A, mom.id)
-    friends(db, mom.id, lot.id)
-    db.delete(notices).run()
+  it('leaves wishes that were sent as they were: closing the notice takes those away', () => {
+    const { db, art, lot, A, game } = setup()
     sendInvite(db, art.id, A, { kind: 'wishes', mode: 'copy', wishIds: [game.id] }, [lot.id])
-    sendInvite(db, mom.id, A, { kind: 'list' }, [lot.id])
-    withdrawSend(db, art.id, A, lot.id)
-    expect(sent(db, lot.id).map(notice => notice.kind).sort()).toEqual(['sent_copy', 'sent_list'])
+    dismissNotice(db, lot.id, sent(db, lot.id)[0]!.id)
+    expect(inviteRows(db)).toBe(0)
   })
 })
 
 describe('what a send may ask', () => {
   it('switches one friend one way at a time', () => {
     expect(listFriendInput.safeParse({ shown: true }).success).toBe(true)
-    expect(listFriendInput.safeParse({ invited: false }).success).toBe(true)
+    expect(listFriendInput.safeParse({ invited: true }).success).toBe(true)
+    // An invitation is not taken back here: it ends by itself.
+    expect(listFriendInput.safeParse({ invited: false }).success).toBe(false)
     expect(listFriendInput.safeParse({}).success).toBe(false)
     expect(listFriendInput.safeParse({ shown: true, invited: true }).success).toBe(false)
     expect(listFriendInput.safeParse({ shown: 'yes' }).success).toBe(false)

@@ -290,9 +290,11 @@ async function befriend(owner: Befriendable) {
   }
 }
 
-// "Delen": the sheet with every way this list gets to other people (ShareSheet.vue).
-const shareSheet = useTemplateRef<{ open: () => void }>('shareSheet')
-const shareButton = useTemplateRef<HTMLButtonElement>('shareButton')
+// "Delen" in the title band, and "Mede-eigenaar uitnodigen" in edit mode: one sheet, opened to
+// share the list or to invite someone to co-own it (ListShare.vue). It gives the focus back to
+// the button that opened it.
+const shareSheet = useTemplateRef<{ open: (how: 'share' | 'invite', from?: HTMLElement | null) => void }>('shareSheet')
+const openListShare = (how: 'share' | 'invite', event: Event) => shareSheet.value?.open(how, event.currentTarget as HTMLElement)
 
 // "Nieuwe link", in edit mode: the list gets another address and the one it had stops opening it.
 // It asks first. Afterwards the page goes on at the new address, where it says so once: the
@@ -625,7 +627,7 @@ async function addWish(title: string) {
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
         <!-- A deleted list and an address a list no longer has can't be shared. -->
         <art-button v-if="!list.deleted && !list.old" variant="secondary">
-          <button ref="shareButton" type="button" @click="shareSheet?.open()"><AppIcon name="share" />{{ t('share.open') }}</button>
+          <button type="button" @click="openListShare('share', $event)"><AppIcon name="share" />{{ t('share.open') }}</button>
         </art-button>
         <div v-if="befriendable.length" class="befriend">
           <template v-for="owner in befriendable" :key="owner.id">
@@ -771,6 +773,9 @@ async function addWish(title: string) {
               <button type="button" :aria-disabled="deleting || undefined" @click="askToRemove(owner)">{{ t('list.removeOwner', { name: owner.name }) }}</button>
             </art-button>
             <art-button variant="quiet" size="s">
+              <button type="button" @click="openListShare('invite', $event)">{{ t('share.inviteTitle') }}</button>
+            </art-button>
+            <art-button variant="quiet" size="s">
               <button type="button" :aria-disabled="relinking || undefined" @click="askForNewLink">{{ t('list.newLink') }}</button>
             </art-button>
             <art-button variant="quiet" size="s" :class="{ danger: !shared }">
@@ -807,7 +812,7 @@ async function addWish(title: string) {
       </button>
     </div>
 
-    <ShareSheet v-if="!list.deleted && !list.old" ref="shareSheet" :token="list.token" :title="list.title" :text="shareText" :owner="canManage" @close="shareButton?.focus()" />
+    <ListShare v-if="!list.deleted && !list.old" ref="shareSheet" :token="list.token" :title="list.title" :text="shareText" :owner="canManage" />
 
     <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 

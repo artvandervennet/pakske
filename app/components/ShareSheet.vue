@@ -1,127 +1,60 @@
 <script setup lang="ts">
-// "Delen" on a list: one sheet with every way the list gets to other people. The link to copy,
-// for an owner a switch per friend, and the device's own share sheet where it has one. An
-// owner also has one switch above it all that turns the sheet into an invitation: the link is
-// then the list's invitation link, and a friend's switch invites them to co-own the list.
-// It says almost nothing, on purpose: one sentence, and only while it invites.
+// A sheet for handing something on: a link to copy, the people it can go to straight away, and
+// the device's own share sheet where it has one. A centred card on a wide screen, against the
+// bottom edge on a narrow one. It says as little as it can: a title, at most one line of
+// `note`, and names under pictures.
 //
-// A friend's switch saves the moment it is used. While inviting, the switches start off every
-// time the sheet opens and don't show what was sent before: a switch that came back off by
-// itself would tell the owner that a friend said no, which nobody is told here.
-const props = defineProps<{ token: string, title: string, text: string, owner: boolean }>()
-// `close` when the sheet went away, however: the page puts the focus back on its button, which
-// a browser only does by itself when that button had the focus (Safari doesn't give it on a click).
-defineEmits<{ close: [] }>()
+// The people are a row that scrolls sideways and snaps, each a picture and a name to press.
+// Pressing one is the whole act: there is nothing to undo here, so only people it hasn't gone
+// to yet are in the row, and one that was pressed shows a tick and then leaves it.
+// What a press does, and what the link is, is the page's business: it hands in `path` (null
+// while the link is still being made, and the buttons wait for it) and listens for `pick`.
+export interface SheetPerson { id: number, name: string, picture: string | null }
+
+const props = defineProps<{
+  title: string
+  /** The address to hand on, on this site; null while it isn't there yet. */
+  path: string | null
+  /** The words that go along with it in the device's share sheet. */
+  text?: string
+  note?: string
+  people?: SheetPerson[]
+  /** What pressing a person does, as the name of the row for a screen reader. */
+  peopleLabel?: string
+  /** The people whose press is on its way, and the ones it reached. */
+  busy?: Set<number>
+  done?: Set<number>
+  error?: string
+  /** What just happened, said to a screen reader; sighted people see the row change. */
+  status?: string
+}>()
+defineEmits<{ pick: [person: SheetPerson] }>()
 
 const { t } = useI18n()
-const localePath = useLocalePath()
-const { parse } = useApiError()
 const id = useId()
-
-type Friend = { id: number, name: string, shown: boolean }
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 const heading = useTemplateRef<HTMLElement>('heading')
-const inviting = ref(false)
-// The invitation link, once the server gave it. The buttons that hand it on wait for it:
-// Safari only copies during the press itself, so it can't be fetched after one.
-const invitePath = ref<string | null>(null)
-const friends = ref<Friend[]>([])
-const invited = reactive(new Set<number>())
-// The friends whose switch is being saved. A tap on one of those is not taken: two requests
-// about one friend could land in the other order, and leave someone invited behind a switch
-// that shows off.
-const saving = reactive(new Set<number>())
-// Counts the openings, so a late answer about the friends never lands in a later opening or
-// over a switch that was used meanwhile.
-let opening = 0
-let used = false
-const error = ref('')
-const status = ref('')
+// What opened the sheet, to give the focus back to: a browser only does that by itself when
+// that control had the focus, and Safari doesn't give a button the focus on a click.
+let opener: HTMLElement | null = null
 // Whether this browser has a share sheet is only known in the browser.
 const canShare = ref(false)
 onMounted(() => {
   canShare.value = typeof navigator.share === 'function'
 })
 
-const path = computed(() => (inviting.value ? invitePath.value : localePath(`/l/${props.token}`)))
-const words = computed(() => (inviting.value ? t('list.inviteShareText', { title: props.title }) : props.text))
-
-/** Opens the sheet as it always starts: sharing, not inviting. */
-function open() {
+function open(from?: HTMLElement | null) {
   if (!dialog.value || dialog.value.open) return
-  inviting.value = false
-  invitePath.value = null
-  invited.clear()
-  error.value = ''
-  status.value = ''
+  opener = from ?? null
   dialog.value.showModal()
   // The heading rather than the first control: a screen reader starts with what this is.
   heading.value?.focus()
-  // Not waited for: the sheet is of use without its friends, and they join it when they arrive.
-  const mine = ++opening
-  used = false
-  if (props.owner) {
-    $fetch<{ friends: Friend[] }>(`/api/lists/${props.token}/friends`)
-      .then((answer) => { if (mine === opening && !used) friends.value = answer.friends })
-      .catch(() => { if (mine === opening && !used) friends.value = [] })
-  }
-}
-
-async function setInviting(event: Event) {
-  const box = event.target as HTMLInputElement
-  inviting.value = box.checked
-  error.value = ''
-  if (!box.checked || invitePath.value) return
-  try {
-    const made = await $fetch<{ invite: string }>(`/api/lists/${props.token}/invites`, { method: 'POST', body: { kind: 'list' } })
-    invitePath.value = localePath(`/j/${made.invite}`)
-  }
-  catch (failure) {
-    // Without a link there is nothing to invite with: back to sharing, and why.
-    inviting.value = false
-    error.value = parse(failure).message
-  }
-}
-
-const isOn = (friend: Friend) => (inviting.value ? invited.has(friend.id) : friend.shown)
-
-async function setFriend(friend: Friend, event: Event) {
-  const box = event.target as HTMLInputElement
-  const on = box.checked
-  if (saving.has(friend.id)) {
-    box.checked = !on
-    return
-  }
-  saving.add(friend.id)
-  used = true
-  const invites = inviting.value
-  const apply = (value: boolean) => {
-    if (!invites) friend.shown = value
-    else if (value) invited.add(friend.id)
-    else invited.delete(friend.id)
-  }
-  apply(on)
-  error.value = ''
-  try {
-    await $fetch<unknown>(`/api/lists/${props.token}/friends/${friend.id}`, { method: 'PUT', body: invites ? { invited: on } : { shown: on } })
-    const said = invites ? (on ? 'share.nowInvited' : 'share.notInvited') : (on ? 'share.nowShown' : 'share.notShown')
-    status.value = t(said, { name: friend.name })
-  }
-  catch (failure) {
-    apply(!on)
-    // The box is the browser's own: put it back where the page says it is.
-    box.checked = !on
-    error.value = parse(failure).message
-  }
-  finally {
-    saving.delete(friend.id)
-  }
 }
 
 /** Keeps a press from handing on a link that isn't there yet. */
 function whenReady(event: Event) {
-  if (path.value) return
+  if (props.path) return
   event.preventDefault()
   event.stopPropagation()
 }
@@ -131,26 +64,37 @@ function onClick(event: MouseEvent) {
   if (event.target === dialog.value) dialog.value?.close()
 }
 
-defineExpose({ open })
+defineExpose({ open, close: () => dialog.value?.close() })
 </script>
 
 <template>
-  <dialog ref="dialog" class="dialog sheet" :aria-labelledby="`${id}-title`" @click="onClick" @close="$emit('close')">
+  <dialog ref="dialog" class="dialog sheet" :aria-labelledby="`${id}-title`" :aria-describedby="note ? `${id}-note` : undefined" @click="onClick" @close="opener?.focus()">
     <div class="sheet-body">
       <div class="sheet-head">
-        <h2 :id="`${id}-title`" ref="heading" tabindex="-1">{{ t('share.open') }}</h2>
+        <h2 :id="`${id}-title`" ref="heading" tabindex="-1">{{ title }}</h2>
         <button type="button" class="icon-button" :aria-label="t('share.close')" @click="dialog?.close()">
           <AppIcon name="close" />
         </button>
       </div>
+      <p v-if="note" :id="`${id}-note`" class="switch-hint">{{ note }}</p>
 
-      <template v-if="owner">
-        <label class="switch sheet-row">
-          <input type="checkbox" :checked="inviting" :aria-describedby="inviting ? `${id}-note` : undefined" @change="setInviting">
-          {{ t('share.asOwner') }}
-        </label>
-        <p v-if="inviting" :id="`${id}-note`" class="switch-hint">{{ t('share.asOwnerNote') }}</p>
-      </template>
+      <ul v-if="people?.length" class="sheet-people" :aria-label="peopleLabel">
+        <li v-for="person in people" :key="person.id">
+          <button
+            type="button"
+            class="sheet-person"
+            :class="{ done: done?.has(person.id) }"
+            :aria-disabled="busy?.has(person.id) || done?.has(person.id) || undefined"
+            @click="$emit('pick', person)"
+          >
+            <span class="sheet-person-picture">
+              <PersonPicture :person="person" />
+              <AppIcon v-if="done?.has(person.id)" name="check" />
+            </span>
+            <span class="sheet-person-name">{{ person.name }}</span>
+          </button>
+        </li>
+      </ul>
 
       <art-share class="sheet-action" nosheet :url="path ?? ''" :copied-label="t('share.copied')" :manual-label="t('share.manual')">
         <art-button variant="secondary">
@@ -163,15 +107,7 @@ defineExpose({ open })
         </art-button>
       </art-share>
 
-      <fieldset v-if="owner && friends.length" class="sheet-friends">
-        <legend class="visually-hidden">{{ inviting ? t('share.friendsInvite') : t('share.friends') }}</legend>
-        <label v-for="friend in friends" :key="friend.id" class="switch sheet-row">
-          <input type="checkbox" :checked="isOn(friend)" :aria-busy="saving.has(friend.id) || undefined" @change="setFriend(friend, $event)">
-          <span class="sheet-name">{{ friend.name }}</span>
-        </label>
-      </fieldset>
-
-      <art-share v-if="canShare" class="sheet-action" :url="path ?? ''" :text="words" :heading="title" :copied-label="t('share.copied')" :manual-label="t('share.manual')">
+      <art-share v-if="canShare" class="sheet-action" :url="path ?? ''" :text="text" :copied-label="t('share.copied')" :manual-label="t('share.manual')">
         <art-button variant="secondary">
           <button type="button" :aria-disabled="path ? undefined : 'true'" @click="whenReady">
             <AppIcon name="share" />{{ t('share.more') }}
@@ -180,7 +116,7 @@ defineExpose({ open })
       </art-share>
 
       <p v-if="error" class="form-message" role="alert">{{ error }}</p>
-      <!-- Always there, so what a switch did is announced; sighted people see the switch. -->
+      <!-- Always there, so what a press did is announced. -->
       <p class="visually-hidden" role="status">{{ status }}</p>
     </div>
   </dialog>

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import type { FriendLinkView, FriendView, RequestsView } from '../../shared/schemas/friends'
 import type { ShownList } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
@@ -260,16 +260,20 @@ export function acceptFriendLink(db: Db, userId: number, token: string): { frien
 // A friend finds a list on their own Lists page when one of its owners ticked it for them. That
 // is all a tick does: it is no key, the list's link opens it for anyone.
 
-/** The person's friends, by name; two with the same name by who became an account first. */
-function friendsOf(db: Db, userId: number): { id: number, name: string }[] {
+/**
+ * The person's friends, by name; two with the same name by who became an account first. Each
+ * with their profile picture, which friends are the only ones to be shown.
+ */
+function friendsOf(db: Db, userId: number): { id: number, name: string, picture: string | null }[] {
   const pairs = db.select().from(friendships)
     .where(or(eq(friendships.userLow, userId), eq(friendships.userHigh, userId))).all()
   const ids = pairs.map(pair => (pair.userLow === userId ? pair.userHigh : pair.userLow))
   if (ids.length === 0) return []
-  return db.select({ id: users.id, name: users.displayName }).from(users)
+  return db.select({ id: users.id, name: users.displayName, imageFile: users.imageFile }).from(users)
     .where(inArray(users.id, ids))
     .orderBy(asc(users.displayName), asc(users.id))
     .all()
+    .map(({ imageFile, ...friend }) => ({ ...friend, picture: imageFile ? `/uploads/${imageFile}` : null }))
 }
 
 /** The person's live lists, oldest first. */
@@ -328,16 +332,24 @@ export function setShownLists(db: Db, ownerId: number, friendId: number, listTok
 
 /**
  * The person's friends who can be shown this list of the person's own, each with whether they
- * are. A friend who owns the list too isn't among them: it is on their own lists already.
+ * are, and whether the person invited them to co-own it in the last 30 days. A friend who owns
+ * the list too isn't among them: it is on their own lists already.
+ *
+ * `invited` reads the same for an invitation that waits and for one the friend declined, and
+ * goes back to false when the invitation's days are over, whichever it was: the person never
+ * sees from it what a friend did.
  */
-export function listFriendsForList(db: Db, ownerId: number, listToken: string): { id: number, name: string, shown: boolean }[] {
+export function listFriendsForList(db: Db, ownerId: number, listToken: string): { id: number, name: string, picture: string | null, shown: boolean, invited: boolean }[] {
   const listId = ownedListId(db, ownerId, listToken)
   const owners = new Set(ownersOfList(db, listId).map(owner => owner.userId))
   const ticked = new Set(db.select({ userId: shown.userId }).from(shown)
     .where(and(eq(shown.listId, listId), eq(shown.shownBy, ownerId))).all().map(row => row.userId))
+  const asked = new Set(db.select({ userId: invites.sentTo }).from(invites)
+    .where(and(eq(invites.listId, listId), eq(invites.kind, 'list'), eq(invites.createdBy, ownerId), isNotNull(invites.sentTo), gt(invites.expiresAt, new Date())))
+    .all().map(row => row.userId))
   return friendsOf(db, ownerId)
     .filter(friend => !owners.has(friend.id))
-    .map(friend => ({ ...friend, shown: ticked.has(friend.id) }))
+    .map(friend => ({ ...friend, shown: ticked.has(friend.id), invited: asked.has(friend.id) }))
 }
 
 /**

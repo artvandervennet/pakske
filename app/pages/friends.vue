@@ -50,28 +50,26 @@ onMounted(() => {
   onBeforeUnmount(off)
 })
 
-// "Vriend toevoegen": a link to send to one person. It shows under the band's button, with the
-// focus on its address, and goes straight on to the device's share sheet where there is one.
+// "Vriend toevoegen": a link to send to one person, handed on from the same sheet a list is
+// shared from. The sheet opens at once and its buttons wait for the link; nothing opens by
+// itself after that, least of all the device's own share sheet.
 const link = ref<string | null>(null)
-const linkBox = useTemplateRef<{ focus: () => void, share: () => Promise<boolean> }>('linkBox')
-const shareWords = computed(() => ({ title: t('friends.linkShareTitle'), text: t('friends.linkShareText') }))
+const linkSheet = useTemplateRef<{ open: (from?: HTMLElement | null) => void }>('linkSheet')
 const making = ref(false)
-const bandError = ref('')
+const linkError = ref('')
 
-async function addFriend() {
+async function addFriend(event: Event) {
   if (making.value) return
   making.value = true
-  bandError.value = ''
+  link.value = null
+  linkError.value = ''
+  linkSheet.value?.open(event.currentTarget as HTMLElement)
   try {
     const made = await $fetch<{ token: string }>('/api/friends/links', { method: 'POST' })
     link.value = localePath(`/f/${made.token}`)
-    await nextTick()
-    linkBox.value?.focus()
-    // Not waited for: the link is made, and the button under it opens the sheet again.
-    void linkBox.value?.share()
   }
   catch (failure) {
-    bandError.value = parse(failure).message
+    linkError.value = parse(failure).message
   }
   finally {
     making.value = false
@@ -138,8 +136,6 @@ async function onRemoved(name: string) {
         <art-button variant="secondary">
           <button type="button" :aria-disabled="making || undefined" @click="addFriend">{{ t('friends.add') }}</button>
         </art-button>
-        <OneTimeLink v-if="link" ref="linkBox" :path="link" :text="t('friends.linkText')" :share="shareWords" />
-        <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
       </template>
     </PageHead>
 
@@ -199,5 +195,6 @@ async function onRemoved(name: string) {
         </div>
       </div>
     </section>
+    <ShareSheet ref="linkSheet" :title="t('friends.add')" :note="t('friends.linkText')" :path="link" :text="t('friends.linkShareText')" :error="linkError" />
   </div>
 </template>

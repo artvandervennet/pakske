@@ -79,6 +79,19 @@ export function setPasswordHash(db: Db, userId: number, passwordHash: string) {
 }
 
 /**
+ * Sets or clears the person's profile picture. Returns the file it replaced, for the caller to
+ * remove from disk: nothing else ever points at a profile picture.
+ */
+export function setPicture(db: Db, userId: number, imageFile: string | null): { unused: string[] } {
+  return db.transaction((tx) => {
+    const before = tx.select({ imageFile: users.imageFile }).from(users).where(eq(users.id, userId)).get()
+    if (!before) throw new DomainError('not_found')
+    tx.update(users).set({ imageFile }).where(eq(users.id, userId)).run()
+    return { unused: before.imageFile && before.imageFile !== imageFile ? [before.imageFile] : [] }
+  }, { behavior: 'immediate' })
+}
+
+/**
  * Removes an account and leaves what it made, without a name. Its lists stay as they are, with
  * their wishes: a list it shares is the other owners' from then on, and a list it owns alone
  * stays open at its link, owned by nobody, so nobody can change it any more. What it wrote on
@@ -90,6 +103,9 @@ export function setPasswordHash(db: Db, userId: number, passwordHash: string) {
 export function deleteUser(db: Db, userId: number): { unused: string[] } {
   return db.transaction((tx) => {
     const unused: string[] = []
+    // Their profile picture goes with them.
+    const own = tx.select({ imageFile: users.imageFile }).from(users).where(eq(users.id, userId)).get()
+    if (own?.imageFile) unused.push(own.imageFile)
     // Their notices go as if they closed each one: a link that nobody can undo any more stops
     // remembering, and the picture it kept may be free.
     for (const notice of tx.select({ id: notices.id }).from(notices).where(eq(notices.userId, userId)).all()) {

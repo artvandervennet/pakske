@@ -448,7 +448,7 @@ describe('showing a list to a friend', () => {
   it('ticks friends from the list as well', () => {
     const { db, art, lot, mom, kerst } = friends()
     befriend(db, lot.id, kerst, art.id)
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([
       { id: lot.id, name: 'Lot', shown: false },
       { id: mom.id, name: 'Mom', shown: false },
     ])
@@ -457,7 +457,7 @@ describe('showing a list to a friend', () => {
     expect(shownTo(db, lot.id)).toEqual(['Kerst'])
     setShownTo(db, art.id, kerst, [lot.id])
     expect(shownTo(db, mom.id)).toEqual([])
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([
       { id: lot.id, name: 'Lot', shown: true },
       { id: mom.id, name: 'Mom', shown: false },
     ])
@@ -483,10 +483,10 @@ describe('showing a list to a friend', () => {
     setShownTo(db, lot.id, kerst, [mom.id])
     expect(listShownLists(db, mom.id)).toMatchObject([{ title: 'Kerst', owners: ['Art', 'Lot'], by: ['Art', 'Lot'] }])
     // Each sees only their own friends there, and unticks only their own tick.
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, name: 'Mom', shown: true }])
     setShownTo(db, art.id, kerst, [])
     expect(listShownLists(db, mom.id)).toMatchObject([{ title: 'Kerst', by: ['Lot'] }])
-    expect(listFriendsForList(db, lot.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    expect(listFriendsForList(db, lot.id, kerst)).toMatchObject([{ id: mom.id, name: 'Mom', shown: true }])
     setShownTo(db, lot.id, kerst, [])
     expect(listShownLists(db, mom.id)).toEqual([])
   })
@@ -498,7 +498,7 @@ describe('showing a list to a friend', () => {
     addOwner(db, kerst, mom.id)
     expect(listShownLists(db, mom.id)).toEqual([])
     // There is no switch for her on that list: it would do nothing. The other friend keeps theirs.
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: lot.id, name: 'Lot', shown: false }])
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: lot.id, name: 'Lot', shown: false }])
     expect(listFriends(db, art.id).find(friend => friend.id === mom.id)!.shows.map(list => list.title)).toEqual([])
     expect(listFriends(db, art.id).find(friend => friend.id === lot.id)!.shows.map(list => list.title)).toEqual(['Kerst'])
     // Saving the switches that are offered leaves hers as it was.
@@ -546,7 +546,7 @@ describe('showing a list to a friend', () => {
     hideShownList(db, mom.id, kerst)
     expect(listShownLists(db, mom.id)).toEqual([])
     expect(listFriends(db, mom.id).find(friend => friend.id === art.id)!.sees).toEqual([])
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, name: 'Mom', shown: true }])
     expect(listNotices(db, art.id)).toHaveLength(before)
     expect(codeOf(() => hideShownList(db, mom.id, kerst))).toBe('not_found')
     expect(codeOf(() => hideShownList(db, art.id, kerst))).toBe('not_found')
@@ -562,7 +562,7 @@ describe('showing a list to a friend', () => {
     const { db, art, mom, kerst } = friends()
     const other = createUser(db, { email: 'mom2@example.test', displayName: 'Mom', passwordHash: 'not-a-real-hash' })
     befriend(db, other.id, kerst, art.id)
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([
       { id: mom.id, name: 'Mom', shown: false },
       { id: other.id, name: 'Mom', shown: false },
     ])
@@ -627,7 +627,7 @@ describe('showing a list to a friend', () => {
     takeOffPage(db, mom.id, kerst)
     expect(listOthersLists(db, mom.id).map(list => list.title)).toEqual(['Lijst van lot'])
     // Art's switch is as it was, and he isn't told.
-    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    expect(listFriendsForList(db, art.id, kerst)).toMatchObject([{ id: mom.id, name: 'Mom', shown: true }])
     // A list that was only opened goes the same way; one that isn't on the page is no error.
     takeOffPage(db, mom.id, lotList)
     takeOffPage(db, mom.id, lotList)

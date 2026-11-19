@@ -34,6 +34,12 @@ export const INVITE_LINK_DAYS = 7
 
 const DAY = 24 * 60 * 60 * 1000
 
+/**
+ * How long an invitation to a list that was sent to a friend lasts. It ends by itself so the
+ * friend can be asked again some day, whatever they did with this one.
+ */
+export const SENT_LIST_DAYS = 30
+
 /** What one person may have waiting for one friend at once; sending one more drops the oldest. */
 export const MAX_WAITING_SENDS = 20
 
@@ -63,6 +69,8 @@ function findInvite(db: Db, token: string, viewerId: number) {
   const invite = db.select().from(invites).where(eq(invites.token, token)).get()
   if (!invite) return undefined
   if (invite.sentTo !== null && invite.sentTo !== viewerId) return undefined
+  // Declined: kept only so its sender sees no difference, and nothing to the friend any more.
+  if (invite.declinedAt !== null) return undefined
   const list = db.select().from(lists).where(eq(lists.id, invite.listId)).get()!
   const owners = ownersOfList(db, list.id)
   const onList = invite.kind === 'wishes' ? wishesStillOn(db, invite.id, list.id) : []
@@ -173,6 +181,8 @@ export function listInviteLink(db: Db, userId: number, token: string): { invite:
  * send of their own, so one friend's answer leaves another's waiting. Sending the same thing
  * the same way again replaces what waited. Someone who isn't a friend is "not friends", and then
  * nothing is sent to anyone; a friend who owns the list already can't be asked to manage it.
+ * An invitation to the list lasts 30 days. One the friend declined stays for those days, and
+ * inviting them again meanwhile reaches nobody and answers as if it did.
  */
 export function sendInvite(db: Db, userId: number, token: string, input: InviteInput, friendIds: number[]): { sent: number } {
   return db.transaction((tx) => {
@@ -200,7 +210,10 @@ export function sendInvite(db: Db, userId: number, token: string, input: InviteI
         .all()
       const again = waiting.filter(earlier => earlier.listId === listId && earlier.kind === input.kind && earlier.mode === mode
         && sameWishes(tx, earlier.id, wishIds))
-      const others = waiting.filter(earlier => !again.includes(earlier))
+      // They said no to this, not long ago: it isn't put before them again.
+      if (again.some(earlier => earlier.declinedAt !== null && earlier.expiresAt !== null && earlier.expiresAt > now)) continue
+      // What was declined is no send that waits: it isn't counted, and isn't dropped for a newer one.
+      const others = waiting.filter(earlier => !again.includes(earlier) && earlier.declinedAt === null)
       const dropping = [...again, ...others.slice(0, Math.max(0, others.length - (MAX_WAITING_SENDS - 1)))]
       // The notice about a send goes with it.
       if (dropping.length > 0) tx.delete(invites).where(inArray(invites.id, dropping.map(row => row.id))).run()
@@ -211,25 +224,13 @@ export function sendInvite(db: Db, userId: number, token: string, input: InviteI
         listId,
         createdBy: userId,
         mode,
-        expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * DAY) : null,
+        expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * DAY) : input.kind === 'list' ? new Date(now.getTime() + SENT_LIST_DAYS * DAY) : null,
         sentTo: friendId,
       }).returning({ id: invites.id }).get()
       if (wishIds.length > 0) tx.insert(inviteWishes).values(wishIds.map(wishId => ({ inviteId: made.id, wishId }))).run()
       addNotice(tx, { userId: friendId, kind, actorId: userId, title, more: Math.max(0, wishIds.length - 1), inviteId: made.id })
     }
     return { sent: friends.length }
-  }, { behavior: 'immediate' })
-}
-
-/**
- * Takes back the invitation to co-own this list that the person sent one friend, with the
- * notice about it. The friend isn't told. It answers the same whether or not anything waited,
- * and whoever the other person is, so it can't be used to find out what became of a send.
- */
-export function withdrawSend(db: Db, userId: number, token: string, friendId: number): void {
-  db.transaction((tx) => {
-    const listId = ownedListId(tx, userId, token)
-    tx.delete(invites).where(and(eq(invites.listId, listId), eq(invites.kind, 'list'), eq(invites.createdBy, userId), eq(invites.sentTo, friendId))).run()
   }, { behavior: 'immediate' })
 }
 

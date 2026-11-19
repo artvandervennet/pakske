@@ -20,6 +20,9 @@ export const users = sqliteTable('users', {
   googleSub: text('google_sub').unique(),
   // "Standaard anoniem" in Settings: a new purchase of theirs is without their name unless they say otherwise.
   anonymousDefault: integer('anonymous_default', { mode: 'boolean' }).notNull().default(false),
+  // The profile picture they put up, a file under uploads/. Without one, the pages draw a study
+  // in two paints from the account's id. Only friends are shown it.
+  imageFile: text('image_file'),
   createdAt: createdAt(),
 })
 
@@ -153,6 +156,9 @@ export const invites = sqliteTable('invites', {
   // Set when it was sent to a friend instead of made as an address to pass on: it then works
   // for that one person only, who finds it in a notice.
   sentTo: integer('sent_to').references(() => users.id, { onDelete: 'cascade' }),
+  // When the friend it was sent to closed the notice about it, for an invitation to a list:
+  // the row stays, and gives nothing, so its sender can't see the friend said no.
+  declinedAt: integer('declined_at', { mode: 'timestamp_ms' }),
 }, t => [
   index('invites_sent_to_idx').on(t.sentTo),
 ])
