@@ -69,6 +69,8 @@ Google goes through Firebase too, so do the steps above first.
 
 Someone who logs in with Google for the first time gets an account without a password, named as at Google; Settings mails them a link if they want a password too. An account that already has their address logs in with its password and links Google under Settings. When that address was never confirmed, Firebase lets Google take the account over and drops its password: Google has shown the address is theirs. "Wachtwoord vergeten" gives them a password again.
 
+Delete accounts under Settings on the site, not in the Firebase console: the console leaves the account here behind, with an id Firebase no longer knows. Someone with Google gets back in anyway, because their next login makes a new Firebase account and the account here follows it by its Google account (`movedAtFirebase` in `server/domain/accounts.ts`). An account with only a password stays locked out until its new Firebase id is written into `users.firebase_uid`.
+
 ### A second project for development
 
 The accounts you make while working on the site don't belong among the real ones. Make a second Firebase project for your own machine and put its key and OAuth client in the `.env` there. It needs steps 1 to 3 of the Firebase steps and, for Google, the three above with `http://localhost:3400/auth/google` as the redirect URI. `localhost` is already among its authorised domains.

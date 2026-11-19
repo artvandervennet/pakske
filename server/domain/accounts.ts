@@ -177,6 +177,20 @@ export async function register(
 }
 
 /**
+ * The account here of a Google account that Firebase now answers a new id for: its account
+ * there was deleted outside this site, in Firebase's console say, and this login made a new one.
+ * The account here follows to the new id. Without that it would keep its address and an id
+ * nobody can log in with, and its owner would be told the address is taken.
+ */
+function movedAtFirebase(db: Db, googleSub: string, uid: string): User | undefined {
+  if (!googleSub) return undefined
+  const user = db.select().from(users).where(eq(users.googleSub, googleSub)).get()
+  if (!user) return undefined
+  db.update(users).set({ firebaseUid: uid }).where(eq(users.id, user.id)).run()
+  return { ...user, firebaseUid: uid }
+}
+
+/**
  * Logs in with Google: the account Firebase ties to it, or a new one named as at Google. An
  * address that already logs in with a password logs in with it first and links Google in
  * Settings. Firebase asks for that itself; an account from before Firebase is asked here, since
@@ -190,7 +204,7 @@ export async function logInWithGoogle(db: Db, identity: Identity, credential: Go
   const result = await identity.google(credential)
   if (result.kind !== 'ok') throw new DomainError('google_email_taken')
   const { login } = result
-  const known = findByUid(db, login.uid)
+  const known = findByUid(db, login.uid) ?? movedAtFirebase(db, result.googleSub, login.uid)
   if (known) {
     db.update(users).set({ googleSub: result.googleSub }).where(eq(users.id, known.id)).run()
     // Google's answer names the address at Google; the account's own may have changed since.

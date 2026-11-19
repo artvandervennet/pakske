@@ -152,6 +152,30 @@ describe('logging in with Google', () => {
     addUser(db, 'art')
     expect(await rejection(logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'), { maxUsers: 1 }))).toBe('registration_closed')
   })
+
+  it('finds the account again after its account at Firebase was deleted there', async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    const first = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    // Deleted in Firebase's console: the next login makes a new account there, with a new id.
+    accounts.length = 0
+    const again = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'), { maxUsers: 1 })
+    expect(again.login.uid).not.toBe(first.login.uid)
+    expect(again.user).toMatchObject({ id: first.user.id, firebaseUid: again.login.uid, googleSub: 'g-1' })
+    expect(findUserById(db, first.user.id)?.firebaseUid).toBe(again.login.uid)
+    expect(listTitles(db, first.user.id)).toEqual(['Verlanglijst'])
+    // And from then on by its new id.
+    expect((await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))).user.id).toBe(first.user.id)
+  })
+
+  it("doesn't hand an account to another Google account with its address", async () => {
+    const db = makeDb()
+    const { identity, accounts } = fakeIdentity()
+    const first = await logInWithGoogle(db, identity, googleCredential('g-1', 'lotte@gmail.test'))
+    accounts.length = 0
+    expect(await rejection(logInWithGoogle(db, identity, googleCredential('g-2', 'lotte@gmail.test')))).toBe('google_email_taken')
+    expect(findUserById(db, first.user.id)).toMatchObject({ firebaseUid: first.login.uid, googleSub: 'g-1' })
+  })
 })
 
 describe('Google in Settings', () => {
