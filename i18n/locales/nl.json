@@ -334,6 +334,8 @@
     "lead": "Een vriend vindt de lijsten die je aanzet bij “Van anderen”, zonder dat je een link stuurt.",
     "add": "Vriend toevoegen",
     "linkText": "Stuur deze link naar één persoon. Wie hem opent en ja zegt, is je vriend. Hij werkt één keer, 30 dagen lang.",
+    "linkShareTitle": "Vrienden worden op Pakske",
+    "linkShareText": "Hey, zullen we vrienden worden op Pakske? Open deze link en zeg ja. De link werkt één keer.",
     "requests": "Verzoeken",
     "wants": "{name} wil vrienden worden",
     "via": "via je lijst “{title}”",

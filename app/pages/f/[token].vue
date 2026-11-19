@@ -69,7 +69,7 @@ async function accept() {
           </art-button>
           <p v-if="message" class="form-message" role="alert">{{ message }}</p>
         </template>
-        <OneTimeLink v-else-if="state === 'own'" :path="route.path" :text="t('friends.linkOwn')" />
+        <OneTimeLink v-else-if="state === 'own'" :path="route.path" :text="t('friends.linkOwn')" :share="{ title: t('friends.linkShareTitle'), text: t('friends.linkShareText') }" />
         <art-button v-else variant="secondary">
           <NuxtLink :to="localePath('/friends')">{{ t('friends.toFriends') }}</NuxtLink>
         </art-button>

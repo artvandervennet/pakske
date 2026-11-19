@@ -334,6 +334,8 @@
     "lead": "A friend finds the lists you switch on under “From others”, without you sending a link.",
     "add": "Add a friend",
     "linkText": "Send this link to one person. Whoever opens it and says yes is your friend. It works once, for 30 days.",
+    "linkShareTitle": "Become friends on Pakske",
+    "linkShareText": "Hey, shall we be friends on Pakske? Open this link and say yes. The link works once.",
     "requests": "Requests",
     "wants": "{name} wants to be friends",
     "via": "from your list “{title}”",
