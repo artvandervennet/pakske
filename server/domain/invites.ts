@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNull, or } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNull, or } from 'drizzle-orm'
 import type { InviteInput, ListTarget } from '../../shared/schemas/input'
 import type { InviteView, NoticeKind } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
@@ -13,10 +13,12 @@ import { copyWishOnto } from './sharing'
 import { newListToken } from './tokens'
 
 // Links that share: an owner of a list makes one for some wishes on it, or for the list itself.
-// A "linked" link makes whoever opens it an owner, of those wishes or of the whole list, and
-// works once. A "copy" link (wishes only) gives everyone who opens it copies of their own, once
-// per account, until it expires; the wishes it was made for stay their owners' alone. A link has
-// a token of its own and never hands out the list's, so it gives nothing once it is closed.
+// A "linked" link for wishes makes whoever opens it an owner of those wishes, and works once. A
+// "copy" link (wishes only) gives everyone who opens it copies of their own, once per account,
+// until it expires; the wishes it was made for stay their owners' alone. A link for the list is
+// an invitation: for 7 days it makes everyone who opens it a co-owner, so it can go into a
+// group chat (`listInviteLink`). A link has a token of its own and never hands out the list's,
+// so it gives nothing once it is closed.
 // The same can be sent to a friend instead (`sendInvite`): it then has no address to pass on.
 // It reaches that friend as a notice, works for them alone, and is gone once they answered.
 // Nothing here reads what buyers did.
@@ -26,6 +28,11 @@ export const MAX_OPEN_INVITES = 20
 
 /** How long a copy link works. It can be passed around, so it must end by itself. */
 export const COPY_LINK_DAYS = 30
+
+/** How long an invitation to a list works. Whoever opens it gets the whole list, so it ends soon. */
+export const INVITE_LINK_DAYS = 7
+
+const DAY = 24 * 60 * 60 * 1000
 
 /** What one person may have waiting for one friend at once; sending one more drops the oldest. */
 export const MAX_WAITING_SENDS = 20
@@ -63,8 +70,11 @@ function findInvite(db: Db, token: string, viewerId: number) {
     && owners.some(owner => owner.userId === invite.createdBy)
     && (invite.kind === 'list' || onList.length > 0)
 
+  // An invitation to a list always has an end. One without is from before it worked for more
+  // than one person, and must not be a way in for everyone for ever.
+  const endless = invite.kind === 'list' && invite.sentTo === null && invite.expiresAt === null
   let state: InviteState = 'open'
-  if (!gives || invite.usedAt !== null) state = 'closed'
+  if (!gives || invite.usedAt !== null || endless) state = 'closed'
   else if (invite.expiresAt !== null && invite.expiresAt.getTime() <= Date.now()) state = 'expired'
   else if (invite.createdBy === viewerId) state = 'own'
   else if (usedBy(db, invite.id, viewerId)) state = 'used'
@@ -100,16 +110,18 @@ function namedWishes(db: Db, listId: number, input: InviteInput): { id: number, 
  * isn't theirs.
  */
 export function createInvite(db: Db, userId: number, token: string, input: InviteInput): { invite: string } {
+  if (input.kind === 'list') return listInviteLink(db, userId, token)
   return db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
     const wishIds = namedWishes(tx, listId, input).map(wish => wish.id)
 
     // Links nobody used pile up when people make one and don't send it, so the oldest goes. A
     // copy link stays open after someone used it, so it counts until it expires. What was sent
-    // to a friend is no link to pass on and is counted per friend instead.
+    // to a friend is no link to pass on and is counted per friend instead, and an invitation to
+    // the list is one per owner and ends by itself.
     const now = new Date()
     const open = tx.select({ id: invites.id }).from(invites)
-      .where(and(eq(invites.listId, listId), isNull(invites.sentTo), isNull(invites.usedAt), or(isNull(invites.expiresAt), gt(invites.expiresAt, now))))
+      .where(and(eq(invites.listId, listId), eq(invites.kind, 'wishes'), isNull(invites.sentTo), isNull(invites.usedAt), or(isNull(invites.expiresAt), gt(invites.expiresAt, now))))
       .orderBy(asc(invites.id))
       .all()
     const dropping = open.slice(0, Math.max(0, open.length - (MAX_OPEN_INVITES - 1)))
@@ -122,9 +134,34 @@ export function createInvite(db: Db, userId: number, token: string, input: Invit
       listId,
       createdBy: userId,
       mode: copies ? 'copy' : 'linked',
-      expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * 24 * 60 * 60 * 1000) : null,
+      expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * DAY) : null,
     }).returning({ id: invites.id, token: invites.token }).get()
     if (wishIds.length > 0) tx.insert(inviteWishes).values(wishIds.map(wishId => ({ inviteId: made.id, wishId }))).run()
+    return { invite: made.token }
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * The person's invitation link for a list of their own: everyone who opens it while it lives
+ * becomes a co-owner. There is one per owner per list, so asking again gives the address that
+ * is already going round, and gives it 7 days from now; once it ended, asking makes a new one.
+ * It ends by itself, 7 days after its owner last asked for it.
+ */
+export function listInviteLink(db: Db, userId: number, token: string): { invite: string } {
+  return db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    const now = new Date()
+    const until = new Date(now.getTime() + INVITE_LINK_DAYS * DAY)
+    const live = tx.select({ id: invites.id, token: invites.token }).from(invites)
+      .where(and(eq(invites.listId, listId), eq(invites.createdBy, userId), eq(invites.kind, 'list'), isNull(invites.sentTo), gt(invites.expiresAt, now)))
+      .orderBy(desc(invites.id))
+      .get()
+    if (live) {
+      tx.update(invites).set({ expiresAt: until }).where(eq(invites.id, live.id)).run()
+      return { invite: live.token }
+    }
+    const made = tx.insert(invites).values({ token: newListToken(), kind: 'list', listId, createdBy: userId, mode: 'linked', expiresAt: until })
+      .returning({ token: invites.token }).get()
     return { invite: made.token }
   }, { behavior: 'immediate' })
 }
@@ -174,7 +211,7 @@ export function sendInvite(db: Db, userId: number, token: string, input: InviteI
         listId,
         createdBy: userId,
         mode,
-        expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * 24 * 60 * 60 * 1000) : null,
+        expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * DAY) : null,
         sentTo: friendId,
       }).returning({ id: invites.id }).get()
       if (wishIds.length > 0) tx.insert(inviteWishes).values(wishIds.map(wishId => ({ inviteId: made.id, wishId }))).run()
@@ -249,7 +286,8 @@ function chosenFrom<Wish extends { id: number }>(onList: Wish[], wishIds: number
  * list of the person's own. Linked: they become an owner of each, the ones they own already are
  * left alone, the maker is told, and the link is spent. Copy: they get a copy of each, also of
  * one they own, nobody is told, and the link is spent for this account only. For a list: the
- * person becomes one of its owners, and of every wish on it; the earlier owners are told.
+ * person becomes one of its owners, and of every wish on it; the earlier owners are told, and
+ * the link goes on working for the next person until its time is over.
  * Returns the list the person can go to now. It all happens in one transaction, so of two
  * people at once only one gets a link that works once.
  */
@@ -261,8 +299,8 @@ export function acceptInvite(db: Db, userId: number, invite: string, target: Lis
     if (found.state !== 'open') throw new DomainError('invite_closed')
     const { list, owners, onList } = found
     const maker = found.invite.createdBy
-    // A link that works once stays, spent, so its address can say so. What was sent to a
-    // friend has no address anyone else knows: answered, it goes, and its notice with it.
+    // A link for wishes that works once stays, spent, so its address can say so. What was sent
+    // to a friend has no address anyone else knows: answered, it goes, and its notice with it.
     const sent = found.invite.sentTo !== null
     const spend = () => {
       if (sent) tx.delete(invites).where(eq(invites.id, found.invite.id)).run()
@@ -277,7 +315,10 @@ export function acceptInvite(db: Db, userId: number, invite: string, target: Lis
       for (const owner of owners) {
         addNotice(tx, { userId: owner.userId, kind: 'list_joined', actorId: userId, title: list.title, listId: list.id })
       }
-      spend()
+      // The invitation link stays for the next person. Whatever was sent to this person for
+      // this list has nothing left to give: the send they just answered, or one that waited
+      // while they came in through the link.
+      tx.delete(invites).where(and(eq(invites.listId, list.id), eq(invites.kind, 'list'), eq(invites.sentTo, userId))).run()
       return { token: list.token }
     }
 

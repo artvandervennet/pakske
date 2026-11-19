@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { count, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invites, inviteUses, listOwners, lists, notices, wishes } from '../server/db/schema'
-import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, MAX_OPEN_INVITES } from '../server/domain/invites'
+import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, INVITE_LINK_DAYS, listInviteLink, MAX_OPEN_INVITES } from '../server/domain/invites'
 import { getListView } from '../server/domain/list-view'
 import { createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
@@ -152,8 +152,9 @@ describe('a link that makes wishes joint', () => {
     const byMom = createInvite(db, mom.id, A, { kind: 'list' }).invite
     const byArt = createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }).invite
     leaveList(db, mom.id, A)
-    expect(getInviteView(db, byMom, lot.id)).toMatchObject({ state: 'closed' })
-    expect(codeOf(() => acceptInvite(db, lot.id, byMom, null))).toBe('invite_closed')
+    // What she made for the list goes with her, so it can't come back to life if she joins again.
+    expect(getInviteView(db, byMom, lot.id)).toBeUndefined()
+    expect(codeOf(() => acceptInvite(db, lot.id, byMom, null))).toBe('not_found')
     expect(getInviteView(db, byArt, lot.id)).toMatchObject({ state: 'open' })
     deleteList(db, art.id, A)
     expect(getInviteView(db, byArt, lot.id)).toMatchObject({ state: 'closed', wishes: [] })
@@ -233,8 +234,8 @@ describe('a link that makes wishes joint', () => {
   it('keeps at most 20 unused links per list', () => {
     const { db, art, lot, A, game, L } = setup()
     expect(MAX_OPEN_INVITES).toBe(20)
-    const used = createInvite(db, art.id, A, { kind: 'list' }).invite
-    acceptInvite(db, lot.id, used, null)
+    const used = createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }).invite
+    acceptInvite(db, lot.id, used, { list: L })
     const made: string[] = []
     for (let i = 0; i < 20; i++) {
       later()
@@ -242,9 +243,9 @@ describe('a link that makes wishes joint', () => {
     }
     expect(getInviteView(db, made[0]!, lot.id)).toBeDefined()
     // Another list's links don't count.
-    createInvite(db, lot.id, L, { kind: 'list' })
+    createInvite(db, lot.id, L, { kind: 'wishes', mode: 'copy', wishIds: [game.id] })
     later()
-    const last = createInvite(db, art.id, A, { kind: 'list' }).invite
+    const last = createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }).invite
     expect(getInviteView(db, made[0]!, lot.id)).toBeUndefined()
     expect(getInviteView(db, made[1]!, lot.id)).toBeDefined()
     expect(getInviteView(db, last, lot.id)).toBeDefined()
@@ -307,7 +308,8 @@ describe('a link that gives copies', () => {
     expect(db.select({ mode: invites.mode, expiresAt: invites.expiresAt }).from(invites).orderBy(invites.id).all()).toEqual([
       { mode: 'copy', expiresAt: new Date(Date.now() + 30 * day) },
       { mode: 'linked', expiresAt: null },
-      { mode: 'linked', expiresAt: null },
+      // An invitation to the list ends too, sooner (see "an invitation link for a list").
+      { mode: 'linked', expiresAt: new Date(Date.now() + INVITE_LINK_DAYS * day) },
     ])
     vi.setSystemTime(new Date(Date.now() + 30 * day - 1))
     expect(getInviteView(db, copy, lot.id)).toMatchObject({ state: 'open' })
@@ -320,7 +322,8 @@ describe('a link that gives copies', () => {
     expect(codeOf(() => acceptInvite(db, mom.id, copy, { newList: 'Van mama' }))).toBe('invite_closed')
     expect(listOwnedLists(db, mom.id)).toEqual([])
     expect(getInviteView(db, linked, mom.id)).toMatchObject({ state: 'open' })
-    expect(getInviteView(db, forList, mom.id)).toMatchObject({ state: 'open', mode: 'linked' })
+    // An invitation to the list ended long before: it has 7 days.
+    expect(getInviteView(db, forList, mom.id)).toMatchObject({ state: 'expired', mode: 'linked' })
   })
 
   it('is never used by its maker', () => {
@@ -388,7 +391,7 @@ describe('a link that gives copies', () => {
     // A copy link someone used is still open for everyone else, so it still counts.
     acceptInvite(db, lot.id, made[1]!, { newList: 'Kopie' })
     later()
-    createInvite(db, art.id, A, { kind: 'list' })
+    createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] })
     expect(getInviteView(db, made[0]!, lot.id)).toBeUndefined()
     expect(getInviteView(db, made[1]!, lot.id)).toMatchObject({ state: 'used' })
     expect(inviteRows(db)).toBe(20)
@@ -480,7 +483,7 @@ describe('a joint list', () => {
     expect(ownerIds(db, addWishTo(db, art.id, A, 'Lamp').id)).toEqual([art.id, lot.id])
     expect(ownerIds(db, addWishTo(db, lot.id, A, 'Vaas').id)).toEqual([art.id, lot.id])
     expect(getListView(db, A, lot.id)).toMatchObject({ viewerOwnsList: true, owners: ['Art', 'Lot'] })
-    expect(codeOf(() => acceptInvite(db, lot.id, invite, null))).toBe('invite_closed')
+    expect(codeOf(() => acceptInvite(db, lot.id, invite, null))).toBe('forbidden')
     expectOwnersSettled(db)
   })
 
@@ -569,18 +572,134 @@ describe('a joint list', () => {
   })
 })
 
+describe('an invitation link for a list', () => {
+  const day = 24 * 60 * 60 * 1000
+  const days = (n: number) => vi.setSystemTime(new Date(Date.now() + n * day))
+
+  it('works for several people and is not spent', () => {
+    const { db, art, lot, mom, A } = setup()
+    const sis = addUser(db, 'sis')
+    const { invite } = listInviteLink(db, art.id, A)
+    later()
+    expect(acceptInvite(db, lot.id, invite, null)).toEqual({ token: A })
+    later()
+    expect(acceptInvite(db, mom.id, invite, null)).toEqual({ token: A })
+    expect(getListView(db, A, lot.id)).toMatchObject({ viewerOwnsList: true, owners: ['Art', 'Lot', 'Mom'] })
+    expect(getInviteView(db, invite, sis.id)).toMatchObject({ kind: 'list', state: 'open' })
+    expect(listNotices(db, art.id).map(notice => [notice.kind, notice.actor])).toEqual([['list_joined', 'Mom'], ['list_joined', 'Lot']])
+    expectOwnersSettled(db)
+  })
+
+  it('refuses someone who owns the list already and stays open', () => {
+    const { db, art, lot, mom, A } = setup()
+    const { invite } = listInviteLink(db, art.id, A)
+    acceptInvite(db, lot.id, invite, null)
+    expect(codeOf(() => acceptInvite(db, lot.id, invite, null))).toBe('forbidden')
+    expect(getInviteView(db, invite, mom.id)).toMatchObject({ state: 'open' })
+  })
+
+  it('is the same address when asked again, with its 7 days starting over', () => {
+    const { db, art, lot, A } = setup()
+    expect(INVITE_LINK_DAYS).toBe(7)
+    const { invite } = listInviteLink(db, art.id, A)
+    days(3)
+    expect(listInviteLink(db, art.id, A)).toEqual({ invite })
+    expect(createInvite(db, art.id, A, { kind: 'list' })).toEqual({ invite })
+    days(6)
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ state: 'open' })
+    days(2)
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ state: 'expired' })
+    expect(codeOf(() => acceptInvite(db, lot.id, invite, null))).toBe('invite_closed')
+  })
+
+  it('is another address once the first one ended', () => {
+    const { db, art, lot, A } = setup()
+    const { invite } = listInviteLink(db, art.id, A)
+    days(8)
+    const fresh = listInviteLink(db, art.id, A).invite
+    expect(fresh).not.toBe(invite)
+    expect(getInviteView(db, fresh, lot.id)).toMatchObject({ state: 'open' })
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ state: 'expired' })
+  })
+
+  it('is one per owner', () => {
+    const { db, art, lot, mom, A } = setup()
+    addOwner(db, A, lot.id)
+    const byArt = listInviteLink(db, art.id, A).invite
+    const byLot = listInviteLink(db, lot.id, A).invite
+    expect(byLot).not.toBe(byArt)
+    expect(listInviteLink(db, lot.id, A).invite).toBe(byLot)
+    expect(codeOf(() => listInviteLink(db, mom.id, A))).toBe('not_found')
+  })
+
+  it('without an end date is closed', () => {
+    const { db, art, lot, A } = setup()
+    // What every unused link for a list was before it worked for several people.
+    db.insert(invites).values({ token: 'old-link-without-end-0', kind: 'list', listId: ownedListId(db, art.id, A), createdBy: art.id, mode: 'linked', expiresAt: null }).run()
+    expect(getInviteView(db, 'old-link-without-end-0', lot.id)).toMatchObject({ state: 'closed' })
+    expect(codeOf(() => acceptInvite(db, lot.id, 'old-link-without-end-0', null))).toBe('invite_closed')
+    // And asking for the link doesn't hand that one out again.
+    expect(listInviteLink(db, art.id, A).invite).not.toBe('old-link-without-end-0')
+  })
+
+  it('ends when the list gets a new link', () => {
+    const { db, art, lot, mom, A } = setup()
+    addOwner(db, A, lot.id)
+    const byArt = listInviteLink(db, art.id, A).invite
+    const byLot = listInviteLink(db, lot.id, A).invite
+    relinkList(db, art.id, A)
+    expect(getInviteView(db, byArt, mom.id)).toBeUndefined()
+    expect(getInviteView(db, byLot, mom.id)).toBeUndefined()
+  })
+
+  it('goes with its maker, and another owner\'s stays', () => {
+    const { db, art, lot, mom, A } = setup()
+    addOwner(db, A, lot.id)
+    const byArt = listInviteLink(db, art.id, A).invite
+    const byLot = listInviteLink(db, lot.id, A).invite
+    leaveList(db, lot.id, A)
+    expect(getInviteView(db, byLot, mom.id)).toBeUndefined()
+    // Joining again doesn't bring it back.
+    acceptInvite(db, lot.id, byArt, null)
+    expect(getInviteView(db, byLot, mom.id)).toBeUndefined()
+    expect(getInviteView(db, byArt, mom.id)).toMatchObject({ state: 'open' })
+  })
+
+  it('is not among the 20 open links', () => {
+    const { db, art, lot, A, game } = setup()
+    const first = createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }).invite
+    for (let i = 0; i < MAX_OPEN_INVITES - 1; i++) {
+      later()
+      createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] })
+    }
+    later()
+    const { invite } = listInviteLink(db, art.id, A)
+    // Making the invitation dropped none of the 20.
+    expect(getInviteView(db, first, lot.id)).toMatchObject({ state: 'open' })
+    later()
+    createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] })
+    // The 21st wish link dropped the oldest wish link, not the invitation.
+    expect(getInviteView(db, first, lot.id)).toBeUndefined()
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ state: 'open' })
+  })
+})
+
 it('server/domain/invites.ts never touches purchases or notes', () => {
   expect(readFileSync('server/domain/invites.ts', 'utf8')).not.toMatch(/purchases|notes/i)
 })
 
 describe('share links of a list that got a new link', () => {
-  it('still work, and lead to the new address', () => {
+  it('still work for wishes, and an invitation made afterwards leads to the new address', () => {
     const { db, art, lot, mom, A, game, L } = setup()
-    const forList = createInvite(db, art.id, A, { kind: 'list' }).invite
+    const before = createInvite(db, art.id, A, { kind: 'list' }).invite
     const forWishes = createInvite(db, art.id, A, { kind: 'wishes', mode: 'linked', wishIds: [game.id] }).invite
     const { token } = relinkList(db, art.id, A)
     expect(getInviteView(db, forWishes, lot.id)).toMatchObject({ state: 'open', wishes: [{ title: 'Bordspel' }] })
     expect(acceptInvite(db, lot.id, forWishes, { list: L })).toEqual({ token: L })
+    // A new link is the stop button for the invitation that was going round.
+    expect(getInviteView(db, before, mom.id)).toBeUndefined()
+    const forList = createInvite(db, art.id, token, { kind: 'list' }).invite
+    expect(forList).not.toBe(before)
     expect(acceptInvite(db, mom.id, forList, null)).toEqual({ token })
     expect(getListView(db, token, mom.id)).toMatchObject({ viewerOwnsList: true })
     // What the link's use tells Art points at the list where it is now.

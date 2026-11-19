@@ -41,7 +41,8 @@ const lead = computed(() => {
   // The maker can't ask themselves for a new link.
   const next = yours ? t('invite.makeNew') : t('invite.askNew', { from })
   if (state.value === 'closed') return `${t('invite.closed')} ${next}`
-  if (state.value === 'expired') return `${t('invite.expired')} ${next}`
+  // A copy link had 30 days, an invitation to a list 7.
+  if (state.value === 'expired') return `${t(invite.value.kind === 'list' ? 'invite.expiredList' : 'invite.expired')} ${next}`
   if (state.value === 'used') return t('invite.used')
   if (state.value === 'own') return t('invite.own')
   return null

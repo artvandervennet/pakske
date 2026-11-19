@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, isNull, max, notInArray, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNotNull, isNull, max, notInArray, or, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listFriends, listOldTokens, listOwners, lists, listVisits, listWishes, notices, users, wishes } from '../db/schema'
+import { invites, listFriends, listOldTokens, listOwners, lists, listVisits, listWishes, notices, users, wishes } from '../db/schema'
 import type { ListTarget } from '../../shared/schemas/input'
 import type { MyLists, OwnedList } from '../../shared/schemas/list'
 import { DomainError } from './errors'
@@ -103,6 +103,43 @@ export function deleteList(db: Db, userId: number, token: string): void {
 }
 
 /**
+ * Ends every invitation link of a list, whichever owner made it: the links that make whoever
+ * opens them a co-owner. What was sent to one friend stays. Runs in the caller's transaction.
+ */
+export function endInviteLinks(db: Db, listId: number): void {
+  db.delete(invites).where(and(eq(invites.listId, listId), eq(invites.kind, 'list'), isNull(invites.sentTo))).run()
+}
+
+/**
+ * What goes with someone who stops owning a list: their invitation link for it and what they
+ * sent friends from it, so none of it works again if they come back, and any invitation to it
+ * that still waited for them. Their links for single wishes stay, closed, so those addresses
+ * can still say so. Runs in the caller's transaction.
+ */
+export function dropInvitesOf(db: Db, listId: number, userId: number): void {
+  db.delete(invites).where(and(
+    eq(invites.listId, listId),
+    eq(invites.createdBy, userId),
+    or(eq(invites.kind, 'list'), isNotNull(invites.sentTo)),
+  )).run()
+  db.delete(invites).where(and(eq(invites.listId, listId), eq(invites.kind, 'list'), eq(invites.sentTo, userId))).run()
+}
+
+/**
+ * Takes one owner off a list that keeps other owners. The list and its wishes stay for those;
+ * the person keeps only the wishes that are also on another list of theirs. Runs in the
+ * caller's transaction.
+ */
+function dropOwner(db: Db, listId: number, userId: number): void {
+  db.delete(listOwners).where(and(eq(listOwners.listId, listId), eq(listOwners.userId, userId))).run()
+  // What they showed their friends was theirs to show; the other owners' ticks stay.
+  db.delete(listFriends).where(and(eq(listFriends.listId, listId), eq(listFriends.shownBy, userId))).run()
+  db.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId), eq(notices.actorId, userId))).run()
+  dropInvitesOf(db, listId, userId)
+  settleOwners(db, wishesMarkedOn(db, listId))
+}
+
+/**
  * Stops owning a joint list. The list and its wishes stay for the other owners; the person keeps
  * only the wishes that are also on another list of theirs. The last owner deletes it instead.
  */
@@ -110,17 +147,14 @@ export function leaveList(db: Db, userId: number, token: string): void {
   db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
     if (ownersOfList(tx, listId).length === 1) throw new DomainError('last_owner')
-    tx.delete(listOwners).where(and(eq(listOwners.listId, listId), eq(listOwners.userId, userId))).run()
-    // What they showed their friends was theirs to show; the other owners' ticks stay.
-    tx.delete(listFriends).where(and(eq(listFriends.listId, listId), eq(listFriends.shownBy, userId))).run()
-    tx.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId), eq(notices.actorId, userId))).run()
-    settleOwners(tx, wishesMarkedOn(tx, listId))
+    dropOwner(tx, listId, userId)
   }, { behavior: 'immediate' })
 }
 
 /**
  * Gives the list a new address; the one it had stops opening it for everyone. The list, its
- * wishes, its owners and its open share links stay as they are. Whoever doesn't own it loses it
+ * wishes, its owners and its links for single wishes stay as they are. Its invitation links end:
+ * a new link is how an owner stops what is going round. Whoever doesn't own it loses it
  * from their visited lists, or those would hand them the new address; an owner sends it to whom
  * they choose. The other owners are told. The old address is kept, for the one thing it is
  * still good for (see `listOldTokens`). Nothing here looks at what buyers did, so it answers the
@@ -135,6 +169,7 @@ export function relinkList(db: Db, userId: number, token: string): { token: stri
     tx.insert(listOldTokens).values({ token, listId }).run()
     tx.update(lists).set({ token: fresh }).where(eq(lists.id, listId)).run()
     tx.delete(listVisits).where(and(eq(listVisits.listId, listId), notInArray(listVisits.userId, owners))).run()
+    endInviteLinks(tx, listId)
     for (const owner of owners) {
       if (owner !== userId) addNotice(tx, { userId: owner, kind: 'list_relinked', actorId: userId, title: list.title, listId })
     }

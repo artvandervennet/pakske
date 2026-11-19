@@ -522,6 +522,10 @@ req art POST /api/lists '{"title":"Samen"}'; check "art makes a list" 201; JOINT
 req art POST "/api/lists/$JOINT/invites" '{"kind":"list"}'; check "art makes a link for the whole list" 201; LISTINVITE=$(json .invite)
 req lot GET "/api/invites/$LISTINVITE"; check "lot opens it" 200; has "… and it is for a list" '"kind":"list"'; lacks "… without the list's token" "$JOINT"
 req lot POST "/api/invites/$LISTINVITE/accept" '{}'; check "lot accepts" 200; has "… and is sent to the list" "\"token\":\"$JOINT\""
+req lot POST "/api/invites/$LISTINVITE/accept" '{}'; check "she can't join a list she owns" 403
+req art POST "/api/lists/$JOINT/invites" '{"kind":"list"}'; same "asked again, art gets the link that is going round" ".invite" "$LISTINVITE"
+req mom POST "/api/invites/$LISTINVITE/accept" '{}'; check "the same link lets mom in too" 200
+req mom POST "/api/lists/$JOINT/leave"; check "… who leaves again" 204
 req lot GET /api/home; has "lot's home page has it, shared with Art" "\"token\":\"$JOINT\",\"title\":\"Samen\",\"wishes\":0,\"owners\":[\"Art\",\"Lotte\"],\"sharedWith\":[\"Art\"]"
 same "… as the first of her lists, since she just joined it" ".owned[0].token" "$JOINT"
 req art GET /api/home; has "art is told Lotte joined" '"kind":"list_joined","actor":"Lotte"'

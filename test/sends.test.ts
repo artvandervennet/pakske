@@ -2,7 +2,7 @@ import { count } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invites, notices } from '../server/db/schema'
 import { acceptFriendLink, makeFriendLink, removeFriend } from '../server/domain/friends'
-import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, MAX_OPEN_INVITES, MAX_WAITING_SENDS, sendInvite } from '../server/domain/invites'
+import { acceptInvite, COPY_LINK_DAYS, createInvite, getInviteView, listInviteLink, MAX_OPEN_INVITES, MAX_WAITING_SENDS, sendInvite } from '../server/domain/invites'
 import { getListView } from '../server/domain/list-view'
 import { leaveList, listOwnedLists } from '../server/domain/lists'
 import { countUnseen, listNotices } from '../server/domain/notices'
@@ -178,6 +178,17 @@ describe('sending a list to manage together', () => {
     expect(inviteRows(db)).toBe(0)
   })
 
+  it('is gone once the friend joined through the link that goes round', () => {
+    const { db, art, lot, A } = setup()
+    sendInvite(db, art.id, A, { kind: 'list' }, [lot.id])
+    const token = sent(db, lot.id)[0]!.invite!
+    acceptInvite(db, lot.id, listInviteLink(db, art.id, A).invite, null)
+    expect(sent(db, lot.id)).toEqual([])
+    expect(getInviteView(db, token, lot.id)).toBeUndefined()
+    // Only the link is left.
+    expect(inviteRows(db)).toBe(1)
+  })
+
   it('refuses a friend who owns the list already', () => {
     const { db, art, lot, A } = setup()
     addOwner(db, A, lot.id)
@@ -205,7 +216,9 @@ describe('what was sent and can no longer be taken', () => {
     leaveList(db, art.id, A)
     expect(sent(db, lot.id)).toEqual([])
     expect(countUnseen(db, lot.id)).toBe(0)
-    expect(codeOf(() => acceptInvite(db, lot.id, token, null))).toBe('invite_closed')
+    // Deleted with the sender's leaving, so it stays gone if they join the list again.
+    expect(codeOf(() => acceptInvite(db, lot.id, token, null))).toBe('not_found')
+    expect(inviteRows(db)).toBe(0)
   })
 
   it('is gone when copies were sent more than thirty days ago', () => {
