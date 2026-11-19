@@ -103,7 +103,8 @@ function ownerWishes(
 /**
  * For a logged-in visitor who owns neither these wishes nor the list: who bought how many, and
  * the notes. A wish that is no longer on the list (taken off, deleted, or on a deleted list) stays
- * while someone has bought it, so the buyer can see it went and take back their purchase.
+ * for whoever bought it, so they can see it went and take back their purchase, and for nobody
+ * else: someone who bought none of it has nothing to settle and no reason to see what was deleted.
  */
 function buyerWishes(
   db: Db,
@@ -131,7 +132,7 @@ function buyerWishes(
 
   return rows.flatMap(({ wish: row, removed }) => {
     const wishPurchases = bought.filter(p => p.wishId === row.id)
-    if (removed && wishPurchases.length === 0) return []
+    if (removed && !wishPurchases.some(p => p.userId === viewerId)) return []
     return [{
       ...toPublicWish(row),
       role: 'buyer',

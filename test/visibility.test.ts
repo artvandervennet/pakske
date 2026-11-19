@@ -167,12 +167,29 @@ describe('a logged-in visitor who is not an owner', () => {
     for (const other of view.wishes) expect(() => buyerWishSchema.parse(other)).not.toThrow()
   })
 
-  it('keeps a deleted wish for buyers while someone has it, marked removed', () => {
-    const { db, token, sis, socks } = world(true)
-    const view = getListView(db, token, sis.id)
+  it('keeps a deleted wish for whoever bought it, marked removed', () => {
+    const { db, token, mom, socks } = world(true)
+    const view = getListView(db, token, mom.id)
     expect(titles(view)).toEqual(['Slimme stekkers', 'Puzzels', 'Boek', 'Sokken'])
-    expect(wishIn(view, socks.id)).toMatchObject({ role: 'buyer', removed: true, bought: 1, mine: 0 })
-    expect(wishIn(view, socks.id)).toMatchObject({ notes: [{ author: 'Sis', body: 'Al gekocht!', mine: true }] })
+    expect(wishIn(view, socks.id)).toMatchObject({ role: 'buyer', removed: true, bought: 1, mine: 1 })
+    expect(wishIn(view, socks.id)).toMatchObject({ notes: [{ author: 'Sis', body: 'Al gekocht!', mine: false }] })
+  })
+
+  it('hides a deleted wish from a buyer who bought none of it, whoever else did', () => {
+    const { db, token, sis, socks } = world(true)
+    // Sis wrote a note on the socks while they were on the list, but only mom bought them.
+    const view = getListView(db, token, sis.id)
+    expect(titles(view)).toEqual(['Slimme stekkers', 'Puzzels', 'Boek'])
+    expect(wishIn(view, socks.id)).toBeUndefined()
+  })
+
+  it('hides a deleted wish from its buyer too once they took their purchase back', () => {
+    const { db, token, art, mom, sis, plugs } = world(true)
+    deleteWish(db, art.id, token, plugs.id)
+    removePurchase(db, token, plugs.id, mom.id)
+    expect(wishIn(getListView(db, token, mom.id), plugs.id)).toBeUndefined()
+    // Sis still has one, so for her it stays, with what is left of the purchases.
+    expect(wishIn(getListView(db, token, sis.id), plugs.id)).toMatchObject({ removed: true, bought: 1, mine: 1 })
   })
 
   it('hides a deleted wish nobody bought from everyone', () => {
@@ -200,12 +217,14 @@ describe('a deleted list', () => {
     }
   })
 
-  it('still shows a buyer what was bought on it, marked deleted', () => {
+  it('still shows a buyer what they bought on it, marked deleted', () => {
     const busy = world(true)
     deleteList(busy.db, busy.art.id, busy.token)
     const view = getListView(busy.db, busy.token, busy.mom.id)!
     expect(view).toMatchObject({ title: 'Kerst', deleted: true, viewerOwnsList: false })
-    expect(titles(view)).toEqual(['Slimme stekkers', 'Boek', 'Sokken'])
+    // Not the book: only sis bought that, and she is the one who still gets it.
+    expect(titles(view)).toEqual(['Slimme stekkers', 'Sokken'])
+    expect(titles(getListView(busy.db, busy.token, busy.sis.id))).toEqual(['Slimme stekkers', 'Boek'])
     for (const wish of view.wishes) expect(buyerWishSchema.parse(wish).removed).toBe(true)
 
     const quiet = world(false)

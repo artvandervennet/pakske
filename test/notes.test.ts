@@ -39,12 +39,22 @@ describe('notes between buyers', () => {
     expect(codeOf(() => addNote(db, token, 9999, mom.id, 'x'))).toBe('not_found')
   })
 
-  it('lets a buyer still write a note on a wish the owner deleted after someone bought it', () => {
+  it('lets whoever bought a wish still write a note on it after the owner deleted it', () => {
+    const { db, token, wish, art, mom, noteRows } = setup()
+    setPurchase(db, token, wish.id, mom.id, 1)
+    deleteWish(db, art.id, token, wish.id)
+    addNote(db, token, wish.id, mom.id, 'Wie houdt hem?')
+    expect(noteRows()).toEqual([{ userId: mom.id, body: 'Wie houdt hem?' }])
+  })
+
+  it('finds nothing for a deleted wish the person bought none of, whoever else did', () => {
     const { db, token, wish, art, mom, sis, noteRows } = setup()
     setPurchase(db, token, wish.id, mom.id, 1)
     deleteWish(db, art.id, token, wish.id)
-    addNote(db, token, wish.id, sis.id, 'Wie houdt hem?')
-    expect(noteRows()).toEqual([{ userId: sis.id, body: 'Wie houdt hem?' }])
+    expect(codeOf(() => addNote(db, token, wish.id, sis.id, 'Wie houdt hem?'))).toBe('not_found')
+    // The owner's answer stays the one it always is.
+    expect(codeOf(() => addNote(db, token, wish.id, art.id, 'Wie houdt hem?'))).toBe('forbidden')
+    expect(noteRows()).toEqual([])
   })
 
   it('refuses the 201st note on a wish', () => {

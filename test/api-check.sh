@@ -226,7 +226,9 @@ req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "art deletes the bought 
 req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "a second delete finds nothing" 404
 req art DELETE "/api/lists/$TOKEN/wishes/$PUZZLES"; check "art deletes another bought wish, same answer" 204
 req art GET "/api/lists/$TOKEN"; lacks "art no longer sees the socks" Sokken
-req sis GET "/api/lists/$TOKEN"; has "sis still sees the socks" Sokken; has "… marked as removed" '"removed":true'
+req mom GET "/api/lists/$TOKEN"; has "mom, who bought the socks, still sees them" Sokken; has "… marked as removed" '"removed":true'
+req sis GET "/api/lists/$TOKEN"; lacks "sis, who bought none of them, no longer sees the socks" Sokken; has "… but still the puzzles she bought" Puzzels
+req sis POST "/api/lists/$TOKEN/wishes/$SOCKS/notes" '{"body":"Wie heeft ze?"}'; check "… and cannot write a note on them" 404
 req sis PUT "/api/lists/$TOKEN/wishes/$SOCKS/purchase" '{"quantity":1}'; check "sis cannot newly buy a removed wish" 409; has "… with the code wish_removed" wish_removed
 req sis PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":2}'; check "sis cannot raise on the lowered wish" 409
 req mom PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":1}'; check "mom can lower on the lowered wish" 204
