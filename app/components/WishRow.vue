@@ -206,14 +206,13 @@ defineExpose({ settle })
           v-if="canAdd"
           ref="addButton"
           type="button"
-          class="icon-button"
-          :aria-label="t('add.open')"
-          :title="t('add.open')"
+          class="icon-button worded"
           :aria-expanded="adding ? 'true' : 'false'"
           :aria-controls="addId"
           @click="adding = !adding"
         >
           <AppIcon name="add-to-list" />
+          <span class="icon-button-words">{{ t('add.open') }}</span>
         </button>
         <!-- Its target spreads under the whole head (see app.css), so tapping the title of a
              wish that isn't yours folds the card, the way tapping the row opened it. -->

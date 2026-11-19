@@ -14,6 +14,7 @@ const localePath = useLocalePath()
         <NuxtLink :to="localePath('/privacy')">{{ t('footer.privacy') }}</NuxtLink>
         <NuxtLink :to="localePath('/terms')">{{ t('footer.terms') }}</NuxtLink>
       </nav>
+      <SchemeButton />
       <art-signature :year="year">Art Van der Vennet</art-signature>
     </div>
   </footer>

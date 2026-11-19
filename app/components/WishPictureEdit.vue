@@ -114,7 +114,7 @@ const picture = useTemplateRef<HTMLButtonElement>('picture')
         <AppIcon name="close" />
       </button>
     </div>
-    <button v-if="coverHost" type="button" class="text-button" :aria-disabled="busy || undefined" @click="choose">
+    <button v-if="coverHost" type="button" class="word-button" :aria-disabled="busy || undefined" @click="choose">
       <AppIcon name="image" />
       {{ t('edit.pictureOwn') }}
     </button>

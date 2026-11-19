@@ -9,8 +9,9 @@ const study = computed(() => {
   // Three paints along the wheel: far enough apart to tell the two halves apart.
   const second = (first + 3) % 8
   return {
-    '--study-a': `var(--paint-${first + 1})`,
-    '--study-b': `var(--paint-${second + 1})`,
+    // The rule shade of a paint: the paints themselves are too close to the page after dark.
+    '--study-a': `var(--paint-${first + 1}-rule)`,
+    '--study-b': `var(--paint-${second + 1}-rule)`,
     '--study-angle': `${45 + (props.wish.id % 4) * 45}deg`,
   }
 })

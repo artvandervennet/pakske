@@ -75,7 +75,7 @@ const loginLink = computed(() => ({
       <ul v-if="wish.urls.length" class="wish-links">
         <li v-for="(url, index) in wish.urls" :key="url">
           <art-button variant="secondary" size="s">
-            <a :href="url" target="_blank" rel="noopener noreferrer"><AppIcon name="link" />{{ t('wish.viewOn', { host: linkHosts[index] }) }}</a>
+            <a :href="url" target="_blank" rel="noopener noreferrer"><AppIcon name="link" />{{ t('wish.viewOn', { host: linkHosts[index] }) }}<span class="visually-hidden"> {{ t('wish.newTab') }}</span></a>
           </art-button>
         </li>
       </ul>

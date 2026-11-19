@@ -95,7 +95,7 @@ function remove(index: number) {
       <li v-for="(url, index) in lines" :key="index">
         <template v-if="editing !== index">
           <AppIcon name="link" />
-          <a class="wish-link-name" :href="url" target="_blank" rel="noopener noreferrer">{{ names[index] }}</a>
+          <a class="wish-link-name" :href="url" target="_blank" rel="noopener noreferrer">{{ names[index] }}<span class="visually-hidden"> {{ t('wish.newTab') }}</span></a>
           <button
             type="button"
             class="icon-button"
@@ -129,7 +129,7 @@ function remove(index: number) {
         />
       </li>
     </ul>
-    <button v-if="editing !== saved.length && saved.length < MAX_LINKS" type="button" class="text-button" data-link-add @click="change(saved.length)">
+    <button v-if="editing !== saved.length && saved.length < MAX_LINKS" type="button" class="word-button" data-link-add @click="change(saved.length)">
       <AppIcon name="plus" />
       {{ t('edit.linkAdd') }}
     </button>

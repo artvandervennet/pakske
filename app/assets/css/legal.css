@@ -4,11 +4,11 @@
    one by its heading. */
 .legal { display: grid; gap: var(--space-8); max-inline-size: var(--measure); }
 .legal > section { display: grid; gap: var(--space-3); }
-/* A section's title in the body type, as on the Settings page: Gesso's display serif at its
-   section size is for a page with a few sections, not a dozen short ones. */
+/* A section's title in Gesso's sub-section style (.text-heading-3), as on the Settings page:
+   the display serif at its section size is for a page with a few sections, not a dozen short ones. */
 .legal h2 {
-  font: var(--weight-bold) var(--step-1)/var(--leading-snug) var(--font-body);
-  letter-spacing: 0;
+  font: var(--weight-regular) var(--step-2)/var(--leading-snug) var(--font-display);
+  letter-spacing: -0.01em;
   overflow-wrap: break-word;
 }
 .legal ul { display: grid; gap: var(--space-2); padding-inline-start: 1.25em; }

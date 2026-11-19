@@ -10,6 +10,13 @@
 :root:root,
 :root [data-paint="deep"] { --focus: var(--accent); }
 
+/* ── What worked ──────────────────────────────────────────────────────────
+   Candidate for Gesso's theme generator: the theme makes --success the brand, and this brand
+   is a red five degrees of hue from --danger, so "saved" looked like "wrong". Here it is the
+   complement, the teal of the tapes, which no error has. Declared like --focus above. */
+:root:root { --success: var(--pigment-complement); }
+:root [data-paint="deep"] { --success: var(--pigment-complement-light); }
+
 /* <main> takes the focus after the skip link and after a navigation (useRouteFocus). It is the
    page, not a control: no ring around all of it. */
 #main:focus { outline: none; }
@@ -72,12 +79,12 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   border-radius: var(--radius-chip);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  background: linear-gradient(var(--rule), var(--rule)) no-repeat 0.18em 100% / calc(100% - 0.36em) 2px;
-  transition: background-color 120ms ease-out;
+  background: linear-gradient(var(--rule-strong), var(--rule-strong)) no-repeat 0.18em 100% / calc(100% - 0.36em) 2px;
+  transition: background-color var(--dur-dab) var(--ease-brush);
 }
 @media (hover: hover) {
   /* Half the sunken paint: at this size the full well is a block, heavier than the title in it. */
-  .title-edit:hover { background-color: color-mix(in oklab, var(--surface-sunken) 50%, transparent); background-size: 0 0; color: var(--ink); }
+  .title-edit:hover { background-color: color-mix(in oklch, var(--surface-sunken) 50%, transparent); background-size: 0 0; color: var(--ink); }
 }
 .title-edit:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .title-edit-field .inline-edit {
@@ -107,6 +114,33 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 /* The footer follows a section in another paint here, so it needs room of its own above. */
 .page-footer .inner { padding-block-start: var(--space-12); }
 .page-footer nav { display: flex; gap: var(--space-4); align-items: baseline; }
+/* Each link is as tall as a finger needs, like every other control. */
+.page-footer nav > * { padding-block: var(--space-3); }
+/* Light, dark or the system's (SchemeButton.vue): Gesso's <art-scheme> in the page's language.
+   A dab of paint shows the choice: hollow for light, full for dark, half for the system. */
+.scheme-button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  border-radius: var(--radius-chip);
+  color: var(--ink);
+  font: var(--weight-medium) var(--step--1)/1 var(--font-body);
+  cursor: pointer;
+}
+.scheme-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.scheme-dab {
+  flex: none;
+  inline-size: 1rem;
+  aspect-ratio: 1;
+  border-radius: 48% 52% 45% 55% / 55% 45% 55% 45%;
+  box-shadow: inset 0 0 0 2px currentColor;
+  background: linear-gradient(to right, currentColor var(--fill, 0%), transparent var(--fill, 0%));
+}
+.scheme-button[data-scheme="dark"] .scheme-dab { --fill: 100%; }
+.scheme-button[data-scheme="auto"] .scheme-dab { --fill: 50%; }
 /* The languages, then the pages about the site. Where both fit on one line with room to spare
    they stand apart, so they read as two groups; on a phone the footer's own spacing does that. */
 @media (min-width: 40rem) { .page-footer nav + nav { margin-inline-start: var(--space-6); } }
@@ -137,6 +171,8 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
    announced when its words arrive. Out of the flow, so it takes no row and no gap of a form. */
 .form-message[role="status"]:empty { display: block; position: absolute; padding: 0; border: 0; }
 
+/* Candidate for Gesso: a button for something that can't be taken back, in the danger colour. */
+art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, var(--danger) 12%, transparent); }
 
 /* ── Rows ─────────────────────────────────────────────────────────────────
    Candidate for Gesso: a list of things as rows between thin rules, each a name with a
@@ -153,7 +189,8 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   padding-block: var(--space-3);
 }
 .row-text { display: grid; flex: 1 1 12rem; min-inline-size: 0; }
-.row-title { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+/* Only a long word gets a hyphen: a short one moves to the next line whole. */
+.row-title { font-weight: var(--weight-medium); hyphens: auto; hyphenate-limit-chars: 12 4 4; overflow-wrap: anywhere; }
 .row-meta { font-size: var(--step--1); color: var(--ink-muted); }
 .row > .row-title { flex: 1 1 12rem; }
 .empty + .rows { margin-block-start: var(--space-2); }
@@ -275,19 +312,17 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
 }
 .wish-toggle::after { content: ""; position: absolute; inset: 0; }
 .wish-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
-.wish-title { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
-/* A chevron right after the title, where the eye already is: it says the row opens. */
+/* A long word breaks with a hyphen where the language has one, and anywhere where it doesn't.
+   A short one moves to the next line whole. */
+.wish-title { font-weight: var(--weight-medium); hyphens: auto; hyphenate-limit-chars: 12 4 4; overflow-wrap: anywhere; }
+/* A chevron right after the title, where the eye already is: it says the row opens. It is a
+   no-break space with the chevron cut out of its colour, so it stays on the line of the
+   title's last word and never wraps to a line of its own. */
 .wish-title::after {
-  content: "";
-  display: inline-block;
-  inline-size: 0.45em;
-  block-size: 0.45em;
-  margin-inline-start: 0.5em;
-  border-inline-end: 2px solid currentColor;
-  border-block-end: 2px solid currentColor;
-  rotate: 45deg;
-  translate: 0 -0.2em;
-  color: var(--ink-muted);
+  content: "\00a0";
+  padding-inline-start: 1.15em;
+  background: var(--ink-muted);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat 100% 55% / 0.8em;
 }
 /* The line under the title stays one line, cut off with an ellipsis where the row ends. */
 .wish-line {
@@ -374,7 +409,7 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   inline-size: 2.75rem;
   block-size: 2.75rem;
   border: 0.25rem solid transparent;
-  border-radius: calc(0.25rem + 9px);
+  border-radius: var(--radius-dab);
   background: var(--accent-wash) padding-box;
   color: var(--accent);
   cursor: pointer;
@@ -425,17 +460,18 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
 }
 
 @media (width < 40rem) {
-  /* With a tick at the start, the tags at the end leave the title too little room: they go
-     on a line of their own, under the title. */
-  .wish-list:has(.wish-tick) .wish-head > .wish-tags {
+  /* On a phone the tags at the end leave the title too little room: they go on a line of
+     their own, under the title. */
+  .wish-head > .wish-tags {
     order: 1;
     flex: 1 0 100%;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    /* Under the title: past the tick, the picture and the gaps after them. */
-    padding-inline-start: calc(2.75rem + 3rem + 2 * var(--space-3));
+    /* Under the title: past the picture and the gap after it, and past the tick where there is one. */
+    padding-inline-start: calc(3rem + var(--space-3));
   }
+  .wish-list:has(.wish-tick) .wish-head > .wish-tags { padding-inline-start: calc(2.75rem + 3rem + 2 * var(--space-3)); }
 }
 
 /* Candidate for Gesso: a line drawing beside or instead of a button's words (AppIcon.vue). It
@@ -486,8 +522,9 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
     white-space: nowrap;
   }
 }
-/* Candidate for Gesso: a quiet button of an icon and a few words, such as "Link toevoegen". */
-.text-button {
+/* Candidate for Gesso: a quiet button of an icon and a few words, such as "Link toevoegen".
+   Not .text-button: that is the name of one of Gesso's text styles. */
+.word-button {
   all: unset;
   box-sizing: border-box;
   display: inline-flex;
@@ -499,9 +536,9 @@ art-button > :is(a, button)[aria-disabled="true"] { cursor: not-allowed; }
   font: var(--weight-bold) var(--step--1)/1.2 var(--font-body);
   cursor: pointer;
 }
-.text-button:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-.text-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-.text-button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.word-button:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.word-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.word-button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
 /* An icon before the words of a Gesso button. Gesso spaces them itself once the button is
    upgraded; this is for the plain HTML before that. */
 art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--space-2); }
@@ -626,30 +663,15 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
 .wish-links > li { max-inline-size: 100%; }
 .wish-links a { overflow-wrap: anywhere; }
 
-/* Candidate for Gesso: "I'm giving this", the one thing to do with someone else's wish. Asked
-   for once, it is a button as wide as the card's column that stays pressed while you give it:
-   a box in it fills and gets its check. Asked for more than once, it is a sentence around the
-   stepper, on the accent's wash. An owner's own is the same control without the fill, since it
-   is not what their card is for. */
+/* "I'm giving this", the one thing to do with someone else's wish. Asked for once, it is
+   Gesso's button, as wide as the card's column, that stays pressed while you give it: a box in
+   it fills and gets its check. Asked for more than once, it is a sentence around the stepper,
+   on the accent's wash. An owner's own is the same control as a box with words, without the
+   fill, since it is not what their card is for. */
 .wish-give-block { display: grid; gap: var(--space-1); }
 .wish-give { display: grid; gap: var(--space-2); justify-items: start; min-inline-size: 0; }
-.give-button {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  inline-size: 100%;
-  min-block-size: 3rem;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-dab);
-  background: var(--accent);
-  color: var(--on-accent);
-  font: var(--weight-bold) var(--step-0)/1.2 var(--font-body);
-  cursor: pointer;
-}
-.give-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.give-button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.wish-give > art-button { display: block; inline-size: 100%; }
+.wish-give > art-button > button { inline-size: 100%; min-block-size: 3rem; gap: var(--space-3); }
 .give-box {
   flex: none;
   display: grid;
@@ -660,7 +682,7 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
   box-shadow: inset 0 0 0 2px currentColor;
 }
 .give-box .icon { stroke-width: 2.6; inline-size: 1.1rem; block-size: 1.1rem; }
-.give-button[aria-pressed="true"] .give-box { background: var(--on-accent); box-shadow: none; color: var(--accent); }
+.wish-give [aria-pressed="true"] > .give-box { background: var(--on-accent); box-shadow: none; color: var(--accent); }
 .give-count {
   box-sizing: border-box;
   display: flex;
@@ -677,16 +699,20 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
 .give-count .stepper > button { background-color: var(--surface-raised); }
 .wish-give-hint { font-size: var(--step--1); color: var(--ink-muted); }
 .wish-give .wish-tick-message { flex: none; }
-.wish-give.own .give-button {
-  inline-size: auto;
+.give-own {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   min-block-size: 2.75rem;
-  padding: 0;
-  background: none;
-  color: var(--ink);
-  font: var(--weight-regular) var(--step-0)/1.2 var(--font-body);
+  border-radius: var(--radius-chip);
+  cursor: pointer;
 }
-.wish-give.own .give-box { box-shadow: inset 0 0 0 2px var(--rule-strong); }
-.wish-give.own .give-button[aria-pressed="true"] .give-box { background: var(--accent); color: var(--on-accent); }
+.give-own:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.give-own[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.give-own > .give-box { box-shadow: inset 0 0 0 2px var(--rule-strong); }
+.give-own[aria-pressed="true"] > .give-box { background: var(--accent); box-shadow: none; color: var(--on-accent); }
 .wish-give.own .give-count { inline-size: auto; padding: 0; background: none; font-weight: var(--weight-regular); }
 .wish-give.own .give-count .stepper > button { background-color: var(--accent-wash); }
 
@@ -731,9 +757,10 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
   margin: -0.125em -0.25em;
   border: 0;
   border-radius: var(--radius-chip);
-  --edit-line: var(--rule);
+  /* The strong rule: the line is the one sign that this text is a field. */
+  --edit-line: var(--rule-strong);
   background: linear-gradient(var(--edit-line), var(--edit-line)) no-repeat 0.25em 100% / calc(100% - 0.5em) 1px;
-  transition: background-color 120ms ease-out;
+  transition: background-color var(--dur-dab) var(--ease-brush);
   letter-spacing: inherit;
   cursor: text;
   resize: none;
@@ -818,7 +845,9 @@ textarea.inline-edit { overflow: hidden; }
   block-size: 1.5rem;
   margin: 0;
   border-radius: var(--radius-round);
-  background: var(--rule-strong);
+  /* Off, it is hollow: an edge, and a knob in the edge's colour. On, it fills with the accent. */
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
   cursor: inherit;
 }
 .switch input::before {
@@ -828,20 +857,20 @@ textarea.inline-edit { overflow: hidden; }
   inset-inline-start: 0.1875rem;
   inline-size: 1.125rem;
   block-size: 1.125rem;
-  border-radius: 50%;
-  background: var(--surface-raised);
+  border-radius: var(--radius-round);
+  background: var(--rule-strong);
 }
-.switch input:checked { background: var(--accent); }
-.switch input:checked::before { translate: 1rem 0; }
+.switch input:checked { background: var(--accent); box-shadow: none; }
+.switch input:checked::before { translate: 1rem 0; background: var(--on-accent); }
 .switch input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .switch input[aria-busy="true"] { opacity: 0.6; }
 @media (prefers-reduced-motion: no-preference) {
-  .switch input { transition: background-color var(--dur-dab) var(--ease-brush); }
+  .switch input { transition: background-color var(--dur-dab) var(--ease-brush), box-shadow var(--dur-dab) var(--ease-brush); }
   .switch input::before { transition: translate var(--dur-dab) var(--ease-brush); }
 }
 /* Without colours of its own the track would vanish: an edge, and the system's own colours. */
 @media (forced-colors: active) {
-  .switch input { border: 1px solid ButtonText; background: Canvas; }
+  .switch input { border: 1px solid ButtonText; background: Canvas; box-shadow: none; }
   .switch input::before { background: ButtonText; }
   .switch input:checked { background: Highlight; }
   .switch input:checked::before { background: HighlightText; }
@@ -897,8 +926,8 @@ textarea.inline-edit { overflow: hidden; }
   text-overflow: ellipsis;
   border-radius: var(--radius-chip);
   background: var(--surface-raised);
-  font-size: 0.75rem;
-  line-height: 1.6;
+  font-size: var(--step--1);
+  line-height: 1.4;
   color: var(--ink-muted);
   pointer-events: none;
 }
@@ -910,7 +939,7 @@ textarea.inline-edit { overflow: hidden; }
   inline-size: 1rem;
   block-size: 1rem;
   padding: 0.3rem;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--surface-raised);
   box-shadow: var(--shadow-tape);
 }
@@ -921,8 +950,8 @@ textarea.inline-edit { overflow: hidden; }
 .wish-owner-tag { white-space: normal; overflow-wrap: anywhere; text-align: end; }
 .wish-card-heading .wish-owner-tag { text-align: start; }
 @media (width < 40rem) {
-  .wish-list:has(.wish-tick) .wish-head > .wish-tags { max-inline-size: none; }
-  .wish-list:has(.wish-tick) .wish-owner-tag { text-align: start; }
+  .wish-head > .wish-tags { max-inline-size: none; }
+  .wish-head .wish-owner-tag { text-align: start; }
 }
 
 /* What the page says about one row, at the top of its card. */
@@ -1073,7 +1102,7 @@ html:has(.joint-bar) art-header::part(drips) { display: none; }
   pointer-events: none;
 }
 @media (forced-colors: active) { .wish-list[data-drop]::after { background: Highlight; } }
-.wish-row.edit-mode:has(.joint-pick input:checked) { background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.wish-row.edit-mode:has(.joint-pick input:checked) { background: color-mix(in oklch, var(--accent) 10%, transparent); }
 
 /* Candidate for Gesso: a link to send, just made. What it does, its address to read or select,
    and the button that copies it. */
@@ -1109,7 +1138,7 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
   inline-size: 0.5rem;
   block-size: 0.5rem;
   margin-inline-start: 0.3em;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--accent);
   vertical-align: super;
 }
@@ -1142,3 +1171,16 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 /* A link beside a form's button, such as "Wachtwoord vergeten?". */
 .form .actions:has(> .actions-link) { align-items: center; gap: var(--space-4) var(--space-6); }
 .actions-link { font-size: var(--step--1); }
+
+/* ── Forced colours ───────────────────────────────────────────────────────
+   Windows' contrast themes drop every box-shadow and background colour. What was drawn with
+   one gets an edge in the system's own colours. */
+@media (forced-colors: active) {
+  :is(.tick-count-number, .give-box, .list-chooser-option, .share-mode, .wish-thumb, .scheme-dab) { outline: 1px solid CanvasText; outline-offset: -1px; }
+  :is(.list-chooser-option, .share-mode):has(input:checked) { outline: 3px solid Highlight; outline-offset: -3px; }
+  :is(.list-chooser-option, .share-mode):has(input:focus-visible) { outline: 3px solid CanvasText; outline-offset: 2px; }
+  .tick-count:focus-visible .tick-count-number { outline: 3px solid CanvasText; outline-offset: 2px; }
+  .tick-count.on .tick-count-number { outline-color: Highlight; outline-width: 3px; outline-offset: -3px; }
+  .wish-row.mine:not(.open) { border-inline-start: 4px solid Highlight; }
+  .wish-title::after { forced-color-adjust: none; background: CanvasText; }
+}

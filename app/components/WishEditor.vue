@@ -112,7 +112,7 @@ async function onDeleteClose() {
     <WishGive :wish="wish" :tick="tick" />
     <!-- Always there, so the words are announced when they appear. -->
     <p class="wish-saved" role="status">{{ saving.saved.value ? t('edit.saved') : '' }}</p>
-    <art-button v-if="canDelete" class="wish-delete" variant="quiet" size="s">
+    <art-button v-if="canDelete" class="wish-delete danger" variant="quiet" size="s">
       <button type="button" :aria-disabled="busy || undefined" @click="askToDelete">{{ t('listEdit.delete') }}</button>
     </art-button>
   </div>
@@ -150,7 +150,7 @@ async function onDeleteClose() {
       <art-button variant="secondary">
         <button value="cancel" autofocus>{{ t('listEdit.deleteCancel') }}</button>
       </art-button>
-      <art-button>
+      <art-button class="danger">
         <button value="delete">{{ t('listEdit.deleteConfirm') }}</button>
       </art-button>
     </form>
