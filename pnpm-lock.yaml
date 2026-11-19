@@ -12,8 +12,8 @@ importers:
         specifier: ^10.6.0
         version: 10.6.0(@nuxt/schema@4.6.4)(@vue/compiler-dom@3.5.45)(db0@0.3.4(better-sqlite3@13.2.0)(drizzle-orm@0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.2.0)))(dotenv@17.4.2)(esbuild@0.28.2)(giget@3.3.1)(ioredis@5.11.1)(jiti@2.7.0)(rolldown@1.2.19)(rollup@4.68.3)(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vue@3.5.45(typescript@6.0.3))
       '@vandervennet/gesso':
-        specifier: github:artvandervennet/gesso#v1.6.2
-        version: https://codeload.github.com/artvandervennet/gesso/tar.gz/2011d450547f27ce757500c2a4818840e4172fce
+        specifier: github:artvandervennet/gesso#v1.7.0
+        version: https://codeload.github.com/artvandervennet/gesso/tar.gz/d2c1783477b4ba1818dbd76edf4676e47347a997
       better-sqlite3:
         specifier: ^13.2.0
         version: 13.2.0
@@ -1707,9 +1707,9 @@ packages:
       webpack:
         optional: true
 
-  '@vandervennet/gesso@https://codeload.github.com/artvandervennet/gesso/tar.gz/2011d450547f27ce757500c2a4818840e4172fce':
-    resolution: {gitHosted: true, integrity: sha512-19ytYbaOS5oXWxLOmLsV6e/7JX21Pv28jvWkACOxCKH3k0x6nlZVVtOwNsN9ObkMcT9FqjJEVj2VYixHbbVMDA==, tarball: https://codeload.github.com/artvandervennet/gesso/tar.gz/2011d450547f27ce757500c2a4818840e4172fce}
-    version: 1.6.2
+  '@vandervennet/gesso@https://codeload.github.com/artvandervennet/gesso/tar.gz/d2c1783477b4ba1818dbd76edf4676e47347a997':
+    resolution: {gitHosted: true, integrity: sha512-BDWbLcaVt/9GGEGMwlifEIe4n3vNFEqMDinuXOTkkmC9XYfvxVi91zseqpjClAx+eEVPuossTxQBBG2EZ5Tzwg==, tarball: https://codeload.github.com/artvandervennet/gesso/tar.gz/d2c1783477b4ba1818dbd76edf4676e47347a997}
+    version: 1.7.0
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5705,7 +5705,7 @@ snapshots:
       - rollup
       - unloader
 
-  '@vandervennet/gesso@https://codeload.github.com/artvandervennet/gesso/tar.gz/2011d450547f27ce757500c2a4818840e4172fce': {}
+  '@vandervennet/gesso@https://codeload.github.com/artvandervennet/gesso/tar.gz/d2c1783477b4ba1818dbd76edf4676e47347a997': {}
 
   '@vercel/nft@1.11.2(rollup@4.68.3)':
     dependencies:
