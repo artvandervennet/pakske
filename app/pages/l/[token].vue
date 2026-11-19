@@ -224,6 +224,7 @@ function onLeaveDialogClose() {
 type CoOwner = NonNullable<typeof list.value.coOwners>[number]
 const removable = computed(() => (list.value.coOwners ?? []).filter(owner => owner.canRemove))
 const removeOwnerDialog = useTemplateRef<HTMLDialogElement>('removeOwnerDialog')
+const listActions = useTemplateRef<HTMLElement>('listActions')
 const leaving = ref<CoOwner | null>(null)
 const ownerStatus = ref('')
 
@@ -252,6 +253,10 @@ async function onRemoveOwnerClose() {
     deleting.value = false
     // Also after a refusal: someone joined, left or was removed since the page loaded.
     await refresh()
+    // The button that was pressed went with the person. The focus goes to what stands there
+    // now: the next co-owner's button, or "Nieuwe link".
+    await nextTick()
+    listActions.value?.querySelector('button')?.focus()
   }
 }
 
@@ -758,7 +763,7 @@ async function addWish(title: string) {
           </ul>
           <!-- About the whole list, not the chosen wishes: under the list, away from the bar's
                buttons, and it asks first. -->
-          <div v-if="editing" class="list-actions">
+          <div v-if="editing" ref="listActions" class="list-actions">
             <p v-if="listError" class="form-message" role="alert">{{ listError }}</p>
             <!-- Always there, so the words are announced; the button that went shows the rest. -->
             <p class="visually-hidden" role="status">{{ ownerStatus }}</p>

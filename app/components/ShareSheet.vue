@@ -28,6 +28,14 @@ const inviting = ref(false)
 const invitePath = ref<string | null>(null)
 const friends = ref<Friend[]>([])
 const invited = reactive(new Set<number>())
+// The friends whose switch is being saved. A tap on one of those is not taken: two requests
+// about one friend could land in the other order, and leave someone invited behind a switch
+// that shows off.
+const saving = reactive(new Set<number>())
+// Counts the openings, so a late answer about the friends never lands in a later opening or
+// over a switch that was used meanwhile.
+let opening = 0
+let used = false
 const error = ref('')
 const status = ref('')
 // Whether this browser has a share sheet is only known in the browser.
@@ -51,10 +59,12 @@ function open() {
   // The heading rather than the first control: a screen reader starts with what this is.
   heading.value?.focus()
   // Not waited for: the sheet is of use without its friends, and they join it when they arrive.
+  const mine = ++opening
+  used = false
   if (props.owner) {
     $fetch<{ friends: Friend[] }>(`/api/lists/${props.token}/friends`)
-      .then((answer) => { friends.value = answer.friends })
-      .catch(() => { friends.value = [] })
+      .then((answer) => { if (mine === opening && !used) friends.value = answer.friends })
+      .catch(() => { if (mine === opening && !used) friends.value = [] })
   }
 }
 
@@ -79,6 +89,12 @@ const isOn = (friend: Friend) => (inviting.value ? invited.has(friend.id) : frie
 async function setFriend(friend: Friend, event: Event) {
   const box = event.target as HTMLInputElement
   const on = box.checked
+  if (saving.has(friend.id)) {
+    box.checked = !on
+    return
+  }
+  saving.add(friend.id)
+  used = true
   const invites = inviting.value
   const apply = (value: boolean) => {
     if (!invites) friend.shown = value
@@ -97,6 +113,9 @@ async function setFriend(friend: Friend, event: Event) {
     // The box is the browser's own: put it back where the page says it is.
     box.checked = !on
     error.value = parse(failure).message
+  }
+  finally {
+    saving.delete(friend.id)
   }
 }
 
@@ -145,9 +164,9 @@ defineExpose({ open })
       </art-share>
 
       <fieldset v-if="owner && friends.length" class="sheet-friends">
-        <legend class="visually-hidden">{{ t('share.friends') }}</legend>
+        <legend class="visually-hidden">{{ inviting ? t('share.friendsInvite') : t('share.friends') }}</legend>
         <label v-for="friend in friends" :key="friend.id" class="switch sheet-row">
-          <input type="checkbox" :checked="isOn(friend)" @change="setFriend(friend, $event)">
+          <input type="checkbox" :checked="isOn(friend)" :aria-busy="saving.has(friend.id) || undefined" @change="setFriend(friend, $event)">
           <span class="sheet-name">{{ friend.name }}</span>
         </label>
       </fieldset>

@@ -20,6 +20,8 @@ const { data, error } = await useFetch<InviteView>(address)
 if (error.value || !data.value) {
   throw createError({ statusCode: error.value?.statusCode ?? 404, fatal: true })
 }
+// Someone who owns the list already has nothing to accept: the link takes them to their list.
+if (data.value.joined) await navigateTo(localePath(`/l/${data.value.joined}`), { replace: true })
 // A copy of its own, so the page can fetch the link again without the first answer's errors
 // taking the page away.
 const invite = ref<InviteView>(data.value)

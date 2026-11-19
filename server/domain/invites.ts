@@ -267,6 +267,12 @@ export function getInviteView(db: Db, invite: string, viewerId: number): InviteV
     from: from.name,
     yours: found.invite.createdBy === viewerId,
     listTitle: found.list.title,
+    // Someone the link already let in opens it again from the chat it was posted in: they get
+    // their list, in whatever state the link is by now, and never an invitation to what is theirs.
+    joined: found.invite.kind === 'list' && found.invite.createdBy !== viewerId && found.list.deletedAt === null
+      && found.owners.some(owner => owner.userId === viewerId)
+      ? found.list.token
+      : null,
     wishes: found.state === 'open'
       ? found.onList.map(wish => ({
           id: wish.id,

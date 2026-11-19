@@ -72,6 +72,7 @@ describe('a link that makes wishes joint', () => {
       state: 'open',
       from: 'Art',
       listTitle: 'Kerst',
+      joined: null,
       yours: false,
       wishes: [
         { id: game.id, title: 'Bordspel', image: '/uploads/bordspel.png', owned: false },
@@ -596,6 +597,22 @@ describe('an invitation link for a list', () => {
     acceptInvite(db, lot.id, invite, null)
     expect(codeOf(() => acceptInvite(db, lot.id, invite, null))).toBe('forbidden')
     expect(getInviteView(db, invite, mom.id)).toMatchObject({ state: 'open' })
+  })
+
+  it('tells a co-owner who opens it again where their list is, and nobody else', () => {
+    const { db, art, lot, mom, A } = setup()
+    const { invite } = listInviteLink(db, art.id, A)
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ state: 'open', joined: null })
+    acceptInvite(db, lot.id, invite, null)
+    // The link in the group chat is how she finds the list again: it leads there, not to an invitation.
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ joined: A })
+    expect(getInviteView(db, invite, mom.id)).toMatchObject({ state: 'open', joined: null })
+    expect(JSON.stringify(getInviteView(db, invite, mom.id))).not.toContain(A)
+    // Its maker still gets their own link to send on.
+    expect(getInviteView(db, invite, art.id)).toMatchObject({ state: 'own', joined: null })
+    // Also once it ended, she is not told to ask for a new one.
+    vi.setSystemTime(new Date(Date.now() + 8 * day))
+    expect(getInviteView(db, invite, lot.id)).toMatchObject({ state: 'expired', joined: A })
   })
 
   it('is the same address when asked again, with its 7 days starting over', () => {

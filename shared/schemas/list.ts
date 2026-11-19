@@ -169,6 +169,12 @@ export interface InviteView {
   yours: boolean
   listTitle: string
   /**
+   * For a link to a list, when the person who opened it owns that list already and didn't make
+   * the link: the list's token, which is theirs to know. The link is then how they find the
+   * list again, and the page takes them there. Null for everyone else.
+   */
+  joined: string | null
+  /**
    * The wishes it shares that are still on the list, in the list's order; empty unless it is
    * open. `owned` says the opener is an owner of that wish already.
    */
