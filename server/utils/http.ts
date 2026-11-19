@@ -29,6 +29,9 @@ const STATUS: Record<DomainErrorCode, number> = {
   password_needed: 409,
   wrong_password: 403,
   reauth_needed: 401,
+  friend_limit: 409,
+  request_limit: 409,
+  not_friends: 404,
 }
 
 /** Ends the request with a status and an error code the client can translate. */

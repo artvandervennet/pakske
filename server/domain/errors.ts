@@ -21,6 +21,9 @@ export type DomainErrorCode
     | 'password_needed'
     | 'wrong_password'
     | 'reauth_needed'
+    | 'friend_limit'
+    | 'request_limit'
+    | 'not_friends'
 
 /** A rule of Pakske said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {

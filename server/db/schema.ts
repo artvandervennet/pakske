@@ -189,6 +189,37 @@ export const linkChanges = sqliteTable('link_changes', {
   primaryKey({ columns: [t.linkId, t.field] }),
 ])
 
+// Two people who are friends: one row for the pair, the lower id first. Being friends shows
+// nothing by itself; each of them chooses which lists the other finds (see `list_friends`).
+export const friendships = sqliteTable('friendships', {
+  userLow: integer('user_low').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userHigh: integer('user_high').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+}, t => [
+  primaryKey({ columns: [t.userLow, t.userHigh] }),
+  index('friendships_high_idx').on(t.userHigh),
+  check('friendships_order_check', sql`${t.userLow} < ${t.userHigh}`),
+])
+
+// Someone asked to be friends, from a list of the receiver's that they could open. A declined
+// request stays, so the sender can't tell it from a waiting one and can't ask again; `hidden`
+// is a declined one its sender took off their own page.
+export const friendRequests = sqliteTable('friend_requests', {
+  // Random, like note ids: the numbers say nothing about other people's requests.
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  fromUser: integer('from_user').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  toUser: integer('to_user').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // The list it was sent from, so the receiver can place the sender.
+  listId: integer('list_id').references(() => lists.id, { onDelete: 'set null' }),
+  status: text('status', { enum: ['pending', 'declined'] }).notNull().default('pending'),
+  hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+  createdAt: createdAt(),
+  seenAt: integer('seen_at', { mode: 'timestamp_ms' }),
+}, t => [
+  uniqueIndex('friend_requests_pair_idx').on(t.fromUser, t.toUser),
+  index('friend_requests_to_idx').on(t.toUser),
+])
+
 export const notices = sqliteTable('notices', {
   // Random, like note ids, so the numbers say nothing about notices for other people.
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
