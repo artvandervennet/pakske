@@ -14,6 +14,7 @@ const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api
 const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
 const notices = computed(() => home.value?.notices ?? [])
+const requests = computed(() => home.value?.requests ?? [])
 const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
 const openedTotal = computed(() => home.value?.openedTotal ?? 0)
 // Without it a failed load would look like having no lists at all.
@@ -80,7 +81,51 @@ function dismiss(notice: NoticeView) {
 const noticeLink = (notice: NoticeView) =>
   localePath(`/l/${notice.token}${notice.wishId === null ? '' : `#wish-${notice.wishId}`}`)
 
-const showNotices = computed(() => loggedIn.value && (notices.value.length > 0 || !!noticeStatus.value || !!noticeError.value))
+// A notice about a friend leads to that friend's row on the friends page.
+const aboutFriend = (notice: NoticeView) => notice.kind === 'friend_accepted' || notice.kind === 'friend_link_used'
+const friendLink = (id: number) => ({ path: localePath('/friends'), hash: `#friend-${id}` })
+
+// Friend requests wait here with the notices until they are answered. Accepting goes on to the
+// new friend's row, where nothing is ticked yet; declining says so here and tells the sender nothing.
+type FriendRequest = HomeView['requests'][number]
+async function acceptRequest(request: FriendRequest) {
+  if (noticeBusy.value) return
+  noticeBusy.value = request.id
+  noticeError.value = ''
+  try {
+    const made = await $fetch<{ friendId: number }>(`/api/friends/requests/${request.id}/accept`, { method: 'POST' })
+    await navigateTo(friendLink(made.friendId))
+  }
+  catch (error) {
+    noticeError.value = parse(error).message
+    await refresh()
+  }
+  finally {
+    noticeBusy.value = null
+  }
+}
+
+async function declineRequest(request: FriendRequest) {
+  if (noticeBusy.value) return
+  noticeBusy.value = request.id
+  noticeStatus.value = ''
+  noticeError.value = ''
+  try {
+    await $fetch<unknown>(`/api/friends/requests/${request.id}/decline`, { method: 'POST' })
+    noticeStatus.value = t('friends.declined', { name: request.from })
+  }
+  catch (error) {
+    noticeError.value = parse(error).message
+  }
+  finally {
+    await refresh()
+    noticeBusy.value = null
+  }
+  await nextTick()
+  if (!document.activeElement || document.activeElement === document.body) noticesTitle.value?.focus()
+}
+
+const showNotices = computed(() => loggedIn.value && (notices.value.length > 0 || requests.value.length > 0 || !!noticeStatus.value || !!noticeError.value))
 
 // Logged out, the page is the hero and the lists opened before; with none, one quiet sentence.
 const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !!loadError.value)
@@ -123,12 +168,28 @@ const paints = computed(() => {
         <div class="section-body">
           <p class="form-message" role="status">{{ noticeStatus }}</p>
           <p v-if="noticeError" class="form-message" role="alert">{{ noticeError }}</p>
-          <ul v-if="notices.length" class="rows">
+          <ul v-if="notices.length || requests.length" class="rows">
+            <li v-for="request in requests" :key="request.id" class="row notice">
+              <p :id="`request-${request.id}`" class="notice-line">
+                {{ t('friends.wants', { name: request.from }) }}<template v-if="request.via"> · {{ t('friends.via', { title: request.via }) }}</template>
+              </p>
+              <div class="notice-actions">
+                <art-button size="s">
+                  <button type="button" :aria-describedby="`request-${request.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="acceptRequest(request)">{{ t('friends.accept') }}</button>
+                </art-button>
+                <art-button variant="quiet" size="s">
+                  <button type="button" :aria-describedby="`request-${request.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="declineRequest(request)">{{ t('friends.decline') }}</button>
+                </art-button>
+              </div>
+            </li>
             <li v-for="notice in notices" :key="notice.id" class="row notice">
               <p :id="`notice-${notice.id}`" class="notice-line">{{ noticeLine(notice, t) }}</p>
               <div class="notice-actions">
                 <art-button v-if="notice.token" variant="quiet" size="s">
                   <NuxtLink :to="noticeLink(notice)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
+                </art-button>
+                <art-button v-else-if="aboutFriend(notice)" variant="quiet" size="s">
+                  <NuxtLink :to="friendLink(notice.actorId)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
                 </art-button>
                 <art-button v-if="notice.canUndo" variant="quiet" size="s">
                   <button type="button" :aria-describedby="`notice-${notice.id}`" :aria-disabled="noticeBusy ? 'true' : undefined" @click="undo(notice)">{{ t('notice.undo') }}</button>

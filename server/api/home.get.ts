@@ -1,5 +1,5 @@
 import { HOME_LISTS, type HomeView } from '../../shared/schemas/list'
-import { listShownLists } from '../domain/friends'
+import { listRequests, listShownLists } from '../domain/friends'
 import { listOwnedLists } from '../domain/lists'
 import { listNotices } from '../domain/notices'
 import { describeLists, listOpenedLists } from '../domain/visits'
@@ -21,5 +21,6 @@ export default defineEventHandler(async (event): Promise<HomeView> => {
     notices: userId === null ? [] : listNotices(db, userId),
     shown: shown.slice(0, HOME_LISTS),
     shownTotal: shown.length,
+    requests: userId === null ? [] : listRequests(db, userId).incoming,
   }
 })

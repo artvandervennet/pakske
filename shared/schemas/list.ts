@@ -216,6 +216,8 @@ export interface HomeView {
   /** The lists friends show the person, the one ticked last first; empty when logged out. */
   shown: ShownList[]
   shownTotal: number
+  /** Friend requests waiting for the person's answer, newest first; empty when logged out. */
+  requests: { id: string, fromId: number, from: string, via: string | null, fresh: boolean }[]
 }
 
 /**

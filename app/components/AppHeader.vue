@@ -38,6 +38,7 @@ async function logout() {
          into the second coat of its repaint, where hidden words would show. -->
     <NuxtLink slot="wordmark" :to="localePath('/')">{{ t('site.name') }}<span v-if="unseen > 0" class="nav-mark" role="img" :aria-label="newNotices" /></NuxtLink>
     <NuxtLink :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
+    <NuxtLink v-if="user" :to="localePath('/friends')">{{ t('nav.friends') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
     <art-button v-if="loggedIn" slot="actions" size="s" variant="secondary">
       <button type="button" @click="logout">{{ t('nav.logout') }}</button>

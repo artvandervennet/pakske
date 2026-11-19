@@ -261,6 +261,43 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
   color: var(--danger);
 }
 
+/* Candidate for Gesso: a row that unfolds in place (<details>), on the friends page: a friend's
+   name and what goes each way, with a chevron after it like a wish's title, and under it the
+   switches and links that line counts. The row is as high as any other row. */
+.friend-item { display: block; }
+.friend > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  min-block-size: 3.5rem;
+  padding-block: var(--space-3);
+  list-style: none;
+  cursor: pointer;
+}
+.friend > summary::-webkit-details-marker { display: none; }
+.friend > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+.friend-name { font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.friend-name::after {
+  content: "";
+  display: inline-block;
+  inline-size: 0.45em;
+  block-size: 0.45em;
+  margin-inline-start: 0.5em;
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  rotate: 45deg;
+  translate: 0 -0.2em;
+  color: var(--ink-muted);
+}
+.friend[open] .friend-name::after { rotate: 225deg; translate: 0 0.1em; }
+.friend > summary > .row-meta { flex: 1 1 12rem; }
+.friend-body { display: grid; gap: var(--space-6); padding-block: var(--space-2) var(--space-6); }
+.friend-shows { display: grid; justify-items: start; min-inline-size: 0; padding: 0; margin: 0; border: 0; }
+.friend-shows > legend { padding: 0; }
+.friend-saved { min-block-size: 1.5em; font-size: var(--step--1); font-weight: var(--weight-medium); color: var(--success); }
+.friends-sent-title { margin-block: var(--space-6) var(--space-2); }
+
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
 
 /* Candidate for Gesso: rows that unfold in place. Each row is a tick, a picture, a title with

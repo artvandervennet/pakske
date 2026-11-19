@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm'
+import type { FriendLinkView, FriendView, RequestsView } from '../../shared/schemas/friends'
 import type { ShownList } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
 import { friendLinks, friendRequests, friendships, listFriends as shown, listOwners, lists, notices, users } from '../db/schema'
@@ -147,13 +148,6 @@ export function withdrawRequest(db: Db, userId: number, requestId: string): void
   }, { behavior: 'immediate' })
 }
 
-export interface RequestsView {
-  /** Waiting for this person's answer, newest first. `via` is the list it was sent from, while that exists. */
-  incoming: { id: string, fromId: number, from: string, via: string | null, fresh: boolean }[]
-  /** What this person asked and still sees: waiting or declined, with nothing to tell them apart. */
-  outgoing: { id: string, toId: number, to: string }[]
-}
-
 export function listRequests(db: Db, userId: number): RequestsView {
   const newestFirst = [desc(friendRequests.createdAt), desc(sql`${friendRequests}.rowid`)]
   const incoming = db.select({ request: friendRequests, from: users.displayName, title: lists.title, deletedAt: lists.deletedAt })
@@ -211,13 +205,6 @@ export function makeFriendLink(db: Db, userId: number): { token: string } {
     tx.insert(friendLinks).values({ token, createdBy: userId, expiresAt: new Date(now.getTime() + FRIEND_LINK_DAYS * 24 * 60 * 60 * 1000) }).run()
     return { token }
   }, { behavior: 'immediate' })
-}
-
-export interface FriendLinkView {
-  /** The display name of whoever made the link. */
-  from: string
-  /** `closed` once it is used or past its time, `own` for its maker, `friends` for someone who is one already. */
-  state: 'open' | 'own' | 'closed' | 'friends'
 }
 
 function findFriendLink(db: Db, token: string, viewerId: number) {
@@ -390,15 +377,6 @@ export function hideShownList(db: Db, userId: number, listToken: string): void {
     tx.update(shown).set({ hiddenAt: new Date() })
       .where(and(eq(shown.listId, visible[0]!.listId), eq(shown.userId, userId))).run()
   }, { behavior: 'immediate' })
-}
-
-export interface FriendView {
-  id: number
-  name: string
-  /** Every live list of the asker's own, with whether this friend finds it. */
-  shows: { token: string, title: string, shown: boolean }[]
-  /** The lists this friend shows the asker, without the ones the asker took off their page. */
-  sees: { token: string, title: string }[]
 }
 
 /** The person's friends, with what goes each way. Nothing here is about anyone else's friends. */
