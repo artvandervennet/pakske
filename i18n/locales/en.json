@@ -547,7 +547,7 @@
     "lists": {
       "title": "Lists and links",
       "open": "A list is open to everyone who has its link, with or without an account, and anyone who has the link can pass it on. You choose who you send it to. An owner can give a list a new link; the old one then stops working.",
-      "together": "Someone you make co-owner of a list or a wish can change it, just as you can."
+      "together": "Someone you make co-owner of a list or a wish can change it, just as you can. An invitation link for a list works for 7 days, for everyone who opens it: send it only to people who may manage the list with you. You can remove a co-owner who joined the list after you; they get a notice about it, with your name."
     },
     "content": {
       "title": "What you put on it",
