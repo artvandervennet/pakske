@@ -46,6 +46,7 @@
     "list_joined": "{actor} is now a co-owner of “{title}”.",
     "list_relinked": "{actor} gave “{title}” a new link. The old one no longer works.",
     "friend_accepted": "You and {actor} are friends now.",
+    "friend_link_used": "{actor} used your friend link. You are friends now.",
     "undo": "Undo",
     "dismiss": "Dismiss",
     "view": "View",

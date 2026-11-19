@@ -220,6 +220,19 @@ export const friendRequests = sqliteTable('friend_requests', {
   index('friend_requests_to_idx').on(t.toUser),
 ])
 
+// A link that makes whoever opens it a friend of its maker. It works once and for 30 days, and
+// has a token of its own, made like a list's.
+export const friendLinks = sqliteTable('friend_links', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  token: text('token').notNull().unique(),
+  createdBy: integer('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+  usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+}, t => [
+  index('friend_links_maker_idx').on(t.createdBy),
+])
+
 export const notices = sqliteTable('notices', {
   // Random, like note ids, so the numbers say nothing about notices for other people.
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { friendRequests, friendships } from '../server/db/schema'
+import { friendLinks, friendRequests, friendships } from '../server/db/schema'
 import {
-  answerRequest, areFriends, askFriend, countFreshRequests, listRequests, markRequestsSeen, MAX_FRIENDS,
-  MAX_WAITING_REQUESTS, removeFriend, withdrawRequest,
+  acceptFriendLink, answerRequest, areFriends, askFriend, countFreshRequests, FRIEND_LINK_DAYS, getFriendLink, listRequests,
+  makeFriendLink, markRequestsSeen, MAX_FRIENDS, MAX_OPEN_FRIEND_LINKS, MAX_WAITING_REQUESTS, removeFriend, withdrawRequest,
 } from '../server/domain/friends'
+import { LIST_TOKEN } from '../server/domain/tokens'
 import { deleteList, relinkList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { deleteUser } from '../server/domain/users'
@@ -212,6 +213,85 @@ describe('asking to be friends', () => {
     // A declined one never counts.
     answerRequest(db, art.id, listRequests(db, art.id).incoming[0]!.id, false)
     expect(countFreshRequests(db, art.id)).toBe(0)
+  })
+})
+
+describe('a friend link', () => {
+  it('makes whoever opens it a friend of its maker, once', () => {
+    const { db, art, lot, mom } = setup()
+    const { token } = makeFriendLink(db, art.id)
+    expect(token).toMatch(LIST_TOKEN)
+    expect(getFriendLink(db, token, mom.id)).toEqual({ from: 'Art', state: 'open' })
+    expect(acceptFriendLink(db, mom.id, token)).toEqual({ friendId: art.id })
+    expect(areFriends(db, art.id, mom.id)).toBe(true)
+    expect(listNotices(db, art.id)).toMatchObject([{ kind: 'friend_link_used', actor: 'Mom', actorId: mom.id, token: null }])
+    expect(listNotices(db, mom.id)).toEqual([])
+    // Spent: the next person finds it closed, and so does the one who used it.
+    expect(getFriendLink(db, token, lot.id)).toEqual({ from: 'Art', state: 'closed' })
+    expect(codeOf(() => acceptFriendLink(db, lot.id, token))).toBe('invite_closed')
+    expect(areFriends(db, art.id, lot.id)).toBe(false)
+  })
+
+  it('is its maker\'s own to send, not to use', () => {
+    const { db, art } = setup()
+    const { token } = makeFriendLink(db, art.id)
+    expect(getFriendLink(db, token, art.id)).toEqual({ from: 'Art', state: 'own' })
+    expect(codeOf(() => acceptFriendLink(db, art.id, token))).toBe('forbidden')
+    expect(friendshipRows(db)).toEqual([])
+  })
+
+  it('is nothing under a token that matches no link', () => {
+    const { db, mom } = setup()
+    expect(getFriendLink(db, 'no-such-link-token-0000', mom.id)).toBeUndefined()
+    expect(codeOf(() => acceptFriendLink(db, mom.id, 'no-such-link-token-0000'))).toBe('not_found')
+  })
+
+  it(`stops working after ${FRIEND_LINK_DAYS} days`, () => {
+    const { db, art, mom } = setup()
+    const { token } = makeFriendLink(db, art.id)
+    vi.setSystemTime(new Date(Date.now() + FRIEND_LINK_DAYS * 24 * 60 * 60 * 1000 - 1000))
+    expect(getFriendLink(db, token, mom.id)).toMatchObject({ state: 'open' })
+    vi.setSystemTime(new Date(Date.now() + 2000))
+    expect(getFriendLink(db, token, mom.id)).toMatchObject({ state: 'closed' })
+    expect(codeOf(() => acceptFriendLink(db, mom.id, token))).toBe('invite_closed')
+  })
+
+  it(`keeps ${MAX_OPEN_FRIEND_LINKS} open links at most: one more drops the oldest`, () => {
+    const { db, art, mom } = setup()
+    const made: string[] = []
+    for (let n = 0; n <= MAX_OPEN_FRIEND_LINKS; n++) {
+      made.push(makeFriendLink(db, art.id).token)
+      later()
+    }
+    expect(db.select().from(friendLinks).all()).toHaveLength(MAX_OPEN_FRIEND_LINKS)
+    expect(getFriendLink(db, made[0]!, mom.id)).toBeUndefined()
+    expect(getFriendLink(db, made[1]!, mom.id)).toMatchObject({ state: 'open' })
+    expect(getFriendLink(db, made.at(-1)!, mom.id)).toMatchObject({ state: 'open' })
+  })
+
+  it('stays open for someone else when a friend opens it', () => {
+    const { db, art, lot, mom, kerst } = setup()
+    befriend(db, mom.id, kerst, art.id)
+    const { token } = makeFriendLink(db, art.id)
+    expect(getFriendLink(db, token, mom.id)).toEqual({ from: 'Art', state: 'friends' })
+    expect(codeOf(() => acceptFriendLink(db, mom.id, token))).toBe('forbidden')
+    expect(acceptFriendLink(db, lot.id, token)).toEqual({ friendId: art.id })
+  })
+
+  it('answers a request that was waiting between the two', () => {
+    const { db, art, mom, kerst } = setup()
+    askFriend(db, mom.id, kerst, art.id)
+    const { token } = makeFriendLink(db, art.id)
+    acceptFriendLink(db, mom.id, token)
+    expect(requestRows(db)).toEqual([])
+    expect(listRequests(db, art.id).incoming).toEqual([])
+  })
+
+  it('goes with its maker\'s account', () => {
+    const { db, art, mom } = setup()
+    const { token } = makeFriendLink(db, art.id)
+    deleteUser(db, art.id)
+    expect(getFriendLink(db, token, mom.id)).toBeUndefined()
   })
 })
 

@@ -160,7 +160,7 @@ export interface InviteView {
   mine: MyLists
 }
 
-export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted'
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used'
 
 /** A notice as its recipient gets it. Notices are about owners and lists, never about buyers. */
 export interface NoticeView {

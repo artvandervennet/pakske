@@ -78,6 +78,13 @@
       "when": 1795085222913,
       "tag": "0010_steady_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795085292215,
+      "tag": "0011_numerous_nightcrawler",
+      "breakpoints": true
     }
   ]
 }

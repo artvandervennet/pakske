@@ -1,8 +1,9 @@
-import { and, count, desc, eq, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { friendRequests, friendships, listOwners, lists, users } from '../db/schema'
+import { friendLinks, friendRequests, friendships, listOwners, lists, users } from '../db/schema'
 import { DomainError } from './errors'
 import { addNotice } from './notices'
+import { newListToken } from './tokens'
 
 // Friends: two people who chose each other once, so they can share without sending links.
 // There is no directory here. Someone can only be asked from a list of theirs that the asker can
@@ -14,6 +15,10 @@ import { addNotice } from './notices'
 export const MAX_FRIENDS = 100
 /** How many requests a person can have out at once, counting every one they still see. */
 export const MAX_WAITING_REQUESTS = 20
+/** Friend links a person can have open at once; making one more drops the oldest. */
+export const MAX_OPEN_FRIEND_LINKS = 10
+/** How long a friend link works. It can be passed on, so it must end by itself. */
+export const FRIEND_LINK_DAYS = 30
 
 const pairOf = (a: number, b: number) => ({ userLow: Math.min(a, b), userHigh: Math.max(a, b) })
 const isPair = (a: number, b: number) => and(eq(friendships.userLow, Math.min(a, b)), eq(friendships.userHigh, Math.max(a, b)))
@@ -165,6 +170,71 @@ export function countFreshRequests(db: Db, userId: number): number {
 
 export function markRequestsSeen(db: Db, userId: number): void {
   db.update(friendRequests).set({ seenAt: new Date() }).where(freshFor(userId)).run()
+}
+
+/**
+ * Makes a link to send to one person: whoever opens it while logged in, and says yes, is the
+ * maker's friend. Making it is the maker's yes, so nothing waits for an answer afterwards.
+ */
+export function makeFriendLink(db: Db, userId: number): { token: string } {
+  return db.transaction((tx) => {
+    const now = new Date()
+    // Links nobody used pile up when people make one and don't send it, so the oldest goes.
+    const open = tx.select({ id: friendLinks.id }).from(friendLinks)
+      .where(and(eq(friendLinks.createdBy, userId), isNull(friendLinks.usedAt), gt(friendLinks.expiresAt, now)))
+      .orderBy(asc(friendLinks.id))
+      .all()
+    const dropping = open.slice(0, Math.max(0, open.length - (MAX_OPEN_FRIEND_LINKS - 1)))
+    if (dropping.length > 0) tx.delete(friendLinks).where(inArray(friendLinks.id, dropping.map(row => row.id))).run()
+    const token = newListToken()
+    tx.insert(friendLinks).values({ token, createdBy: userId, expiresAt: new Date(now.getTime() + FRIEND_LINK_DAYS * 24 * 60 * 60 * 1000) }).run()
+    return { token }
+  }, { behavior: 'immediate' })
+}
+
+export interface FriendLinkView {
+  /** The display name of whoever made the link. */
+  from: string
+  /** `closed` once it is used or past its time, `own` for its maker, `friends` for someone who is one already. */
+  state: 'open' | 'own' | 'closed' | 'friends'
+}
+
+function findFriendLink(db: Db, token: string, viewerId: number) {
+  const row = db.select({ link: friendLinks, from: users.displayName }).from(friendLinks)
+    .innerJoin(users, eq(users.id, friendLinks.createdBy))
+    .where(eq(friendLinks.token, token))
+    .get()
+  if (!row) return undefined
+  const { link, from } = row
+  let state: FriendLinkView['state'] = 'open'
+  if (link.usedAt !== null || link.expiresAt.getTime() <= Date.now()) state = 'closed'
+  else if (link.createdBy === viewerId) state = 'own'
+  else if (areFriends(db, link.createdBy, viewerId)) state = 'friends'
+  return { link, from, state }
+}
+
+/** What a friend link is to the person who opened it, or undefined for a token that matches none. */
+export function getFriendLink(db: Db, token: string, viewerId: number): FriendLinkView | undefined {
+  const found = findFriendLink(db, token, viewerId)
+  return found && { from: found.from, state: found.state }
+}
+
+/**
+ * Uses a friend link: the person and its maker are friends, the link is spent, and the maker is
+ * told. A link opened by someone who is a friend already stays for someone else.
+ */
+export function acceptFriendLink(db: Db, userId: number, token: string): { friendId: number } {
+  return db.transaction((tx) => {
+    const found = findFriendLink(tx, token, userId)
+    if (!found) throw new DomainError('not_found')
+    if (found.state === 'own' || found.state === 'friends') throw new DomainError('forbidden')
+    if (found.state !== 'open') throw new DomainError('invite_closed')
+    const maker = found.link.createdBy
+    makeFriends(tx, userId, maker)
+    tx.update(friendLinks).set({ usedAt: new Date() }).where(eq(friendLinks.id, found.link.id)).run()
+    addNotice(tx, { userId: maker, kind: 'friend_link_used', actorId: userId, title: '' })
+    return { friendId: maker }
+  }, { behavior: 'immediate' })
 }
 
 /** Stops two people being friends. Nobody is told. */
