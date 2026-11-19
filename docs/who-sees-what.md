@@ -25,6 +25,14 @@ A wish with several owners:
 - A wish taken off a list stays on that list for logged-in people who own neither the wish nor the list, marked "Taken off the list", for as long as anyone has a purchase on it. They can lower or withdraw their own purchase there and write notes, but not buy more. The list's owners and the wish's owners never get that row.
 - Someone who stops owning a wish (by taking it off their list, leaving a list or being unlinked) is a buyer of it again wherever they can still open a list that shows it, and sees its purchases and notes there.
 
+An address a list had before it got a new link no longer opens the list. `oldLinkView` answers it three ways:
+
+- An owner of the list is told the new address.
+- Someone logged in who has a purchase on a wish of that list gets those wishes only, each with their own purchase alone: no other buyers, no notes, no other wishes, and not the new address. They can lower or withdraw it there. Giving more, writing a note and putting the wish on a list of their own answer "not found".
+- Everyone else gets "not found", like an address that never existed.
+
+Who owns the list is all that decides an owner's answer, and a visitor's is always "not found", so both are the same whatever buyers did.
+
 The page shows whatever the API returned, so the HTML that Nuxt renders on the server can't contain more than the person may see.
 
 Every request about a wish goes through a list link: the URL names the list's token, and the wish must be on that list now (`wishOnList` in `server/domain/placement.ts`). A wish's number alone gives no access. Lowering or withdrawing a purchase and writing a note also work on a wish that left the list; buying more there answers `wish_removed`. A few requests name no list. Deleting your own note and dismissing your own notice go by a random id, and only their owner gets anything but "not found". A share link goes by its own token.

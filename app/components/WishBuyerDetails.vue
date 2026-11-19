@@ -9,7 +9,9 @@ import type { WishTickState } from '~/composables/useWishTick'
 // WishEditor instead. Putting the wish on a list of your own is the button in the card's head.
 // `owners` is the list's owners. The notes are hidden from them and from the wish's other owners.
 // `tick` is the row's own tick (useWishTick), shown here with its full stepper.
-const props = defineProps<{ wish: WishView, token: string, owners: string[], tick: WishTickState }>()
+// `bare` is the page behind a list's old link: the wish and the viewer's own tick, nothing about
+// anyone else and nothing to write.
+const props = defineProps<{ wish: WishView, token: string, owners: string[], tick: WishTickState, bare?: boolean }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const { t } = useI18n()
@@ -63,10 +65,10 @@ const loginLink = computed(() => ({
 <template>
   <!-- On a wide card a buyer's side has two columns: the wish and giving it, and beside them
        what the buyers tell each other. A visitor has only the first, as text. -->
-  <div class="wish-card-body buyer" :class="{ pictured: wish.image, noted: wish.role === 'buyer' }">
+  <div class="wish-card-body buyer" :class="{ pictured: wish.image, noted: wish.role === 'buyer' && !bare }">
     <img v-if="wish.image" class="wish-picture" :src="wish.image" alt="" decoding="async">
     <div class="wish-card-column">
-      <p v-if="wish.role === 'buyer' && wish.removed" class="form-message">
+      <p v-if="wish.role === 'buyer' && wish.removed && !bare" class="form-message">
         {{ owners.length ? t('wish.removedIntro', { names: names(owners) }, owners.length) : t('wish.removedIntroNobody') }}
       </p>
       <p v-if="wish.description" class="wish-text">{{ wish.description }}</p>
@@ -100,7 +102,7 @@ const loginLink = computed(() => ({
           </div>
         </div>
 
-        <div class="wish-field">
+        <div v-if="!bare" class="wish-field">
           <h4 :id="`${id}-who`" class="wish-label">{{ t('purchase.title') }}</h4>
           <ul v-if="wish.purchases.length" class="people" :aria-labelledby="`${id}-who`">
             <li v-for="(purchase, index) in wish.purchases" :key="index" :class="{ mine: purchase.mine }">
@@ -117,7 +119,7 @@ const loginLink = computed(() => ({
         <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
       </p>
     </div>
-    <div v-if="wish.role === 'buyer'" class="wish-card-column">
+    <div v-if="wish.role === 'buyer' && !bare" class="wish-card-column">
       <WishNotes :wish="wish" :token="token" :hidden-from="hiddenFrom" @changed="emit('changed')" />
     </div>
   </div>

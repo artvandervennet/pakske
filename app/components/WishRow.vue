@@ -34,6 +34,8 @@ const props = defineProps<{
   viewerOwnsList: boolean
   refresh: () => Promise<unknown>
   editMode?: boolean
+  /** The page behind a list's old link: only the viewer's own tick, to lower or take back. */
+  bare?: boolean
 }>()
 const emit = defineEmits<{
   toggle: []
@@ -53,7 +55,8 @@ const detailsId = computed(() => `wish-${props.wish.id}-details`)
 const addId = computed(() => `wish-${props.wish.id}-add`)
 const line = computed(() => lineOf(props.wish))
 const amount = computed(() => amountTag(props.wish))
-const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed)
+// On an old link's page every row is "removed" so nothing more can be given; the tag would be untrue.
+const removed = computed(() => props.wish.role === 'buyer' && props.wish.removed && !props.bare)
 const mine = computed(() => givenByMe(props.wish))
 const crossedOut = computed(() => isCrossedOut(props.wish))
 const ownerTag = computed(() => {
@@ -236,7 +239,7 @@ defineExpose({ settle })
           <AddToMyList v-if="adding && wish.role === 'buyer'" :wish="wish" :token="token" :can-link="hasOwners" @added="onAdded" @removed="emit('removed')" />
         </div>
         <WishEditor v-if="ownWish" :wish="ownWish" :saving="saving" :tick="tick" :can-delete="viewerOwnsList" @changed="emit('changed')" @deleted="emit('deleted')" />
-        <WishBuyerDetails v-else :wish="wish" :token="token" :owners="owners" :tick="tick" @changed="emit('changed')" />
+        <WishBuyerDetails v-else :wish="wish" :token="token" :owners="owners" :tick="tick" :bare="bare" @changed="emit('changed')" />
       </template>
     </div>
   </li>

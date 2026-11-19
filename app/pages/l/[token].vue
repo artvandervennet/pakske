@@ -9,7 +9,9 @@ const localePath = useLocalePath()
 const { parse } = useApiError()
 
 const token = computed(() => String(route.params.token))
-const { list, gone, refresh } = await useListView(token)
+const { list, gone, refresh, movedTo } = await useListView(token)
+// An owner at an address the list had before a new link: on to where it is now.
+if (movedTo) await navigateTo(localePath(`/l/${movedTo}`), { replace: true })
 
 useHead({ title: () => list.value.title })
 
@@ -205,6 +207,41 @@ function onDeleteDialogClose() {
 
 function onLeaveDialogClose() {
   if (answer(leaveDialog.value) === 'leave' && !deleting.value) deleteOrLeave('leave')
+}
+
+// "Nieuwe link", in edit mode: the list gets another address and the one it had stops opening it.
+// It asks first. Afterwards the page goes on at the new address, where it says so once: the
+// page there is a new one, so what to say travels in a state that page clears when it goes.
+const newLinkDialog = useTemplateRef<HTMLDialogElement>('newLinkDialog')
+const relinking = ref(false)
+const relinkedTo = useState<string | null>('list-relinked-to', () => null)
+const justRelinked = relinkedTo.value === token.value
+const relinkedLine = useTemplateRef<HTMLElement>('relinkedLine')
+if (justRelinked) {
+  // Read out where the focus lands: the button that asked for it went with the old page.
+  onMounted(() => relinkedLine.value?.focus())
+  onBeforeUnmount(() => (relinkedTo.value = null))
+}
+
+function askForNewLink() {
+  if (!relinking.value) newLinkDialog.value?.showModal()
+}
+
+async function onNewLinkClose() {
+  if (answer(newLinkDialog.value) !== 'relink' || relinking.value) return
+  relinking.value = true
+  listError.value = ''
+  try {
+    const made = await $fetch<{ token: string }>(`/api/lists/${token.value}/new-link`, { method: 'POST' })
+    relinkedTo.value = made.token
+    await navigateTo(localePath(`/l/${made.token}`), { replace: true })
+  }
+  catch (error) {
+    listError.value = parse(error).message
+  }
+  finally {
+    relinking.value = false
+  }
 }
 
 // "Lijst samen beheren": a link that makes someone a co-owner of the list. It shows under the
@@ -417,7 +454,7 @@ async function addWish(title: string) {
       </template>
       <template #actions>
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
-        <ShareButton v-if="!list.deleted" :path="localePath(`/l/${list.token}`)" />
+        <ShareButton v-if="!list.deleted && !list.old" :path="localePath(`/l/${list.token}`)" />
         <template v-if="canManage">
           <!-- Gone while editing: the bar above the list has "Klaar", and takes over from here. -->
           <art-button v-if="!editing" variant="secondary">
@@ -438,10 +475,14 @@ async function addWish(title: string) {
           <h2 id="wishes-title" ref="wishesTitle" class="section-title" tabindex="-1">{{ t('list.wishes') }}</h2>
         </div>
         <div class="section-body">
-          <p v-if="gone" class="form-message" role="alert">
+          <p v-if="gone && !list.old" class="form-message" role="alert">
             {{ t('list.gone') }} <NuxtLink :to="localePath('/')">{{ t('error.home') }}</NuxtLink>
           </p>
-          <p v-if="list.deleted" class="form-message">
+          <p v-if="justRelinked" ref="relinkedLine" class="form-message" role="status" tabindex="-1">{{ t('list.newLinkDone') }}</p>
+          <!-- What an old link still shows: the viewer's own ticks. When the last one is taken
+               back the address answers nothing any more, and the page says why it is empty. -->
+          <p v-if="list.old" class="form-message" role="status">{{ gone ? t('list.oldLinkDone') : t('list.oldLink') }}</p>
+          <p v-else-if="list.deleted" class="form-message">
             {{ owners ? t('list.deleted', { names: owners }, list.owners.length) : t('list.deletedNobody') }}
           </p>
           <template v-else>
@@ -468,6 +509,9 @@ async function addWish(title: string) {
               </template>
               <!-- About the whole list, not the chosen wishes: quieter, at the far end, and it asks first. -->
               <art-button class="joint-bar-list" variant="quiet" size="s">
+                <button type="button" :aria-disabled="relinking || undefined" @click="askForNewLink">{{ t('list.newLink') }}</button>
+              </art-button>
+              <art-button variant="quiet" size="s">
                 <button type="button" :aria-disabled="deleting || undefined" @click="askToDeleteOrLeave">{{ shared ? t('list.leave') : t('list.delete') }}</button>
               </art-button>
             </div>
@@ -478,7 +522,7 @@ async function addWish(title: string) {
           <p v-if="!editing && edit.orderError.value" class="form-message" role="alert">{{ edit.orderError.value }}</p>
           <p v-if="editing" class="visually-hidden" role="status">{{ orderStatus }}</p>
           <p v-if="editing" id="order-help" class="visually-hidden">{{ t('listEdit.moveHelp') }}</p>
-          <ul v-if="wishes.length || (canManage && !editing)" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
+          <ul v-if="(wishes.length || (canManage && !editing)) && !(list.old && gone)" ref="wishList" class="wish-list" :class="{ editing, manageable: canManage }">
             <WishRow
               v-for="wish in shownWishes"
               :key="wish.id"
@@ -490,6 +534,7 @@ async function addWish(title: string) {
               :open="open.has(wish.id)"
               :refresh="refreshList"
               :edit-mode="editing"
+              :bare="list.old"
               @toggle="toggle(wish.id)"
               @changed="onWishChanged(wish)"
               @ticked="reason => onTickChanged(wish, reason)"
@@ -576,6 +621,22 @@ async function addWish(title: string) {
         </art-button>
         <art-button>
           <button value="delete">{{ t('listEdit.deleteConfirm') }}</button>
+        </art-button>
+      </form>
+    </dialog>
+
+    <dialog v-if="canManage" ref="newLinkDialog" class="dialog" aria-labelledby="list-new-link-title" aria-describedby="list-new-link-text" @close="onNewLinkClose">
+      <h2 id="list-new-link-title">{{ t('list.newLinkTitle', { title: list.title }) }}</h2>
+      <p id="list-new-link-text">
+        {{ t('list.newLinkBody') }}
+        <template v-if="shared">{{ t('list.newLinkBodyShared', { names: otherOwners }, list.owners.length - 1) }}</template>
+      </p>
+      <form method="dialog" class="actions">
+        <art-button variant="secondary">
+          <button value="cancel" autofocus>{{ t('list.deleteCancel') }}</button>
+        </art-button>
+        <art-button>
+          <button value="relink">{{ t('list.newLinkConfirm') }}</button>
         </art-button>
       </form>
     </dialog>

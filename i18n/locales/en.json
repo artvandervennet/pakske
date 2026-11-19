@@ -91,7 +91,15 @@
     "leave": "Leave list",
     "leaveTitle": "Leave “{title}”?",
     "leaveBody": "You will no longer own this list, nor the wishes on it that aren’t on another list of yours. The list stays with {names}.",
-    "leaveConfirm": "Leave list"
+    "leaveConfirm": "Leave list",
+    "newLink": "New link",
+    "newLinkTitle": "Give “{title}” a new link?",
+    "newLinkBody": "The old link then stops working for everyone. You keep the list, and send the new link to whoever may have it. Someone who ticked something can still take that back through the old link.",
+    "newLinkBodyShared": "{names} keeps the list too. | {names} keep the list too.",
+    "newLinkConfirm": "Give a new link",
+    "newLinkDone": "This list has a new link. The old one no longer works.",
+    "oldLink": "This list has a new link. Only what you ticked is still here: you can lower it or take it back. Ask the owner for the new link.",
+    "oldLinkDone": "You have nothing ticked here any more."
   },
   "wish": {
     "yours": "You have this yourself | You have {n} yourself",
@@ -424,7 +432,7 @@
   "terms": {
     "title": "Terms",
     "lead": "What you can expect from this site, and what it expects from you.",
-    "updated": "Last changed on 18 November 2026.",
+    "updated": "Last changed on 19 November 2026.",
     "site": {
       "title": "What this is",
       "named": "Pakske is a wishlist site that {operator} runs for family and friends. It costs nothing.",
@@ -439,7 +447,7 @@
     },
     "lists": {
       "title": "Lists and links",
-      "open": "A list is open to everyone who has its link, with or without an account, and anyone who has the link can pass it on. You choose who you send it to. The site can’t take a link back from someone.",
+      "open": "A list is open to everyone who has its link, with or without an account, and anyone who has the link can pass it on. You choose who you send it to. An owner can give a list a new link; the old one then stops working.",
       "together": "Someone you make co-owner of a list or a wish can change it, just as you can."
     },
     "content": {

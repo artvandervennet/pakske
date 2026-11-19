@@ -91,7 +91,15 @@
     "leave": "Lijst verlaten",
     "leaveTitle": "“{title}” verlaten?",
     "leaveBody": "Je bent dan geen eigenaar meer van deze lijst, en ook niet van de wensen erop die niet op een andere lijst van jou staan. De lijst blijft van {names}.",
-    "leaveConfirm": "Lijst verlaten"
+    "leaveConfirm": "Lijst verlaten",
+    "newLink": "Nieuwe link",
+    "newLinkTitle": "“{title}” een nieuwe link geven?",
+    "newLinkBody": "De oude link werkt dan voor niemand meer. Je houdt de lijst, en stuurt de nieuwe link naar wie hem mag hebben. Wie iets aanvinkte, kan dat via de oude link nog intrekken.",
+    "newLinkBodyShared": "Ook {names} houdt de lijst. | Ook {names} houden de lijst.",
+    "newLinkConfirm": "Nieuwe link geven",
+    "newLinkDone": "Deze lijst heeft een nieuwe link. De oude werkt niet meer.",
+    "oldLink": "Deze lijst heeft een nieuwe link. Hier staat alleen nog wat jij aanvinkte: je kunt het verlagen of intrekken. Vraag de eigenaar om de nieuwe link.",
+    "oldLinkDone": "Je hebt hier niets meer aangevinkt."
   },
   "wish": {
     "yours": "Je hebt dit zelf | Je hebt er zelf {n}",
@@ -424,7 +432,7 @@
   "terms": {
     "title": "Voorwaarden",
     "lead": "Wat je van deze site mag verwachten, en wat de site van jou verwacht.",
-    "updated": "Laatst gewijzigd op 18 november 2026.",
+    "updated": "Laatst gewijzigd op 19 november 2026.",
     "site": {
       "title": "Wat dit is",
       "named": "Pakske is een site voor verlanglijstjes die {operator} beheert voor familie en vrienden. Je betaalt er niets voor.",
@@ -439,7 +447,7 @@
     },
     "lists": {
       "title": "Lijsten en links",
-      "open": "Een lijst staat open voor iedereen die de link heeft, met of zonder account, en wie de link heeft, kan hem doorgeven. Jij kiest naar wie je hem stuurt. De site kan een link niet van iemand terugnemen.",
+      "open": "Een lijst staat open voor iedereen die de link heeft, met of zonder account, en wie de link heeft, kan hem doorgeven. Jij kiest naar wie je hem stuurt. Een eigenaar kan een lijst een nieuwe link geven; de oude werkt dan niet meer.",
       "together": "Wie je mede-eigenaar maakt van een lijst of een wens, kan die wijzigen, net als jij."
     },
     "content": {
