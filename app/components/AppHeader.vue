@@ -33,8 +33,10 @@ async function logout() {
          under that link.
          The mark for new notices sits on the wordmark, which leads to the home page, where the
          notices are. Its words are an aria-label, not text: <art-header> copies the links' text
-         into the second coat of its repaint, where hidden words would show. -->
-    <NuxtLink slot="wordmark" :to="localePath('/')">{{ t('site.name') }}<span v-if="unseen > 0" class="nav-mark" role="img" :aria-label="newNotices" /></NuxtLink>
+         into the second coat of its repaint, where hidden words would show.
+         The logo stands before the name, inside the same link. The name names the link, so the
+         picture has an empty alt. Gesso's layout.css sizes it. -->
+    <NuxtLink slot="wordmark" :to="localePath('/')"><img src="/logo.svg" alt="" width="28" height="28">{{ t('site.name') }}<span v-if="unseen > 0" class="nav-mark" role="img" :aria-label="newNotices" /></NuxtLink>
     <NuxtLink :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
     <art-button v-if="loggedIn" slot="actions" size="s" variant="secondary">

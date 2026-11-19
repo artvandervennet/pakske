@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.6.0",
-    "@vandervennet/gesso": "github:artvandervennet/gesso#v1.4.0",
+    "@vandervennet/gesso": "github:artvandervennet/gesso#v1.6.0",
     "better-sqlite3": "^13.2.0",
     "drizzle-orm": "^0.45.4",
     "nuxt": "^4.6.4",
