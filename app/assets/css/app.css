@@ -1302,22 +1302,6 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
   background: var(--accent);
   box-shadow: 0 0 0 2px var(--surface);
 }
-/* Logged out, on a small screen: the one link stands in the bar, beside "Inloggen". On a wide
-   screen the header's own link shows, with the stroke under it, and this one stays away. */
-.bar-link { display: none; }
-@media (max-width: 48rem) {
-  .bar-link {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: 2.75rem;
-    padding-inline: var(--space-1);
-    color: inherit;
-    font-size: var(--step--1);
-    font-weight: var(--weight-medium);
-    text-decoration: none;
-  }
-  .bar-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
-}
 .notices-menu { inline-size: min(26rem, calc(100vw - 2 * var(--gutter))); max-block-size: min(34rem, 75dvh); padding: var(--space-4) var(--space-6); overflow-y: auto; overscroll-behavior: contain; }
 .notices-menu:popover-open { display: block; }
 .notices-title { margin: 0 0 var(--space-2); font-size: var(--step-1); }

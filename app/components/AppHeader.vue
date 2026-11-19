@@ -22,34 +22,24 @@ const headerKey = computed(() => `${user.value?.id ?? 'anon'}-${locale.value}`)
 const noticesHost = useTemplateRef<{ toggle: (from: HTMLElement) => void, open: boolean }>('noticesHost')
 const bellName = computed(() => (unseen.value > 0 ? `${t('nav.notices')}, ${t('nav.newNotices', { n: unseen.value }, unseen.value)}` : t('nav.notices')))
 
+// The header stays while the pages under it change. A menu that was left open doesn't stay
+// over the next page, however that page was reached.
+const header = useTemplateRef<HTMLElement & { open?: (yes: boolean) => void }>('header')
+watch(() => route.fullPath, () => header.value?.open?.(false))
+
 async function logout() {
   await clear()
   // A full reload, so nothing a buyer saw stays in memory for the next person at this computer.
   window.location.assign(localePath('/'))
 }
-
-// Candidate for Gesso: a header without links to fold away needs no "Menu" button. Logged out
-// there is one link, which stands in the bar itself on a small screen (see the template), so
-// the button and its copy in the header's second coat are taken out of the way. They have no
-// part to style from outside, so it is done on the elements.
-const header = useTemplateRef<HTMLElement>('header')
-function fitMenu() {
-  for (const button of header.value?.shadowRoot?.querySelectorAll<HTMLElement>('.toggle') ?? []) button.style.display = loggedIn.value ? '' : 'none'
-}
-onMounted(async () => {
-  await customElements.whenDefined('art-header')
-  fitMenu()
-})
-watch(headerKey, async () => {
-  await nextTick()
-  fitMenu()
-})
 </script>
 
 <template>
   <!-- The banner role makes the wordmark and the buttons part of a landmark too; <art-header>
        itself only gives its links one (a nav). -->
-  <art-header ref="header" :key="headerKey" role="banner" :label="t('nav.label')" data-paint="deep">
+  <!-- Logged out the header holds one link and one button, which fit a phone's bar: `nofold`
+       keeps them there, and there is no "Menu" to open for a single line. -->
+  <art-header ref="header" :key="headerKey" role="banner" :label="t('nav.label')" data-paint="deep" :nofold="loggedIn ? undefined : ''">
     <!-- The link to the page you are on carries aria-current="page": NuxtLink sets it when its
          address is the current one, whatever the query, and <art-header> paints its stroke
          under that link. -->
@@ -57,10 +47,12 @@ watch(headerKey, async () => {
     <NuxtLink :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/friends')">{{ t('nav.friends') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
-    <!-- Logging out is the last of the links, so on a small screen it folds away under "Menu"
-         with them and the bar keeps room for the bell. A link and not a button: <art-header>
-         only folds, and repaints, its links. It leads where logging out ends, the home page. -->
-    <a v-if="loggedIn" :href="localePath('/')" @click.prevent="logout">{{ t('nav.logout') }}</a>
+    <!-- Logging out is an action, so it is a button and looks like one. It stands among the
+         links and not in the actions: there <art-header> folds it away under "Menu" on a small
+         screen, with the links, and the bar keeps its room for the bell. -->
+    <art-button v-if="loggedIn" size="s" variant="secondary">
+      <button type="button" @click="logout">{{ t('nav.logout') }}</button>
+    </art-button>
     <!-- The bell is an action, and actions stay in the bar at every width: never under "Menu". -->
     <button
       v-if="loggedIn"
@@ -76,14 +68,9 @@ watch(headerKey, async () => {
       <AppIcon name="bell" />
       <span v-if="unseen > 0" class="bell-dot" aria-hidden="true" />
     </button>
-    <template v-else>
-      <!-- Logged out the bar has room for both, so nothing hides under a menu: on a small
-           screen, where the link above is folded away, this one stands in the bar. -->
-      <NuxtLink slot="actions" class="bar-link" :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
-      <art-button slot="actions" size="s">
-        <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
-      </art-button>
-    </template>
+    <art-button v-else slot="actions" size="s">
+      <NuxtLink :to="loginLink">{{ t('nav.login') }}</NuxtLink>
+    </art-button>
   </art-header>
   <NoticesHost v-if="loggedIn" ref="noticesHost" />
 </template>
