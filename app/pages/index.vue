@@ -96,8 +96,11 @@ const paints = computed(() => {
   <div>
     <div class="band hero" data-paint="deep">
       <div class="inner">
-        <!-- The site's name, and the wordmark: <art-header> flies it up into its place as you scroll. -->
-        <h1 ref="pageTitle" tabindex="-1" data-wordmark>{{ t('site.name') }}</h1>
+        <!-- The site's name, and the wordmark: <art-header> flies it up into its place as you scroll.
+             Under it a brushstroke in the yellow of the signature in the footer (Gesso's
+             <art-stroke>), painted once when the page opens. It is part of the title, so it flies
+             up with it. No white space inside the element: it would show beside the name. -->
+        <h1 ref="pageTitle" tabindex="-1" data-wordmark><art-stroke pigment="stroke" seed="pakske" animate>{{ t('site.name') }}</art-stroke></h1>
         <p class="lead">{{ t('home.lead') }}</p>
         <div v-if="!loggedIn" class="actions">
           <art-button>
