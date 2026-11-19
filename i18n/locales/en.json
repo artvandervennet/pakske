@@ -641,6 +641,7 @@
   "fields": {
     "required": "Fill this in.",
     "too_long": "That is too long.",
+    "title_too_long": "A title can be 200 characters long. Put the rest in the wish’s description.",
     "invalid_email": "That isn’t a valid email address.",
     "password_short": "Choose a password of at least 8 characters.",
     "invalid_url": "Start the link with http:// or https://.",

@@ -23,7 +23,13 @@ const props = withDefaults(defineProps<{
   kind?: 'line' | 'text' | 'url'
   placeholder?: string
   maxlength?: number
-}>(), { kind: 'line', showLabel: false, placeholder: undefined, maxlength: undefined })
+  /**
+   * What to say about a text longer than `maxlength`. With it the field takes more than that,
+   * says this while the text is too long, and saves nothing until it fits. Without it the
+   * field stops at `maxlength`, and what is pasted is cut off without a word.
+   */
+  overLimit?: string
+}>(), { kind: 'line', showLabel: false, placeholder: undefined, maxlength: undefined, overLimit: undefined })
 
 // After a save that worked or changed nothing, and after Escape; not after a failed save.
 const emit = defineEmits<{ done: [how: 'enter' | 'escape' | 'blur'] }>()
@@ -43,6 +49,13 @@ const failedText = ref<string | null>(null)
 const error = ref('')
 const focused = ref(false)
 const saving = ref(false)
+
+// Longer than it can be saved, in a field that says so (`overLimit`) rather than stopping there.
+const over = computed(() =>
+  props.overLimit !== undefined && props.maxlength !== undefined && cleanText(draft.value, props.kind).length > props.maxlength)
+// Said beside the field: that the text is too long, as it is typed, else why the last save failed.
+const shownError = computed(() => (over.value ? props.overLimit ?? '' : error.value))
+const hardLimit = computed(() => (props.overLimit === undefined ? props.maxlength : undefined))
 
 watch(() => props.value, (value) => {
   saved.value = value
@@ -102,6 +115,12 @@ async function commit(how: 'enter' | 'blur') {
   if (action === 'adopt') {
     draft.value = atFocus.value = saved.value
     emit('done', how)
+    return
+  }
+  // Too long: it is kept like a text whose save failed, and goes out once it was shortened.
+  if (over.value) {
+    failedText.value = draft.value
+    error.value = ''
     return
   }
   saving.value = true
@@ -179,9 +198,9 @@ defineExpose({
         spellcheck="false"
         enterkeyhint="done"
         :placeholder="placeholder"
-        :maxlength="maxlength"
-        :aria-invalid="error ? 'true' : undefined"
-        :aria-describedby="error ? errorId : undefined"
+        :maxlength="hardLimit"
+        :aria-invalid="shownError ? 'true' : undefined"
+        :aria-describedby="shownError ? errorId : undefined"
         :aria-busy="saving || undefined"
         @focus="onFocus"
         @blur="onBlur"
@@ -198,9 +217,9 @@ defineExpose({
         autocomplete="off"
         :enterkeyhint="kind === 'line' ? 'done' : 'enter'"
         :placeholder="placeholder"
-        :maxlength="maxlength"
-        :aria-invalid="error ? 'true' : undefined"
-        :aria-describedby="error ? errorId : undefined"
+        :maxlength="hardLimit"
+        :aria-invalid="shownError ? 'true' : undefined"
+        :aria-describedby="shownError ? errorId : undefined"
         :aria-busy="saving || undefined"
         @focus="onFocus"
         @blur="onBlur"
@@ -209,6 +228,6 @@ defineExpose({
       />
       <slot />
     </div>
-    <p v-if="error" :id="errorId" class="inline-field-error" role="alert">{{ error }}</p>
+    <p v-if="shownError" :id="errorId" class="inline-field-error" role="alert">{{ shownError }}</p>
   </div>
 </template>

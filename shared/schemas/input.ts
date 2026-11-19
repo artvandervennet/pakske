@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_LINKS } from '../utils/wish-edit'
+import { MAX_LINKS, WISH_TITLE_MAX } from '../utils/wish-edit'
 
 // What people submit. Every message is a code; the client translates `fields.<code>`.
 
@@ -172,7 +172,8 @@ const links = z.array(z.string('invalid').trim(), 'invalid').superRefine((list, 
 })
 
 const wishFields = {
-  title: requiredText(120),
+  // A code of its own: its sentence says where the rest of the text can go, the description.
+  title: z.string('required').trim().min(1, 'required').max(WISH_TITLE_MAX, 'title_too_long'),
   description: optionalText(2000),
   urls: links,
   // null means unlimited

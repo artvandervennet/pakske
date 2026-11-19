@@ -20,6 +20,13 @@ describe('a wish someone submits', () => {
     expect(fieldErrors(wish({ title: '   ' }).error!)).toEqual({ title: 'required' })
   })
 
+  it('takes a title of at most 200 characters, and names a longer one by a code of its own', () => {
+    expect(wish({ title: 'x'.repeat(200) }).success).toBe(true)
+    expect(wish({ title: ` ${'x'.repeat(200)} ` }).success).toBe(true)
+    expect(fieldErrors(wish({ title: 'x'.repeat(201) }).error!)).toEqual({ title: 'title_too_long' })
+    expect(fieldErrors(wishPatchInput.safeParse({ title: 'x'.repeat(201) }).error!)).toEqual({ title: 'title_too_long' })
+  })
+
   it('accepts http and https links only', () => {
     expect(wish({ urls: ['https://example.test/x', 'http://example.test/y'] }).success).toBe(true)
     for (const bad of ['javascript:alert(1)', 'data:text/html,x', 'example.test', '', '   ']) {

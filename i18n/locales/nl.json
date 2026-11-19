@@ -641,6 +641,7 @@
   "fields": {
     "required": "Vul dit in.",
     "too_long": "Dat is te lang.",
+    "title_too_long": "Een titel kan 200 tekens lang zijn. Meer uitleg zet je in de beschrijving van de wens.",
     "invalid_email": "Dat is geen geldig e-mailadres.",
     "password_short": "Kies een wachtwoord van minstens 8 tekens.",
     "invalid_url": "Begin de link met http:// of https://.",

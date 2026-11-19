@@ -187,7 +187,7 @@ defineExpose({ settle })
         <template v-if="ownWish">
           <!-- The card keeps a heading while its visible title is a field. -->
           <h3 class="visually-hidden">{{ wish.title }}</h3>
-          <EditableText class="wish-title-edit" :value="wish.title" :label="t('edit.title')" :save="saveTitle" :maxlength="120" />
+          <EditableText class="wish-title-edit" :value="wish.title" :label="t('edit.title')" :save="saveTitle" :maxlength="WISH_TITLE_MAX" :over-limit="t('fields.title_too_long')" />
         </template>
         <h3 v-else class="wish-card-title">{{ wish.title }}</h3>
         <div v-if="cardAmount || removed || cardOwnerTag" class="wish-tags">

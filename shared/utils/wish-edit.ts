@@ -10,6 +10,9 @@ export type WishChange = Partial<Pick<PublicWish, WishTextField | 'quantity' | '
 /** How many links a wish can have. */
 export const MAX_LINKS = 5
 
+/** How long a wish's title can be. What doesn't fit belongs in its description. */
+export const WISH_TITLE_MAX = 200
+
 /** The saved text a field shows, and what Escape puts back. */
 export function savedText(wish: Pick<PublicWish, WishTextField>, field: WishTextField): string {
   return wish[field] ?? ''
