@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { eq, isNull } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import type { Db } from '../server/db/client'
+import type { BuyerWish } from '../shared/schemas/list'
 import { linkChanges, listOwners, lists, notes, users, wishes, wishLinks } from '../server/db/schema'
 import { deleteAccount, logIn, logInWithGoogle, register, type Identity } from '../server/domain/accounts'
 import { getListView } from '../server/domain/list-view'
@@ -82,20 +83,19 @@ describe('deleting an account', () => {
     addNote(db, mom.first, book.id, lot.id, 'Ik neem de derde.')
     await remove(art)
     expect(purchaseRows(db, book.id)).toEqual([{ userId: lot.id, quantity: 1 }])
-    expect(db.select({ body: notes.body, userId: notes.userId }).from(notes).orderBy(notes.createdAt).all()).toEqual([
+    // Both notes were written in the same moment, so they are looked up by what they say.
+    expect(db.select({ body: notes.body, userId: notes.userId }).from(notes).orderBy(notes.body).all()).toEqual([
       { body: 'Ik haal ze in de stad.', userId: null },
       { body: 'Ik neem de derde.', userId: lot.id },
     ])
     // Mom's own page is as it was, and Lotte sees room for two again.
     expect(wishIn(getListView(db, mom.first, mom.id), book.id)).toMatchObject({ role: 'owner', mine: 0 })
-    expect(wishIn(getListView(db, mom.first, lot.id), book.id)).toMatchObject({
-      bought: 1,
-      purchases: [{ name: 'Lotte', quantity: 1 }],
-      notes: [
-        { author: null, body: 'Ik haal ze in de stad.', mine: false },
-        { author: 'Lotte', body: 'Ik neem de derde.', mine: true },
-      ],
-    })
+    const forLotte = wishIn(getListView(db, mom.first, lot.id), book.id) as BuyerWish
+    expect(forLotte).toMatchObject({ bought: 1, purchases: [{ name: 'Lotte', quantity: 1 }] })
+    expect(forLotte.notes.map(({ author, body, mine }) => ({ author, body, mine })).sort((a, b) => a.body.localeCompare(b.body))).toEqual([
+      { author: null, body: 'Ik haal ze in de stad.', mine: false },
+      { author: 'Lotte', body: 'Ik neem de derde.', mine: true },
+    ])
   })
 
   it('leaves a list it shares to the other owners, with its wishes', async () => {
