@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { friendLinks, friendRequests, friendships } from '../server/db/schema'
+import { friendLinks, friendRequests, friendships, listFriends as shownRows } from '../server/db/schema'
 import {
-  acceptFriendLink, answerRequest, areFriends, askFriend, countFreshRequests, FRIEND_LINK_DAYS, getFriendLink, listRequests,
-  makeFriendLink, markRequestsSeen, MAX_FRIENDS, MAX_OPEN_FRIEND_LINKS, MAX_WAITING_REQUESTS, removeFriend, withdrawRequest,
+  acceptFriendLink, answerRequest, areFriends, askFriend, countFreshRequests, FRIEND_LINK_DAYS, getFriendLink, hideShownList,
+  isShownTo, listFriends, listFriendsForList, listRequests, listShownLists, makeFriendLink, markRequestsSeen, MAX_FRIENDS,
+  MAX_OPEN_FRIEND_LINKS, MAX_WAITING_REQUESTS, removeFriend, setShownLists, setShownTo, withdrawRequest,
 } from '../server/domain/friends'
 import { LIST_TOKEN } from '../server/domain/tokens'
-import { deleteList, relinkList } from '../server/domain/lists'
+import { deleteList, leaveList, ownedListId, relinkList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
-import { deleteUser } from '../server/domain/users'
+import { createUser, deleteUser } from '../server/domain/users'
+import { listOpenedLists, rememberList } from '../server/domain/visits'
 import { addList, addOwner, addUser, codeOf, makeDb } from './helpers'
 
 // A clock that only moves when a test moves it, so "newest first" never depends on two actions
@@ -292,6 +294,222 @@ describe('a friend link', () => {
     const { token } = makeFriendLink(db, art.id)
     deleteUser(db, art.id)
     expect(getFriendLink(db, token, mom.id)).toBeUndefined()
+  })
+})
+
+describe('showing a list to a friend', () => {
+  /** Art and Mom are friends, and so are Lotte and Mom. */
+  function friends() {
+    const world = setup()
+    const { db, art, lot, mom, kerst } = world
+    befriend(db, mom.id, kerst, art.id)
+    befriend(db, mom.id, addList(db, lot.id, 'Lijst van lot'), lot.id)
+    return world
+  }
+  const shownTo = (db: ReturnType<typeof makeDb>, userId: number) => listShownLists(db, userId).map(list => list.title)
+  const shownNotices = (db: ReturnType<typeof makeDb>, userId: number) => listNotices(db, userId).filter(notice => notice.kind === 'list_shown')
+
+  it('shows nothing just by being friends', () => {
+    const { db, art, mom } = friends()
+    expect(listShownLists(db, mom.id)).toEqual([])
+    expect(listShownLists(db, art.id)).toEqual([])
+    expect(listFriends(db, art.id)).toMatchObject([{ id: mom.id, name: 'Mom', shows: [{ title: 'Kerst', shown: false }], sees: [] }])
+  })
+
+  it('puts a ticked list on the friend\'s page and tells them, and takes both away again without a word', () => {
+    const { db, art, mom, kerst, momList } = friends()
+    setShownLists(db, art.id, mom.id, [kerst])
+    expect(listShownLists(db, mom.id)).toEqual([{ token: kerst, title: 'Kerst', owners: ['Art'], by: ['Art'] }])
+    expect(shownNotices(db, mom.id)).toMatchObject([{ actor: 'Art', title: 'Kerst', token: kerst }])
+    expect(listFriends(db, art.id)).toMatchObject([{ id: mom.id, shows: [{ token: kerst, title: 'Kerst', shown: true }], sees: [] }])
+    expect(listFriends(db, mom.id).find(friend => friend.id === art.id)).toMatchObject({
+      name: 'Art',
+      shows: [{ token: momList, shown: false }],
+      sees: [{ token: kerst, title: 'Kerst' }],
+    })
+    expect(isShownTo(db, mom.id, ownedListId(db, art.id, kerst))).toBe(true)
+    // Showing is one way: Art sees nothing of Mom's.
+    expect(listShownLists(db, art.id)).toEqual([])
+    // Ticking it again changes nothing and says nothing more.
+    setShownLists(db, art.id, mom.id, [kerst])
+    expect(shownNotices(db, mom.id)).toHaveLength(1)
+
+    const before = listNotices(db, art.id).length
+    setShownLists(db, art.id, mom.id, [])
+    expect(listShownLists(db, mom.id)).toEqual([])
+    expect(shownNotices(db, mom.id)).toEqual([])
+    expect(listNotices(db, art.id)).toHaveLength(before)
+    expect(isShownTo(db, mom.id, ownedListId(db, art.id, kerst))).toBe(false)
+  })
+
+  it('ticks friends from the list as well', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    befriend(db, lot.id, kerst, art.id)
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([
+      { id: lot.id, name: 'Lot', shown: false },
+      { id: mom.id, name: 'Mom', shown: false },
+    ])
+    setShownTo(db, art.id, kerst, [mom.id, lot.id])
+    expect(shownTo(db, mom.id)).toEqual(['Kerst'])
+    expect(shownTo(db, lot.id)).toEqual(['Kerst'])
+    setShownTo(db, art.id, kerst, [lot.id])
+    expect(shownTo(db, mom.id)).toEqual([])
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([
+      { id: lot.id, name: 'Lot', shown: true },
+      { id: mom.id, name: 'Mom', shown: false },
+    ])
+  })
+
+  it('is only for a list of your own and a friend of your own', () => {
+    const { db, art, lot, mom, kerst, momList } = friends()
+    // Art and Lotte are no friends; Mom's list isn't Art's.
+    expect(codeOf(() => setShownLists(db, art.id, lot.id, [kerst]))).toBe('not_friends')
+    expect(codeOf(() => setShownTo(db, art.id, kerst, [lot.id]))).toBe('not_friends')
+    expect(codeOf(() => setShownLists(db, art.id, mom.id, [momList]))).toBe('not_found')
+    expect(codeOf(() => setShownTo(db, art.id, momList, [mom.id]))).toBe('not_found')
+    expect(codeOf(() => listFriendsForList(db, art.id, momList))).toBe('not_found')
+    expect(codeOf(() => setShownLists(db, art.id, mom.id, [kerst, 'no-such-list-token-000']))).toBe('not_found')
+    expect(db.select().from(shownRows).all()).toEqual([])
+  })
+
+  it('keeps each owner\'s ticks apart on a joint list', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    addOwner(db, kerst, lot.id)
+    setShownTo(db, art.id, kerst, [mom.id])
+    later()
+    setShownTo(db, lot.id, kerst, [mom.id])
+    expect(listShownLists(db, mom.id)).toMatchObject([{ title: 'Kerst', owners: ['Art', 'Lot'], by: ['Art', 'Lot'] }])
+    // Each sees only their own friends there, and unticks only their own tick.
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    setShownTo(db, art.id, kerst, [])
+    expect(listShownLists(db, mom.id)).toMatchObject([{ title: 'Kerst', by: ['Lot'] }])
+    expect(listFriendsForList(db, lot.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    setShownTo(db, lot.id, kerst, [])
+    expect(listShownLists(db, mom.id)).toEqual([])
+  })
+
+  it('never lists a list under a friend who owns it', () => {
+    const { db, art, mom, kerst } = friends()
+    setShownTo(db, art.id, kerst, [mom.id])
+    addOwner(db, kerst, mom.id)
+    expect(listShownLists(db, mom.id)).toEqual([])
+    // Ticking an owner does nothing: the list is theirs already.
+    setShownTo(db, art.id, kerst, [mom.id])
+    // She leaves; Art still ticks it for her, so it is shown again.
+    leaveList(db, mom.id, kerst)
+    expect(shownTo(db, mom.id)).toEqual(['Kerst'])
+    setShownTo(db, art.id, kerst, [])
+    expect(shownTo(db, mom.id)).toEqual([])
+  })
+
+  it('stops when the owner who showed it leaves the list, and when the list is deleted', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    addOwner(db, kerst, lot.id)
+    setShownTo(db, lot.id, kerst, [mom.id])
+    expect(shownTo(db, mom.id)).toEqual(['Kerst'])
+    leaveList(db, lot.id, kerst)
+    expect(shownTo(db, mom.id)).toEqual([])
+    expect(db.select().from(shownRows).all()).toEqual([])
+    // What she was told about it goes too: it would point at nothing.
+    expect(shownNotices(db, mom.id)).toEqual([])
+    setShownTo(db, art.id, kerst, [mom.id])
+    expect(shownNotices(db, mom.id)).toHaveLength(1)
+    deleteList(db, art.id, kerst)
+    expect(shownTo(db, mom.id)).toEqual([])
+    expect(db.select().from(shownRows).all()).toEqual([])
+    expect(shownNotices(db, mom.id)).toEqual([])
+  })
+
+  it('follows a list to its new link', () => {
+    const { db, art, mom, kerst } = friends()
+    setShownTo(db, art.id, kerst, [mom.id])
+    const { token } = relinkList(db, art.id, kerst)
+    expect(listShownLists(db, mom.id)).toMatchObject([{ token, title: 'Kerst' }])
+    expect(shownNotices(db, mom.id)).toMatchObject([{ token }])
+  })
+
+  it('lets the friend take a shown list off their own page, without the owner knowing', () => {
+    const { db, art, mom, kerst } = friends()
+    setShownTo(db, art.id, kerst, [mom.id])
+    const before = listNotices(db, art.id).length
+    hideShownList(db, mom.id, kerst)
+    expect(listShownLists(db, mom.id)).toEqual([])
+    expect(listFriends(db, mom.id).find(friend => friend.id === art.id)!.sees).toEqual([])
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([{ id: mom.id, name: 'Mom', shown: true }])
+    expect(listNotices(db, art.id)).toHaveLength(before)
+    expect(codeOf(() => hideShownList(db, mom.id, kerst))).toBe('not_found')
+    expect(codeOf(() => hideShownList(db, art.id, kerst))).toBe('not_found')
+    // Ticking it again by itself changes nothing; unticking and ticking shows it anew.
+    setShownTo(db, art.id, kerst, [mom.id])
+    expect(listShownLists(db, mom.id)).toEqual([])
+    setShownTo(db, art.id, kerst, [])
+    setShownTo(db, art.id, kerst, [mom.id])
+    expect(shownTo(db, mom.id)).toEqual(['Kerst'])
+  })
+
+  it('tells two friends with the same name apart', () => {
+    const { db, art, mom, kerst } = friends()
+    const other = createUser(db, { email: 'mom2@example.test', displayName: 'Mom', passwordHash: 'not-a-real-hash' })
+    befriend(db, other.id, kerst, art.id)
+    expect(listFriendsForList(db, art.id, kerst)).toEqual([
+      { id: mom.id, name: 'Mom', shown: false },
+      { id: other.id, name: 'Mom', shown: false },
+    ])
+    setShownTo(db, art.id, kerst, [other.id])
+    expect(shownTo(db, other.id)).toEqual(['Kerst'])
+    expect(shownTo(db, mom.id)).toEqual([])
+    expect(listFriends(db, art.id).map(friend => [friend.id, friend.shows.find(list => list.token === kerst)!.shown])).toEqual([[mom.id, false], [other.id, true]])
+  })
+
+  it('lists the newest tick first', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    setShownTo(db, art.id, kerst, [mom.id])
+    later()
+    const lotList = listFriends(db, lot.id)[0]!.shows[0]!.token
+    setShownLists(db, lot.id, mom.id, [lotList])
+    expect(shownTo(db, mom.id)).toEqual(['Lijst van lot', 'Kerst'])
+  })
+
+  it('is not also a visited list while it is shown', () => {
+    const { db, art, mom, kerst } = friends()
+    rememberList(db, mom.id, kerst)
+    expect(listOpenedLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
+    setShownTo(db, art.id, kerst, [mom.id])
+    expect(listOpenedLists(db, mom.id)).toEqual([])
+    // She had opened its link herself before, so it is a visited list again once it isn't shown.
+    setShownTo(db, art.id, kerst, [])
+    expect(listOpenedLists(db, mom.id).map(list => list.title)).toEqual(['Kerst'])
+  })
+
+  it('ends with the friendship, and nothing comes back when they are friends again', () => {
+    const { db, art, mom, kerst, momList } = friends()
+    setShownTo(db, art.id, kerst, [mom.id])
+    setShownTo(db, mom.id, momList, [art.id])
+    removeFriend(db, mom.id, art.id)
+    expect(listShownLists(db, mom.id)).toEqual([])
+    expect(listShownLists(db, art.id)).toEqual([])
+    expect(shownNotices(db, mom.id)).toEqual([])
+    expect(shownNotices(db, art.id)).toEqual([])
+    expect(db.select().from(shownRows).all()).toEqual([])
+    befriend(db, art.id, momList, mom.id)
+    expect(listShownLists(db, mom.id)).toEqual([])
+    expect(listShownLists(db, art.id)).toEqual([])
+    expect(listFriends(db, art.id).find(friend => friend.id === mom.id)).toMatchObject({ shows: [{ title: 'Kerst', shown: false }], sees: [] })
+  })
+
+  it('goes with a deleted account, on either side', () => {
+    const { db, art, lot, mom, kerst } = friends()
+    const lotList = listFriends(db, lot.id)[0]!.shows[0]!.token
+    setShownTo(db, art.id, kerst, [mom.id])
+    setShownLists(db, lot.id, mom.id, [lotList])
+    // The owner goes: the list stays at its link, nobody's, and is shown to no friend.
+    deleteUser(db, art.id)
+    expect(shownTo(db, mom.id)).toEqual(['Lijst van lot'])
+    expect(listFriends(db, mom.id).map(friend => friend.name)).toEqual(['Lot'])
+    // The friend goes: the owner's page has no trace of her.
+    deleteUser(db, mom.id)
+    expect(listFriends(db, lot.id)).toEqual([])
+    expect(db.select().from(shownRows).all()).toEqual([])
   })
 })
 

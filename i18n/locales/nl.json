@@ -47,6 +47,7 @@
     "list_relinked": "{actor} gaf “{title}” een nieuwe link. De oude werkt niet meer.",
     "friend_accepted": "{actor} en jij zijn nu vrienden.",
     "friend_link_used": "{actor} gebruikte je vriendenlink. Jullie zijn nu vrienden.",
+    "list_shown": "{actor} laat je de lijst “{title}” zien. Je vindt hem bij je lijsten.",
     "undo": "Ongedaan maken",
     "dismiss": "Sluiten",
     "view": "Bekijken",

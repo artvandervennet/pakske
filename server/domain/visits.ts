@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { listOwners, listVisits, lists, users } from '../db/schema'
 import type { OpenedList } from '../../shared/schemas/list'
+import { shownListIds } from './friends'
 
 /** A list by its token, deleted or not, with whether this person owns it. Undefined when no list has the token. */
 function findList(db: Db, userId: number, token: string) {
@@ -65,7 +66,9 @@ export function listOpenedLists(db: Db, userId: number): OpenedList[] {
   // Opening a list of your own is remembered too, and a list can become yours after you opened
   // it. Either way it is under your own lists, deleted ones included, and not here.
   const owned = new Set(db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, userId)).all().map(r => r.listId))
-  return toOpened(db, rows.filter(row => !owned.has(row.id)))
+  // A list a friend shows the person is under "from friends" while it is shown, not here as well.
+  const shown = shownListIds(db, userId)
+  return toOpened(db, rows.filter(row => !owned.has(row.id) && !shown.has(row.id)))
 }
 
 /** Describes lists by token, in the given order. Tokens that match no list are skipped. */

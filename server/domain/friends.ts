@@ -1,7 +1,9 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm'
+import type { ShownList } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { friendLinks, friendRequests, friendships, listOwners, lists, users } from '../db/schema'
+import { friendLinks, friendRequests, friendships, listFriends as shown, listOwners, lists, notices, users } from '../db/schema'
 import { DomainError } from './errors'
+import { ownedListId, ownersOfList } from './lists'
 import { addNotice } from './notices'
 import { newListToken } from './tokens'
 
@@ -237,10 +239,172 @@ export function acceptFriendLink(db: Db, userId: number, token: string): { frien
   }, { behavior: 'immediate' })
 }
 
-/** Stops two people being friends. Nobody is told. */
+// ── Showing lists ──────────────────────────────────────────────────────────
+// A friend finds a list on their own Lists page when one of its owners ticked it for them. That
+// is all a tick does: it is no key, the list's link opens it for anyone.
+
+/** The person's friends, by name; two with the same name by who became an account first. */
+function friendsOf(db: Db, userId: number): { id: number, name: string }[] {
+  const pairs = db.select().from(friendships)
+    .where(or(eq(friendships.userLow, userId), eq(friendships.userHigh, userId))).all()
+  const ids = pairs.map(pair => (pair.userLow === userId ? pair.userHigh : pair.userLow))
+  if (ids.length === 0) return []
+  return db.select({ id: users.id, name: users.displayName }).from(users)
+    .where(inArray(users.id, ids))
+    .orderBy(asc(users.displayName), asc(users.id))
+    .all()
+}
+
+/** The person's live lists, oldest first. */
+function ownLists(db: Db, userId: number): { id: number, token: string, title: string }[] {
+  return db.select({ id: lists.id, token: lists.token, title: lists.title }).from(lists)
+    .innerJoin(listOwners, eq(listOwners.listId, lists.id))
+    .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
+    .orderBy(asc(lists.id))
+    .all()
+}
+
+const tickOf = (listId: number, friendId: number, ownerId: number) =>
+  and(eq(shown.listId, listId), eq(shown.userId, friendId), eq(shown.shownBy, ownerId))
+const toldOf = (listId: number, friendId: number, ownerId: number) =>
+  and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId), eq(notices.userId, friendId), eq(notices.actorId, ownerId))
+
+/**
+ * Sets one owner's tick of one list for one friend. A new tick tells the friend; taking one away
+ * takes that notice along and tells nobody. A friend who owns the list is not ticked: it is on
+ * their own lists already. Runs in the caller's transaction.
+ */
+function tick(db: Db, ownerId: number, list: { id: number, title: string }, friendId: number, on: boolean): void {
+  const has = db.select({ listId: shown.listId }).from(shown).where(tickOf(list.id, friendId, ownerId)).get() !== undefined
+  if (on && !has) {
+    const theirs = db.select({ userId: listOwners.userId }).from(listOwners)
+      .where(and(eq(listOwners.listId, list.id), eq(listOwners.userId, friendId))).get() !== undefined
+    if (theirs) return
+    db.insert(shown).values({ listId: list.id, userId: friendId, shownBy: ownerId }).run()
+    addNotice(db, { userId: friendId, kind: 'list_shown', actorId: ownerId, title: list.title, listId: list.id })
+  }
+  if (!on && has) {
+    db.delete(shown).where(tickOf(list.id, friendId, ownerId)).run()
+    db.delete(notices).where(toldOf(list.id, friendId, ownerId)).run()
+  }
+}
+
+/** Which of the person's own lists one friend finds: exactly these. */
+export function setShownLists(db: Db, ownerId: number, friendId: number, listTokens: string[]): void {
+  db.transaction((tx) => {
+    if (!areFriends(tx, ownerId, friendId)) throw new DomainError('not_friends')
+    const chosen = new Set(listTokens.map(token => ownedListId(tx, ownerId, token)))
+    for (const list of ownLists(tx, ownerId)) tick(tx, ownerId, list, friendId, chosen.has(list.id))
+  }, { behavior: 'immediate' })
+}
+
+/** The person's friends, each with whether they find this list of the person's own. */
+export function listFriendsForList(db: Db, ownerId: number, listToken: string): { id: number, name: string, shown: boolean }[] {
+  const listId = ownedListId(db, ownerId, listToken)
+  const ticked = new Set(db.select({ userId: shown.userId }).from(shown)
+    .where(and(eq(shown.listId, listId), eq(shown.shownBy, ownerId))).all().map(row => row.userId))
+  return friendsOf(db, ownerId).map(friend => ({ ...friend, shown: ticked.has(friend.id) }))
+}
+
+/** Which of the person's friends find this list of the person's own: exactly these. */
+export function setShownTo(db: Db, ownerId: number, listToken: string, friendIds: number[]): void {
+  db.transaction((tx) => {
+    const listId = ownedListId(tx, ownerId, listToken)
+    const list = tx.select({ id: lists.id, title: lists.title }).from(lists).where(eq(lists.id, listId)).get()!
+    const friends = friendsOf(tx, ownerId)
+    const chosen = new Set(friendIds)
+    if ([...chosen].some(id => !friends.some(friend => friend.id === id))) throw new DomainError('not_friends')
+    for (const friend of friends) tick(tx, ownerId, list, friend.id, chosen.has(friend.id))
+  }, { behavior: 'immediate' })
+}
+
+/**
+ * Every tick that puts a list on this person's page now: not one they took off themselves, of a
+ * list that exists, by someone who still owns it and is still their friend, and never a list
+ * they own themselves. Oldest tick first.
+ */
+function ticksFor(db: Db, userId: number) {
+  const mine = new Set(db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, userId)).all().map(row => row.listId))
+  return db.select({ listId: lists.id, token: lists.token, title: lists.title, by: shown.shownBy, name: users.displayName, addedAt: shown.addedAt })
+    .from(shown)
+    .innerJoin(lists, eq(lists.id, shown.listId))
+    .innerJoin(listOwners, and(eq(listOwners.listId, lists.id), eq(listOwners.userId, shown.shownBy)))
+    .innerJoin(users, eq(users.id, shown.shownBy))
+    .where(and(eq(shown.userId, userId), isNull(shown.hiddenAt), isNull(lists.deletedAt)))
+    .orderBy(asc(shown.addedAt), asc(shown.shownBy))
+    .all()
+    .filter(row => !mine.has(row.listId) && areFriends(db, userId, row.by))
+}
+
+/** The lists friends show this person, the one ticked last first. */
+export function listShownLists(db: Db, userId: number): ShownList[] {
+  const byList = new Map<number, { token: string, title: string, by: string[], last: number }>()
+  for (const row of ticksFor(db, userId)) {
+    const list = byList.get(row.listId) ?? { token: row.token, title: row.title, by: [], last: 0 }
+    list.by.push(row.name)
+    list.last = Math.max(list.last, row.addedAt.getTime())
+    byList.set(row.listId, list)
+  }
+  return [...byList.entries()]
+    .sort(([aId, a], [bId, b]) => b.last - a.last || bId - aId)
+    .map(([listId, list]) => ({ token: list.token, title: list.title, owners: ownersOfList(db, listId).map(owner => owner.name), by: list.by }))
+}
+
+/** The ids of the lists friends show this person now. */
+export function shownListIds(db: Db, userId: number): Set<number> {
+  return new Set(ticksFor(db, userId).map(row => row.listId))
+}
+
+export function isShownTo(db: Db, userId: number, listId: number): boolean {
+  return shownListIds(db, userId).has(listId)
+}
+
+/**
+ * The friend takes a shown list off their own page. Every owner's tick for them is marked, and
+ * stays: the owners aren't told, and see their tick as it was. It shows again when an owner
+ * unticks and ticks it anew.
+ */
+export function hideShownList(db: Db, userId: number, listToken: string): void {
+  db.transaction((tx) => {
+    const visible = ticksFor(tx, userId).filter(row => row.token === listToken)
+    if (visible.length === 0) throw new DomainError('not_found')
+    tx.update(shown).set({ hiddenAt: new Date() })
+      .where(and(eq(shown.listId, visible[0]!.listId), eq(shown.userId, userId))).run()
+  }, { behavior: 'immediate' })
+}
+
+export interface FriendView {
+  id: number
+  name: string
+  /** Every live list of the asker's own, with whether this friend finds it. */
+  shows: { token: string, title: string, shown: boolean }[]
+  /** The lists this friend shows the asker, without the ones the asker took off their page. */
+  sees: { token: string, title: string }[]
+}
+
+/** The person's friends, with what goes each way. Nothing here is about anyone else's friends. */
+export function listFriends(db: Db, userId: number): FriendView[] {
+  const own = ownLists(db, userId)
+  const given = db.select({ listId: shown.listId, friendId: shown.userId }).from(shown).where(eq(shown.shownBy, userId)).all()
+  const got = ticksFor(db, userId)
+  return friendsOf(db, userId).map(friend => ({
+    ...friend,
+    shows: own.map(list => ({ token: list.token, title: list.title, shown: given.some(row => row.listId === list.id && row.friendId === friend.id) })),
+    sees: got.filter(row => row.by === friend.id).map(row => ({ token: row.token, title: row.title })),
+  }))
+}
+
+/**
+ * Stops two people being friends. Nobody is told. What each showed the other goes with it, and
+ * what they were told about that; if they become friends again, they start with nothing ticked.
+ */
 export function removeFriend(db: Db, userId: number, friendId: number): void {
   db.transaction((tx) => {
     const gone = tx.delete(friendships).where(isPair(userId, friendId)).returning({ userLow: friendships.userLow }).get()
     if (!gone) throw new DomainError('not_friends')
+    for (const [owner, friend] of [[userId, friendId], [friendId, userId]] as const) {
+      tx.delete(shown).where(and(eq(shown.shownBy, owner), eq(shown.userId, friend))).run()
+      tx.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.actorId, owner), eq(notices.userId, friend))).run()
+    }
   }, { behavior: 'immediate' })
 }

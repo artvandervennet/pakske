@@ -233,6 +233,21 @@ export const friendLinks = sqliteTable('friend_links', {
   index('friend_links_maker_idx').on(t.createdBy),
 ])
 
+// An owner shows one of their lists to a friend: it is then on that friend's Lists page without
+// a link being sent. It is not a key: the list opens for anyone who has its link, tick or no
+// tick. Each owner of a joint list ticks their own friends, so the owner is part of the key.
+// `hiddenAt` is the friend taking the list off their own page; the owner isn't told.
+export const listFriends = sqliteTable('list_friends', {
+  listId: integer('list_id').notNull().references(() => lists.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  shownBy: integer('shown_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  addedAt: addedAt(),
+  hiddenAt: integer('hidden_at', { mode: 'timestamp_ms' }),
+}, t => [
+  primaryKey({ columns: [t.listId, t.userId, t.shownBy] }),
+  index('list_friends_user_idx').on(t.userId),
+])
+
 export const notices = sqliteTable('notices', {
   // Random, like note ids, so the numbers say nothing about notices for other people.
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

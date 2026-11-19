@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listOwners, lists, listWishes, notices, users, wishes, wishLinks } from '../db/schema'
+import { listFriends, listOwners, lists, listWishes, notices, users, wishes, wishLinks } from '../db/schema'
 import type { NoticeKind, NoticeView } from '../../shared/schemas/list'
 import { onListNow } from './placement'
 
@@ -30,7 +30,7 @@ export function listNotices(db: Db, userId: number): NoticeView[] {
     .orderBy(desc(notices.createdAt), desc(sql`${notices}.rowid`))
     .all()
   return rows.map(({ notice, actor }) => {
-    const token = noticeToken(db, userId, notice.wishId, notice.listId)
+    const token = notice.kind === 'list_shown' ? shownToken(db, userId, notice.listId) : noticeToken(db, userId, notice.wishId, notice.listId)
     const undoable = notice.kind === 'wish_linked' && token !== null && notice.wishId !== null
       && db.select({ id: wishLinks.id }).from(wishLinks)
         .where(and(eq(wishLinks.wishId, notice.wishId), eq(wishLinks.userId, notice.actorId))).get() !== undefined
@@ -73,6 +73,20 @@ function noticeToken(db: Db, userId: number, wishId: number | null, listId: numb
     if (own) return own.token
   }
   return null
+}
+
+/**
+ * Where a "shows you this list" notice leads: the list, while a friend who owns it still shows
+ * it to the recipient and they haven't taken it off their page.
+ */
+function shownToken(db: Db, userId: number, listId: number | null): string | null {
+  if (listId === null) return null
+  const shown = db.select({ token: lists.token }).from(listFriends)
+    .innerJoin(lists, eq(lists.id, listFriends.listId))
+    .innerJoin(listOwners, and(eq(listOwners.listId, lists.id), eq(listOwners.userId, listFriends.shownBy)))
+    .where(and(eq(listFriends.listId, listId), eq(listFriends.userId, userId), isNull(listFriends.hiddenAt), isNull(lists.deletedAt)))
+    .get()
+  return shown?.token ?? null
 }
 
 export function countUnseen(db: Db, userId: number): number {

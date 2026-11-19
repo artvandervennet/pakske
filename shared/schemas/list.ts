@@ -122,6 +122,16 @@ export interface OpenedList {
   deleted: boolean
 }
 
+/** A list a friend shows this person, so it is on their Lists page without a link being sent. */
+export interface ShownList {
+  token: string
+  title: string
+  /** Display names of the list's owners. */
+  owners: string[]
+  /** Display names of the friends who show it, the first to do so first. */
+  by: string[]
+}
+
 /** The person's own lists, for choosing where a wish lands. */
 export interface MyLists {
   /** Oldest first. */
@@ -160,7 +170,7 @@ export interface InviteView {
   mine: MyLists
 }
 
-export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used'
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown'
 
 /** A notice as its recipient gets it. Notices are about owners and lists, never about buyers. */
 export interface NoticeView {

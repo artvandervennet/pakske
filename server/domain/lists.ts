@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, isNull, max, notInArray, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { listOldTokens, listOwners, lists, listVisits, listWishes, users, wishes } from '../db/schema'
+import { listFriends, listOldTokens, listOwners, lists, listVisits, listWishes, notices, users, wishes } from '../db/schema'
 import type { ListTarget } from '../../shared/schemas/input'
 import type { MyLists, OwnedList } from '../../shared/schemas/list'
 import { DomainError } from './errors'
@@ -96,6 +96,9 @@ export function deleteList(db: Db, userId: number, token: string): void {
     if (ownersOfList(tx, listId).length > 1) throw new DomainError('list_shared')
     for (const wishId of wishesMarkedOn(tx, listId)) takeOffList(tx, listId, wishId)
     tx.update(lists).set({ deletedAt: new Date() }).where(eq(lists.id, listId)).run()
+    // Nobody is shown a list that is gone, and what friends were told about it would lead nowhere.
+    tx.delete(listFriends).where(eq(listFriends.listId, listId)).run()
+    tx.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId))).run()
   }, { behavior: 'immediate' })
 }
 
@@ -108,6 +111,9 @@ export function leaveList(db: Db, userId: number, token: string): void {
     const listId = ownedListId(tx, userId, token)
     if (ownersOfList(tx, listId).length === 1) throw new DomainError('last_owner')
     tx.delete(listOwners).where(and(eq(listOwners.listId, listId), eq(listOwners.userId, userId))).run()
+    // What they showed their friends was theirs to show; the other owners' ticks stay.
+    tx.delete(listFriends).where(and(eq(listFriends.listId, listId), eq(listFriends.shownBy, userId))).run()
+    tx.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId), eq(notices.actorId, userId))).run()
     settleOwners(tx, wishesMarkedOn(tx, listId))
   }, { behavior: 'immediate' })
 }
