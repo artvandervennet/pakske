@@ -5,7 +5,8 @@ import type { WishView } from '#shared/schemas/list'
 // keeps which rows are open, so several can be open at once and they stay open when the list
 // refreshes.
 //
-// Folded, it is the tick, the small picture, the title with a line of detail, and the tags. A
+// Folded, it is the tick, the small picture, the title with a line of detail, the tags, and at
+// the far end a chevron, which stands where the opened card's own chevron does. A
 // wish the viewer gives is marked as theirs: an edge in the accent at the row's start and
 // their part of the line on a yellow tape; it is never greyed. A wish that others took fully
 // is greyed and crossed out (isCrossedOut).
@@ -177,6 +178,9 @@ defineExpose({ settle })
         <art-tape v-if="ownerTag" class="wish-owner-tag" :seed="`owners-${wish.id}`">{{ ownerTag }}</art-tape>
         <art-tape v-if="amount" :seed="`wish-${wish.id}`">{{ amount }}</art-tape>
       </div>
+      <!-- Says the row opens, at the far end where the opened card has the chevron that folds
+           it. Not in edit mode, where the row doesn't open and the handle stands there. -->
+      <span v-if="!editMode" class="wish-chevron"><AppIcon name="chevron" /></span>
       <slot name="end" />
       <!-- A refused tick, on a line of its own under the row. -->
       <p v-if="tick.message" :id="tick.messageId" class="wish-tick-message" role="alert">{{ tick.message }}</p>

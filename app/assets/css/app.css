@@ -470,14 +470,18 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
 /* A long word breaks with a hyphen where the language has one, and anywhere where it doesn't.
    A short one moves to the next line whole. */
 .wish-title { font-weight: var(--weight-medium); hyphens: auto; hyphenate-limit-chars: 12 4 4; overflow-wrap: anywhere; }
-/* A chevron right after the title, where the eye already is: it says the row opens. It is a
-   no-break space with the chevron cut out of its colour, so it stays on the line of the
-   title's last word and never wraps to a line of its own. */
-.wish-title::after {
-  content: "\00a0";
-  padding-inline-start: 1.15em;
-  background: var(--ink-muted);
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat 100% 55% / 0.8em;
+/* A chevron at the row's far end says the row opens. It stands where the card's own chevron
+   stands once the row is open, so it turns over in place: the card reaches var(--space-3)
+   past the list and has var(--space-2) of padding, and its chevron sits in the middle of a
+   2.75rem square (.wish-fold-face). This box is that square less what the card sticks out on
+   both sides, so both chevrons have the same middle. It is a drawing under the row's button,
+   like the picture: a press on it opens the row. */
+.wish-chevron {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: calc(2.75rem - 2 * (var(--space-3) - var(--space-2)));
+  color: var(--ink-muted);
 }
 /* The line under the title stays one line, cut off with an ellipsis where the row ends. */
 .wish-line {
@@ -1266,9 +1270,8 @@ html:has(.joint-bar) art-header::part(drips) { display: none; }
 /* The bar's count takes the focus after a delete; it is text, so no ring around it. */
 .joint-bar-count:focus { outline: none; }
 
-/* Edit mode: a row is the label of its box, without the chevron that says it opens. A chosen
-   row is marked across its whole width. */
-.wish-row.edit-mode .wish-title::after { display: none; }
+/* Edit mode: a row is the label of its box, without the chevron that says it opens (WishRow
+   leaves it out). A chosen row is marked across its whole width. */
 /* On a list of yours, holding a row starts edit mode: no text selection, no phone menu and no
    dragging the picture out. Fields in the row stay selectable. */
 .wish-list.manageable .wish-head {
@@ -1461,5 +1464,4 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
   .tick-count:focus-visible .tick-count-number { outline: 3px solid CanvasText; outline-offset: 2px; }
   .tick-count.on .tick-count-number { outline-color: Highlight; outline-width: 3px; outline-offset: -3px; }
   .wish-row.mine:not(.open) { border-inline-start: 4px solid Highlight; }
-  .wish-title::after { forced-color-adjust: none; background: CanvasText; }
 }
