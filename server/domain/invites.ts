@@ -1,9 +1,10 @@
 import { and, asc, eq, gt, inArray, isNull, or } from 'drizzle-orm'
 import type { InviteInput, ListTarget } from '../../shared/schemas/input'
-import type { InviteView } from '../../shared/schemas/list'
+import type { InviteView, NoticeKind } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
 import { invites, inviteUses, inviteWishes, listOwners, lists, listWishes, users, wishes } from '../db/schema'
 import { DomainError } from './errors'
+import { areFriends } from './friends'
 import { assertListRoom, listMyLists, ownedListId, ownersOfList, targetListId, wishesMarkedOn } from './lists'
 import { addNotice } from './notices'
 import { assertRoom, onListNow, ownsWish, putOnList, settleOwners } from './placement'
@@ -16,6 +17,8 @@ import { newListToken } from './tokens'
 // works once. A "copy" link (wishes only) gives everyone who opens it copies of their own, once
 // per account, until it expires; the wishes it was made for stay their owners' alone. A link has
 // a token of its own and never hands out the list's, so it gives nothing once it is closed.
+// The same can be sent to a friend instead (`sendInvite`): it then has no address to pass on.
+// It reaches that friend as a notice, works for them alone, and is gone once they answered.
 // Nothing here reads what buyers did.
 
 /** Open links a list may have at once; making one more drops the oldest. */
@@ -23,6 +26,9 @@ export const MAX_OPEN_INVITES = 20
 
 /** How long a copy link works. It can be passed around, so it must end by itself. */
 export const COPY_LINK_DAYS = 30
+
+/** What one person may have waiting for one friend at once; sending one more drops the oldest. */
+export const MAX_WAITING_SENDS = 20
 
 type InviteState = InviteView['state']
 
@@ -43,11 +49,13 @@ function wishesStillOn(db: Db, inviteId: number, listId: number) {
  * person. It is closed for everyone once its list is deleted, its maker no longer owns the list,
  * none of its wishes is on the list any more, or, for a linked link, someone used it. A copy
  * link past its time is expired. Otherwise it is the maker's own, or used by this person (a copy
- * link they took already), or open.
+ * link they took already), or open. What was sent to a friend exists for that friend only: to
+ * anyone else, its sender included, its token matches nothing.
  */
 function findInvite(db: Db, token: string, viewerId: number) {
   const invite = db.select().from(invites).where(eq(invites.token, token)).get()
   if (!invite) return undefined
+  if (invite.sentTo !== null && invite.sentTo !== viewerId) return undefined
   const list = db.select().from(lists).where(eq(lists.id, invite.listId)).get()!
   const owners = ownersOfList(db, list.id)
   const onList = invite.kind === 'wishes' ? wishesStillOn(db, invite.id, list.id) : []
@@ -70,6 +78,23 @@ function usedBy(db: Db, inviteId: number, userId: number): boolean {
 }
 
 /**
+ * The wishes an owner named for a link or a send, each once and in the list's order. Every one
+ * must be on that list now; anything else is "not found". None for the list itself.
+ */
+function namedWishes(db: Db, listId: number, input: InviteInput): { id: number, title: string }[] {
+  if (input.kind !== 'wishes') return []
+  const wishIds = [...new Set(input.wishIds)]
+  const shown = db.select({ id: wishes.id, title: wishes.title }).from(listWishes)
+    .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
+    .innerJoin(lists, eq(lists.id, listWishes.listId))
+    .where(and(eq(listWishes.listId, listId), inArray(listWishes.wishId, wishIds), onListNow))
+    .orderBy(asc(listWishes.position), asc(wishes.createdAt), asc(wishes.id))
+    .all()
+  if (shown.length !== wishIds.length) throw new DomainError('not_found')
+  return shown
+}
+
+/**
  * Makes a link for some wishes on the person's list, linked or as copies, or for the list
  * itself. Every wish must be on that list now; anything else is "not found", like a list that
  * isn't theirs.
@@ -77,21 +102,14 @@ function usedBy(db: Db, inviteId: number, userId: number): boolean {
 export function createInvite(db: Db, userId: number, token: string, input: InviteInput): { invite: string } {
   return db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
-    const wishIds = input.kind === 'wishes' ? [...new Set(input.wishIds)] : []
-    if (wishIds.length > 0) {
-      const shown = tx.select({ wishId: listWishes.wishId }).from(listWishes)
-        .innerJoin(wishes, eq(wishes.id, listWishes.wishId))
-        .innerJoin(lists, eq(lists.id, listWishes.listId))
-        .where(and(eq(listWishes.listId, listId), inArray(listWishes.wishId, wishIds), onListNow))
-        .all()
-      if (shown.length !== wishIds.length) throw new DomainError('not_found')
-    }
+    const wishIds = namedWishes(tx, listId, input).map(wish => wish.id)
 
     // Links nobody used pile up when people make one and don't send it, so the oldest goes. A
-    // copy link stays open after someone used it, so it counts until it expires.
+    // copy link stays open after someone used it, so it counts until it expires. What was sent
+    // to a friend is no link to pass on and is counted per friend instead.
     const now = new Date()
     const open = tx.select({ id: invites.id }).from(invites)
-      .where(and(eq(invites.listId, listId), isNull(invites.usedAt), or(isNull(invites.expiresAt), gt(invites.expiresAt, now))))
+      .where(and(eq(invites.listId, listId), isNull(invites.sentTo), isNull(invites.usedAt), or(isNull(invites.expiresAt), gt(invites.expiresAt, now))))
       .orderBy(asc(invites.id))
       .all()
     const dropping = open.slice(0, Math.max(0, open.length - (MAX_OPEN_INVITES - 1)))
@@ -109,6 +127,79 @@ export function createInvite(db: Db, userId: number, token: string, input: Invit
     if (wishIds.length > 0) tx.insert(inviteWishes).values(wishIds.map(wishId => ({ inviteId: made.id, wishId }))).run()
     return { invite: made.token }
   }, { behavior: 'immediate' })
+}
+
+/**
+ * Sends some wishes on the person's list, or the list itself, to friends of theirs: to each what
+ * a link would have given, as a notice that leads to it. Nothing changes for a friend until they
+ * say yes there, and closing the notice is their no, which nobody is told. Each friend gets a
+ * send of their own, so one friend's answer leaves another's waiting. Sending the same thing
+ * the same way again replaces what waited. Someone who isn't a friend is "not friends", and then
+ * nothing is sent to anyone; a friend who owns the list already can't be asked to manage it.
+ */
+export function sendInvite(db: Db, userId: number, token: string, input: InviteInput, friendIds: number[]): { sent: number } {
+  return db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    const named = namedWishes(tx, listId, input)
+    const wishIds = named.map(wish => wish.id)
+    const friends = [...new Set(friendIds)]
+    const owners = new Set(ownersOfList(tx, listId).map(owner => owner.userId))
+    for (const friendId of friends) {
+      if (!areFriends(tx, userId, friendId)) throw new DomainError('not_friends')
+      if (input.kind === 'list' && owners.has(friendId)) throw new DomainError('forbidden')
+    }
+
+    const copies = input.kind === 'wishes' && input.mode === 'copy'
+    const mode = copies ? 'copy' : 'linked'
+    const kind: NoticeKind = input.kind === 'list' ? 'sent_list' : copies ? 'sent_copy' : 'sent_linked'
+    const title = input.kind === 'list'
+      ? tx.select({ title: lists.title }).from(lists).where(eq(lists.id, listId)).get()!.title
+      : named[0]!.title
+    const now = new Date()
+    for (const friendId of friends) {
+      const waiting = tx.select().from(invites)
+        .where(and(eq(invites.createdBy, userId), eq(invites.sentTo, friendId)))
+        .orderBy(asc(invites.id))
+        .all()
+      const again = waiting.filter(earlier => earlier.listId === listId && earlier.kind === input.kind && earlier.mode === mode
+        && sameWishes(tx, earlier.id, wishIds))
+      const others = waiting.filter(earlier => !again.includes(earlier))
+      const dropping = [...again, ...others.slice(0, Math.max(0, others.length - (MAX_WAITING_SENDS - 1)))]
+      // The notice about a send goes with it.
+      if (dropping.length > 0) tx.delete(invites).where(inArray(invites.id, dropping.map(row => row.id))).run()
+
+      const made = tx.insert(invites).values({
+        token: newListToken(),
+        kind: input.kind,
+        listId,
+        createdBy: userId,
+        mode,
+        expiresAt: copies ? new Date(now.getTime() + COPY_LINK_DAYS * 24 * 60 * 60 * 1000) : null,
+        sentTo: friendId,
+      }).returning({ id: invites.id }).get()
+      if (wishIds.length > 0) tx.insert(inviteWishes).values(wishIds.map(wishId => ({ inviteId: made.id, wishId }))).run()
+      addNotice(tx, { userId: friendId, kind, actorId: userId, title, more: Math.max(0, wishIds.length - 1), inviteId: made.id })
+    }
+    return { sent: friends.length }
+  }, { behavior: 'immediate' })
+}
+
+/** Whether a link or send is about exactly these wishes. */
+function sameWishes(db: Db, inviteId: number, wishIds: number[]): boolean {
+  const theirs = db.select({ wishId: inviteWishes.wishId }).from(inviteWishes).where(eq(inviteWishes.inviteId, inviteId)).all()
+  const named = new Set(wishIds)
+  return theirs.length === named.size && theirs.every(row => named.has(row.wishId))
+}
+
+/**
+ * The token of what was sent to this person, while they can still take it; null once it is
+ * closed, expired or taken. A notice about a send is shown only while this gives a token.
+ */
+export function waitingSend(db: Db, inviteId: number, userId: number): string | null {
+  const sent = db.select({ token: invites.token }).from(invites)
+    .where(and(eq(invites.id, inviteId), eq(invites.sentTo, userId))).get()
+  if (!sent) return null
+  return findInvite(db, sent.token, userId)?.state === 'open' ? sent.token : null
 }
 
 /**
@@ -154,7 +245,7 @@ function chosenFrom<Wish extends { id: number }>(onList: Wish[], wishIds: number
 }
 
 /**
- * Uses the link. For wishes, the chosen ones (all of them unless `wishIds` names some) go on a
+ * Uses the link, or says yes to what a friend sent. For wishes, the chosen ones (all of them unless `wishIds` names some) go on a
  * list of the person's own. Linked: they become an owner of each, the ones they own already are
  * left alone, the maker is told, and the link is spent. Copy: they get a copy of each, also of
  * one they own, nobody is told, and the link is spent for this account only. For a list: the
@@ -170,6 +261,13 @@ export function acceptInvite(db: Db, userId: number, invite: string, target: Lis
     if (found.state !== 'open') throw new DomainError('invite_closed')
     const { list, owners, onList } = found
     const maker = found.invite.createdBy
+    // A link that works once stays, spent, so its address can say so. What was sent to a
+    // friend has no address anyone else knows: answered, it goes, and its notice with it.
+    const sent = found.invite.sentTo !== null
+    const spend = () => {
+      if (sent) tx.delete(invites).where(eq(invites.id, found.invite.id)).run()
+      else tx.update(invites).set({ usedAt: new Date() }).where(eq(invites.id, found.invite.id)).run()
+    }
 
     if (found.invite.kind === 'list') {
       if (owners.some(owner => owner.userId === userId)) throw new DomainError('forbidden')
@@ -179,7 +277,7 @@ export function acceptInvite(db: Db, userId: number, invite: string, target: Lis
       for (const owner of owners) {
         addNotice(tx, { userId: owner.userId, kind: 'list_joined', actorId: userId, title: list.title, listId: list.id })
       }
-      tx.update(invites).set({ usedAt: new Date() }).where(eq(invites.id, found.invite.id)).run()
+      spend()
       return { token: list.token }
     }
 
@@ -189,7 +287,8 @@ export function acceptInvite(db: Db, userId: number, invite: string, target: Lis
       const landing = targetListId(tx, userId, target)
       assertRoom(tx, landing.id, chosen.length)
       for (const wish of chosen) copyWishOnto(tx, wish, landing.id)
-      tx.insert(inviteUses).values({ inviteId: found.invite.id, userId }).run()
+      if (sent) spend()
+      else tx.insert(inviteUses).values({ inviteId: found.invite.id, userId }).run()
       return { token: landing.token }
     }
 
@@ -200,8 +299,8 @@ export function acceptInvite(db: Db, userId: number, invite: string, target: Lis
     assertRoom(tx, landing.id, arriving.length)
     for (const wish of arriving) putOnList(tx, landing.id, wish.id)
     const [first] = arriving
-    addNotice(tx, { userId: maker, kind: 'joint_link_used', actorId: userId, title: first!.title, more: arriving.length - 1, wishId: first!.id })
-    tx.update(invites).set({ usedAt: new Date() }).where(eq(invites.id, found.invite.id)).run()
+    addNotice(tx, { userId: maker, kind: sent ? 'share_accepted' : 'joint_link_used', actorId: userId, title: first!.title, more: arriving.length - 1, wishId: first!.id })
+    spend()
     return { token: landing.token }
   }, { behavior: 'immediate' })
 }

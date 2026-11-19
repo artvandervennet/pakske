@@ -1,12 +1,15 @@
-import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { listFriends, listOwners, lists, listWishes, notices, users, wishes, wishLinks } from '../db/schema'
 import type { NoticeKind, NoticeView } from '../../shared/schemas/list'
+import { waitingSend } from './invites'
 import { onListNow } from './placement'
 
 // Messages for one person inside the site: what other owners did with their wishes and lists.
-// They are made only by owner actions (linking, unlinking, links used, lists joined), so nothing
-// a buyer does can ever show up here.
+// They are made only by owner actions (linking, unlinking, links used, lists joined, something
+// sent to a friend), so nothing a buyer does can ever show up here.
+// (`./invites` uses `addNotice` and this file its `waitingSend`: each only calls the other's
+// functions, never at load.)
 
 /** Leaves a notice for one person. Runs in the caller's transaction. */
 export function addNotice(db: Db, notice: {
@@ -17,11 +20,15 @@ export function addNotice(db: Db, notice: {
   more?: number
   wishId?: number
   listId?: number
+  inviteId?: number
 }): void {
   db.insert(notices).values(notice).run()
 }
 
-/** The person's notices, newest first. */
+/**
+ * The person's notices, newest first. One about something a friend sent is among them only
+ * while that can still be taken.
+ */
 export function listNotices(db: Db, userId: number): NoticeView[] {
   const rows = db.select({ notice: notices, actor: users.displayName }).from(notices)
     .innerJoin(users, eq(users.id, notices.actorId))
@@ -29,12 +36,14 @@ export function listNotices(db: Db, userId: number): NoticeView[] {
     // Of notices made in the same millisecond, the one inserted last comes first.
     .orderBy(desc(notices.createdAt), desc(sql`${notices}.rowid`))
     .all()
-  return rows.map(({ notice, actor }) => {
+  return rows.flatMap(({ notice, actor }) => {
+    const invite = notice.inviteId === null ? null : waitingSend(db, notice.inviteId, userId)
+    if (notice.inviteId !== null && invite === null) return []
     const token = notice.kind === 'list_shown' ? shownToken(db, userId, notice.listId) : noticeToken(db, userId, notice.wishId, notice.listId)
     const undoable = notice.kind === 'wish_linked' && token !== null && notice.wishId !== null
       && db.select({ id: wishLinks.id }).from(wishLinks)
         .where(and(eq(wishLinks.wishId, notice.wishId), eq(wishLinks.userId, notice.actorId))).get() !== undefined
-    return {
+    return [{
       id: notice.id,
       kind: notice.kind as NoticeKind,
       actor,
@@ -43,10 +52,11 @@ export function listNotices(db: Db, userId: number): NoticeView[] {
       more: notice.more,
       token,
       wishId: notice.wishId,
+      invite,
       canUndo: undoable,
       fresh: notice.seenAt === null,
       createdAt: notice.createdAt.toISOString(),
-    }
+    }]
   })
 }
 
@@ -89,9 +99,13 @@ function shownToken(db: Db, userId: number, listId: number | null): string | nul
   return shown?.token ?? null
 }
 
+/** How many of the notices `listNotices` gives haven't been seen. */
 export function countUnseen(db: Db, userId: number): number {
-  return db.select({ unseen: count() }).from(notices)
-    .where(and(eq(notices.userId, userId), isNull(notices.seenAt))).get()!.unseen
+  const plain = db.select({ unseen: count() }).from(notices)
+    .where(and(eq(notices.userId, userId), isNull(notices.seenAt), isNull(notices.inviteId))).get()!.unseen
+  const sent = db.select({ inviteId: notices.inviteId }).from(notices)
+    .where(and(eq(notices.userId, userId), isNull(notices.seenAt), isNotNull(notices.inviteId))).all()
+  return plain + sent.filter(row => waitingSend(db, row.inviteId!, userId) !== null).length
 }
 
 export function markNoticesSeen(db: Db, userId: number): void {

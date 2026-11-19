@@ -27,7 +27,7 @@ A wish with several owners:
 
 Friends change nothing on a list. A friend who opens a list is a buyer like anyone who has its link, unless they own a wish there. Switching a list on for a friend only puts it on their Lists page. `getListView` knows nothing about friends; the list's route adds who the viewer may ask to be friends beside it. `server/domain/friends.ts` reads neither purchases nor notes, and a test reads its source to keep it that way.
 
-What friends see of each other: a name, and the lists switched on for them. Nobody sees who anyone else's friends are, on any page or in any answer. An owner still never learns who opened their list: showing a list reports nothing back, and neither does a friend taking it off their page. A request shows the sender's name and the list it was sent from to that list's owner. A declined request is indistinguishable from a waiting one for its sender.
+What friends see of each other: a name, and the lists switched on for them. Nobody sees who anyone else's friends are, on any page or in any answer. An owner still never learns who opened their list: showing a list reports nothing back, and neither does a friend taking it off their page. A request shows the sender's name and the list it was sent from to that list's owner. A declined request is indistinguishable from a waiting one for its sender. Something sent to a friend (wishes, or a list to manage together) shows that friend what a share link would: the sender's name and the titles. The sender learns of a yes, and never of a closed notice.
 
 An address a list had before it got a new link no longer opens the list. `oldLinkView` answers it three ways:
 

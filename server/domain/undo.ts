@@ -1,6 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { linkChanges, notices, wishLinks, wishes } from '../db/schema'
+import { invites, linkChanges, notices, wishLinks, wishes } from '../db/schema'
 import { DomainError } from './errors'
 import { ownedWishOnList, ownsWish } from './placement'
 import { mayUnlink, unlink } from './sharing'
@@ -128,13 +128,15 @@ export function undoLink(db: Db, userId: number, token: string, wishId: number, 
 /**
  * Removes one of the person's notices. When it was the last notice about a link, the link is
  * no longer undone by anyone, so it stops remembering, and the earlier pictures it kept may now
- * be unused.
+ * be unused. When it was about something a friend sent, that is taken back with it.
  */
 export function dismissNotice(db: Db, userId: number, noticeId: string): { unused: string[] } {
   return db.transaction((tx) => {
     const notice = tx.select().from(notices).where(and(eq(notices.id, noticeId), eq(notices.userId, userId))).get()
     if (!notice) throw new DomainError('not_found')
     tx.delete(notices).where(eq(notices.id, notice.id)).run()
+    // Closing the notice about something a friend sent is the answer "no": what was sent goes.
+    if (notice.inviteId !== null) tx.delete(invites).where(and(eq(invites.id, notice.inviteId), eq(invites.sentTo, userId))).run()
     if (notice.kind !== 'wish_linked' || notice.wishId === null) return { unused: [] }
 
     const others = tx.select({ id: notices.id }).from(notices).where(linkedNotices(notice.wishId, notice.actorId)).get()

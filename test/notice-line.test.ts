@@ -20,6 +20,7 @@ function notice(kind: NoticeKind, extra: Partial<NoticeView> = {}): NoticeView {
     more: 0,
     token: 'list-1',
     wishId: 7,
+    invite: null,
     canUndo: false,
     fresh: true,
     createdAt: '2026-11-17T10:00:00.000Z',
@@ -28,7 +29,7 @@ function notice(kind: NoticeKind, extra: Partial<NoticeView> = {}): NoticeView {
 }
 
 describe("a notice's sentence", () => {
-  it.each(['wish_linked', 'wish_unlinked', 'joint_link_used', 'list_joined'] as const)(
+  it.each(['wish_linked', 'wish_unlinked', 'joint_link_used', 'list_joined', 'sent_copy', 'sent_linked', 'sent_list', 'share_accepted'] as const)(
     'uses the key of its own kind, %s, with who did it and the title',
     (kind) => {
       expect(noticeLine(notice(kind), t)).toBe(`[notice.${kind} {"actor":"Lotte","title":"Bordspel","n":0} 0]`)

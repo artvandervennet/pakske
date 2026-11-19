@@ -185,7 +185,11 @@ const paints = computed(() => {
             <li v-for="notice in notices" :key="notice.id" class="row notice">
               <p :id="`notice-${notice.id}`" class="notice-line">{{ noticeLine(notice, t) }}</p>
               <div class="notice-actions">
-                <art-button v-if="notice.token" variant="quiet" size="s">
+                <!-- Something a friend sent: on to the page where the answer is given. -->
+                <art-button v-if="notice.invite" size="s">
+                  <NuxtLink :to="localePath(`/j/${notice.invite}`)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
+                </art-button>
+                <art-button v-else-if="notice.token" variant="quiet" size="s">
                   <NuxtLink :to="noticeLink(notice)" :aria-describedby="`notice-${notice.id}`">{{ t('notice.view') }}</NuxtLink>
                 </art-button>
                 <art-button v-else-if="aboutFriend(notice)" variant="quiet" size="s">

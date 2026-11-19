@@ -305,6 +305,10 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
 .befriend-state:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
 /* The dialog that says which friends find a list: its switches under each other, like a friend's row. */
 .friends-dialog .friend-shows { margin-block-end: var(--space-2); }
+/* The same switches where something is sent to a friend, under the choice of how: with air
+   above them, and their sentence right under the last one. */
+.send-to { margin-block-start: var(--space-6); }
+.send-to > .switch-hint { margin-block: var(--space-2) 0; }
 
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
 

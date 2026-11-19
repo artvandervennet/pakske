@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle
 import type { FriendLinkView, FriendView, RequestsView } from '../../shared/schemas/friends'
 import type { ShownList } from '../../shared/schemas/list'
 import type { Db } from '../db/client'
-import { friendLinks, friendRequests, friendships, listFriends as shown, listOwners, lists, notices, users } from '../db/schema'
+import { friendLinks, friendRequests, friendships, invites, listFriends as shown, listOwners, lists, notices, users } from '../db/schema'
 import { DomainError } from './errors'
 import { ownedListId, ownersOfList } from './lists'
 import { addNotice } from './notices'
@@ -431,8 +431,9 @@ export function listFriends(db: Db, userId: number): FriendView[] {
 }
 
 /**
- * Stops two people being friends. Nobody is told. What each showed the other goes with it, and
- * what they were told about that; if they become friends again, they start with nothing ticked.
+ * Stops two people being friends. Nobody is told. What each showed the other goes with it, what
+ * each sent the other and wasn't answered yet, and what they were told about either; if they
+ * become friends again, they start with nothing ticked.
  */
 export function removeFriend(db: Db, userId: number, friendId: number): void {
   db.transaction((tx) => {
@@ -441,6 +442,8 @@ export function removeFriend(db: Db, userId: number, friendId: number): void {
     for (const [owner, friend] of [[userId, friendId], [friendId, userId]] as const) {
       tx.delete(shown).where(and(eq(shown.shownBy, owner), eq(shown.userId, friend))).run()
       tx.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.actorId, owner), eq(notices.userId, friend))).run()
+      // And what one sent the other that still waited, with the notice about it.
+      tx.delete(invites).where(and(eq(invites.createdBy, owner), eq(invites.sentTo, friend))).run()
     }
   }, { behavior: 'immediate' })
 }

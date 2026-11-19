@@ -593,9 +593,38 @@ req art PUT "/api/lists/$FLIST/friends" "{\"friends\":[$FMOM]}"; check "… and 
 req mom GET /api/lists; same "it is back on mom's page" ".opened.filter(l=>l.token==='$FLIST').length" 1
 req mom GET /api/friends; lacks "mom's friends page says nothing of art's other friend" "Zus"
 req mom GET "/api/lists/$FLIST"; lacks "… and neither does the list" "Zus"
+
+echo "── sending to a friend"
+req art POST "/api/lists/$FLIST/wishes" '{"title":"Kaarsen"}'; check "art adds a wish to send" 201; SENDW=$(json .id)
+req art GET "/api/lists/$FLIST"; same "his list says how many friends it could be sent to" ".friendsToSend" 2
+req mom GET "/api/lists/$FLIST"; same "… and says that to nobody else" ".friendsToSend" 0
+req art POST "/api/lists/$FLIST/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$SENDW],\"friends\":[$FMOM]}"; check "art sends the wish to mom" 201; same "… and hears how many it went to" ".sent" 1; lacks "… without a link to pass on" '"invite"'
+req art POST "/api/lists/$FLIST/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$SENDW],\"friends\":[$LOT_ID]}"; check "he cannot send it to lot, who is no friend" 404; has "… with the code not_friends" not_friends
+req art POST "/api/lists/$FLIST/invites" '{"kind":"list","friends":[]}'; check "sending to nobody is refused" 422
+req mom GET /api/home; has "mom has a notice about it" '"kind":"sent_linked"'; SENT=$(json ".notices.find(n=>n.kind==='sent_linked').invite")
+req mom GET /api/notices/unseen; lacks "… and the mark for something new" '"unseen":0'
+req sis GET "/api/invites/$SENT"; check "sis cannot open what was sent to mom" 404
+req art GET "/api/invites/$SENT"; check "… and neither can art, who sent it" 404
+req sis POST "/api/invites/$SENT/accept" '{"newList":"Niet van mij"}'; check "sis cannot take it either" 404
+req mom GET "/api/invites/$SENT"; check "mom opens it" 200; has "… and it is open" '"state":"open"'; has "… from art" '"from":"Art"'
+req mom POST "/api/invites/$SENT/accept" '{"newList":"Van Art gekregen"}'; check "mom says yes" 200; GOTLIST=$(json .token)
+req mom GET /api/home; lacks "her notice is gone" sent_linked
+req mom GET "/api/invites/$SENT"; check "… and so is what was sent" 404
+req art GET /api/home; has "art is told she said yes" '"kind":"share_accepted"'
+req mom DELETE "/api/lists/$GOTLIST"; check "mom deletes the list it landed on" 204
+req art POST "/api/lists/$FLIST/invites" "{\"kind\":\"list\",\"friends\":[$FMOM]}"; check "art asks mom to manage the list with him" 201
+req mom GET /api/home; has "mom has a notice about that" '"kind":"sent_list"'; LSENT=$(json ".notices.find(n=>n.kind==='sent_list').invite"); LNOTE=$(json ".notices.find(n=>n.kind==='sent_list').id")
+req mom DELETE "/api/notices/$LNOTE"; check "she closes it, which is her no" 204
+req mom GET "/api/invites/$LSENT"; check "what was sent is gone with it" 404
+req art GET "/api/lists/$FLIST"; same "the list is still art's alone" ".owners.length" 1
+req art POST "/api/lists/$FLIST/invites" "{\"kind\":\"wishes\",\"mode\":\"copy\",\"wishIds\":[$SENDW],\"friends\":[$FMOM]}"; check "art sends mom a copy to take" 201
+req mom GET /api/home; has "it waits for her" '"kind":"sent_copy"'
+
+echo "── friends no more"
 req art DELETE "/api/friends/$FMOM"; check "art removes mom as a friend" 204
 req mom GET /api/lists; same "the list is off her page" ".opened.filter(l=>l.token==='$FLIST').length" 0
 req mom GET /api/friends; same "… and art off her friends" ".friends.length" 0
+req mom GET /api/home; lacks "… and what he sent her and she hadn't answered" sent_copy
 req art DELETE "/api/friends/$FMOM"; check "removing her again finds no friend" 404; has "… with the code not_friends" not_friends
 
 echo "── a new link"

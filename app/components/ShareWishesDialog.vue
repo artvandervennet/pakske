@@ -1,16 +1,19 @@
 <script setup lang="ts">
 // "Delen" on wishes of a list of your own, in two steps: choose how, then the link to send.
 // Kopie gives whoever opens the link wishes of their own; Samen makes them an owner of these.
-// The dialog makes the link itself, so any button on the page can open it for the wishes that
-// button is about. The browser gives the focus back to that button when the dialog closes.
-// `close` says whether a link was made; `failed` that making one was refused, which usually
-// means the list changed meanwhile.
+// Someone who has friends can also choose some of them in the first step: they then get it as
+// a notice and decide there, and the second step says who it went to instead of showing a link.
+// The dialog makes the link or sends itself, so any button on the page can open it for the
+// wishes that button is about. The browser gives the focus back to that button when the dialog
+// closes. `close` says whether a link was made or something sent; `failed` that it was refused,
+// which usually means the list changed meanwhile.
 const props = defineProps<{ token: string, wishIds: number[] }>()
 const emit = defineEmits<{ close: [made: boolean], failed: [] }>()
 
 const { t } = useI18n()
 const { parse } = useApiError()
 const localePath = useLocalePath()
+const names = useNames()
 const id = useId()
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
@@ -26,6 +29,10 @@ const shareWords = computed(() => ({
 }))
 const mode = ref<'copy' | 'linked'>('copy')
 const path = ref<string | null>(null)
+// The friends these wishes can go to, the ones chosen, and after sending, who it went to.
+const friends = ref<{ id: number, name: string }[]>([])
+const chosen = ref<number[]>([])
+const sentTo = ref<string[] | null>(null)
 const busy = ref(false)
 const error = ref('')
 
@@ -35,7 +42,14 @@ async function open() {
   ids.value = [...props.wishIds]
   mode.value = 'copy'
   path.value = null
+  chosen.value = []
+  sentTo.value = null
   error.value = ''
+  // Not waited for: the dialog opens at once, and friends join the first step when they arrive.
+  // Without them it is what it always was.
+  $fetch<{ friends: { id: number, name: string }[] }>(`/api/lists/${props.token}/friends`)
+    .then((answer) => { friends.value = answer.friends })
+    .catch(() => { friends.value = [] })
   // The first step renders before the dialog shows, so it never opens on the last link.
   await nextTick()
   dialog.value.showModal()
@@ -48,6 +62,18 @@ async function make() {
   busy.value = true
   error.value = ''
   try {
+    const to = friends.value.filter(friend => chosen.value.includes(friend.id))
+    if (to.length) {
+      await $fetch<unknown>(`/api/lists/${props.token}/invites`, {
+        method: 'POST',
+        body: { kind: 'wishes', mode: mode.value, wishIds: ids.value, friends: to.map(friend => friend.id) },
+      })
+      sentTo.value = to.map(friend => friend.name)
+      // The button that was pressed is gone with the first step: on to what the dialog says now.
+      await nextTick()
+      heading.value?.focus()
+      return
+    }
     const made = await $fetch<{ invite: string }>(`/api/lists/${props.token}/invites`, {
       method: 'POST',
       body: { kind: 'wishes', mode: mode.value, wishIds: ids.value },
@@ -72,7 +98,7 @@ async function make() {
 function onClose() {
   // Escape sets no value, and browsers differ on whether it clears the last one: reset it.
   if (dialog.value) dialog.value.returnValue = ''
-  emit('close', path.value !== null)
+  emit('close', path.value !== null || sentTo.value !== null)
 }
 
 defineExpose({ open })
@@ -81,29 +107,38 @@ defineExpose({ open })
 <template>
   <dialog ref="dialog" class="dialog share-dialog" :aria-labelledby="`${id}-title`" @close="onClose">
     <h2 :id="`${id}-title`" ref="heading" tabindex="-1">
-      {{ path ? t('share.readyTitle') : t('share.title', { n: ids.length }, ids.length) }}
+      {{ sentTo ? t('share.sentTitle') : path ? t('share.readyTitle') : t('share.title', { n: ids.length }, ids.length) }}
     </h2>
-    <template v-if="!path">
+    <template v-if="sentTo">
+      <p>{{ t('share.sentText', { names: names(sentTo) }, sentTo.length) }}</p>
+      <form method="dialog" class="actions">
+        <art-button>
+          <button value="done">{{ t('share.done') }}</button>
+        </art-button>
+      </form>
+    </template>
+    <template v-else-if="!path">
       <fieldset class="share-modes">
         <legend class="share-modes-legend">{{ t('share.how') }}</legend>
         <label class="share-mode">
           <input v-model="mode" type="radio" :name="`${id}-mode`" value="copy">
           <span class="share-mode-name">{{ t('share.modeCopy') }}</span>
-          <span class="share-mode-hint">{{ t('share.modeCopyHint') }}</span>
+          <span class="share-mode-hint">{{ chosen.length ? t('share.modeCopyHintSent') : t('share.modeCopyHint') }}</span>
         </label>
         <label class="share-mode">
           <input v-model="mode" type="radio" :name="`${id}-mode`" value="linked">
           <span class="share-mode-name">{{ t('share.modeLinked') }}</span>
-          <span class="share-mode-hint">{{ t('share.modeLinkedHint', ids.length) }}</span>
+          <span class="share-mode-hint">{{ chosen.length ? t('share.modeLinkedHintSent', ids.length) : t('share.modeLinkedHint', ids.length) }}</span>
         </label>
       </fieldset>
+      <FriendChoice v-if="friends.length" v-model="chosen" :friends="friends" :legend="t('share.toFriends')" :hint="t('share.toFriendsHint')" />
       <p v-if="error" class="form-message" role="alert">{{ error }}</p>
       <form method="dialog" class="actions">
         <art-button variant="secondary">
           <button value="cancel">{{ t('share.cancel') }}</button>
         </art-button>
         <art-button>
-          <button type="button" :aria-disabled="busy || undefined" @click="make">{{ t('share.make') }}</button>
+          <button type="button" :aria-disabled="busy || undefined" @click="make">{{ chosen.length ? t('share.send') : t('share.make') }}</button>
         </art-button>
       </form>
     </template>

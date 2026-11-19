@@ -150,7 +150,12 @@ export const invites = sqliteTable('invites', {
   usedAt: integer('used_at', { mode: 'timestamp_ms' }),
   // Copy: until when it can be used. Null for a linked link, which doesn't expire.
   expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
-})
+  // Set when it was sent to a friend instead of made as an address to pass on: it then works
+  // for that one person only, who finds it in a notice.
+  sentTo: integer('sent_to').references(() => users.id, { onDelete: 'cascade' }),
+}, t => [
+  index('invites_sent_to_idx').on(t.sentTo),
+])
 
 // Who used a copy link, so one account takes the copies once.
 export const inviteUses = sqliteTable('invite_uses', {
@@ -260,6 +265,8 @@ export const notices = sqliteTable('notices', {
   more: integer('more').notNull().default(0),
   wishId: integer('wish_id').references(() => wishes.id, { onDelete: 'cascade' }),
   listId: integer('list_id').references(() => lists.id, { onDelete: 'cascade' }),
+  // What a friend sent, for a notice that says so: the notice goes when that does.
+  inviteId: integer('invite_id').references(() => invites.id, { onDelete: 'cascade' }),
   createdAt: createdAt(),
   seenAt: integer('seen_at', { mode: 'timestamp_ms' }),
 }, t => [

@@ -303,7 +303,17 @@ async function onNewLinkClose() {
 }
 
 // "Lijst samen beheren": a link that makes someone a co-owner of the list. It shows under the
-// band's buttons, with the focus on its address.
+// band's buttons, with the focus on its address. Someone with friends who could be sent the list
+// is first asked whether it goes to some of them; the line under the buttons says who it went to.
+const sendListDialog = useTemplateRef<{ open: () => Promise<void> }>('sendListDialog')
+function startInvite() {
+  if (list.value.friendsToSend) void sendListDialog.value?.open()
+  else void inviteCoOwner()
+}
+function onListSent(to: string[]) {
+  friendsStatus.value = t('list.sent', { names: names(to) }, to.length)
+}
+
 const listLink = ref<string | null>(null)
 const listLinkBox = useTemplateRef<{ focus: () => void, share: () => Promise<boolean> }>('listLinkBox')
 const inviting = ref(false)
@@ -629,7 +639,7 @@ async function addWish(title: string) {
             <button type="button" @click="friendsDialog?.open()">{{ t('list.friends') }}</button>
           </art-button>
           <art-button variant="secondary">
-            <button type="button" :aria-disabled="inviting || undefined" @click="inviteCoOwner">{{ t('list.invite') }}</button>
+            <button type="button" :aria-disabled="inviting || undefined" @click="startInvite">{{ t('list.invite') }}</button>
           </art-button>
           <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" :share="{ title: list.title, text: t('list.inviteShareText', { title: list.title }) }" />
           <!-- Always there for an owner, so the words are announced when they appear. -->
@@ -794,6 +804,7 @@ async function addWish(title: string) {
     </div>
 
     <ListFriendsDialog v-if="canManage" ref="friendsDialog" :token="list.token" :title="list.title" @saved="onFriendsSaved" />
+    <SendListDialog v-if="canManage" ref="sendListDialog" :token="list.token" :title="list.title" @link="inviteCoOwner" @sent="onListSent" />
 
     <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 

@@ -89,6 +89,12 @@ export const targetInput = z.union([
 const wishId = z.number('invalid').int('invalid').positive('invalid')
 
 /**
+ * The friends something is sent to, by account: with them it reaches each as a notice, without
+ * them it is a link to pass on.
+ */
+const sendTo = z.array(z.number('invalid').int('invalid').positive('invalid'), 'invalid').min(1, 'required').max(20, 'too_long').optional()
+
+/**
  * A link that shares some wishes on the list, or the list itself. Wishes go as copies unless the
  * maker says "linked"; a list is only ever shared together, so it has no mode to choose.
  */
@@ -97,8 +103,9 @@ export const inviteInput = z.discriminatedUnion('kind', [
     kind: z.literal('wishes'),
     mode: z.enum(['linked', 'copy'], 'invalid').default('copy'),
     wishIds: z.array(wishId, 'required').min(1, 'required').max(50, 'too_long'),
+    friends: sendTo,
   }),
-  z.strictObject({ kind: z.literal('list') }),
+  z.strictObject({ kind: z.literal('list'), friends: sendTo }),
 ])
 
 /**
