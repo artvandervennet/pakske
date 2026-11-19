@@ -95,6 +95,18 @@ describe('the old address of a list that got a new link', () => {
     expect(titles(getListView(db, momList, mom.id))).toEqual([])
   })
 
+  it('answers taking back nothing like an address that never existed', () => {
+    const { db, mom, lot, old, token, sokken, boek } = setup()
+    // Someone who ticked nothing there, and Mom on a wish she never ticked: both learn nothing,
+    // not even that the list still has that wish.
+    expect(codeOf(() => removePurchase(db, old, sokken.id, lot.id))).toBe('not_found')
+    expect(codeOf(() => removePurchase(db, old, boek.id, mom.id))).toBe('not_found')
+    expect(codeOf(() => removePurchase(db, 'no-such-list-token-000', sokken.id, lot.id))).toBe('not_found')
+    // Through the address the list has now, removing nothing is still no error.
+    expect(codeOf(() => removePurchase(db, token, sokken.id, lot.id))).toBeUndefined()
+    expect(purchaseRows(db, sokken.id)).toEqual([{ userId: mom.id, quantity: 1 }])
+  })
+
   it('keeps working after a second new link, for both old addresses', () => {
     const { db, art, mom, old, token, sokken } = setup()
     const { token: third } = relinkList(db, art.id, token)

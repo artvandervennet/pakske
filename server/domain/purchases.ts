@@ -52,10 +52,16 @@ export function setPurchase(db: Db, token: string, wishId: number, userId: numbe
   }, { behavior: 'immediate' })
 }
 
-/** Removing something that isn't there is not an error. */
+/**
+ * Removing something that isn't there is not an error. Except through an address the list had
+ * before a new link: there, someone with nothing to remove gets "not found", like for an address
+ * that never existed, or they could go on asking which wishes the list has.
+ */
 export function removePurchase(db: Db, token: string, wishId: number, userId: number): void {
   db.transaction((tx) => {
-    wishOnList(tx, token, wishId, { old: true })
-    tx.delete(purchases).where(and(eq(purchases.wishId, wishId), eq(purchases.userId, userId))).run()
+    const { old } = wishOnList(tx, token, wishId, { old: true })
+    const removed = tx.delete(purchases).where(and(eq(purchases.wishId, wishId), eq(purchases.userId, userId)))
+      .returning({ id: purchases.id }).get()
+    if (old && !removed) throw new DomainError('not_found')
   }, { behavior: 'immediate' })
 }

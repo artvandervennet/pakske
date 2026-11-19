@@ -559,6 +559,8 @@ req anon GET "/api/lists/$NEWLIST"; check "the new address opens for a visitor" 
 req anon GET "/api/lists/$RELIST"; check "the old one is nothing for a visitor" 404
 req lot GET "/api/lists/$RELIST"; check "… and for lot, who ticked nothing" 404
 req lot GET /api/lists; lacks "the list left lot's visited lists" "Nieuwjaar"
+req lot DELETE "/api/lists/$RELIST/wishes/$CANDLES/purchase"; check "lot, who ticked nothing, cannot even take nothing back there" 404
+req mom DELETE "/api/lists/$RELIST/wishes/$GARLAND/purchase"; check "… nor mom on a wish she never ticked" 404
 req art GET "/api/lists/$RELIST"; check "art is told where the list went" 200; has "… with the new address" "\"movedTo\":\"$NEWLIST\""
 req art PATCH "/api/lists/$RELIST" '{"title":"Oud"}'; check "art cannot change the list through the old address" 404
 req art GET /api/lists; has "art's lists have it at the new address" "$NEWLIST"; lacks "… and not at the old one" "$RELIST"
