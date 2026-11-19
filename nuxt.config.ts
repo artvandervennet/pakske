@@ -13,6 +13,10 @@ export default defineNuxtConfig({
   modules: ['nuxt-auth-utils', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
 
+  // The dev server answers only to the names it knows. This lets `tailscale serve` put it on a
+  // phone over https, at the Mac's name in the tailnet; nothing outside the tailnet gets there.
+  vite: { server: { allowedHosts: ['.ts.net'] } },
+
   vue: {
     compilerOptions: {
       // Gesso's components are native custom elements, registered in app/plugins/gesso.client.ts.
