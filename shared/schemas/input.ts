@@ -39,6 +39,12 @@ export const forgotInput = z.object({ email, locale: mailLocale })
 
 export const passwordMailInput = z.object({ locale: mailLocale })
 
+/** The code of a link from one of Firebase's mails, as it stands in the link. */
+export const mailLinkCode = z.string('required').min(1, 'required').max(2048, 'too_long')
+
+/** Using such a link: its code, and the new password when the link is for choosing one. */
+export const mailLinkInput = z.object({ code: mailLinkCode, newPassword: newPassword.optional() })
+
 /** A change to the profile: only what is sent changes. */
 export const profileInput = z.object({
   displayName: requiredText(60).optional(),

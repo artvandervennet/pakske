@@ -593,6 +593,16 @@ req weg GET "/api/lists/$WEGLIST"; check "she opens the old one like anyone else
 req weg GET "/api/lists/$MOMLIST"; same "her old note is not hers" ".wishes.find(w=>w.id===$TEA).notes[0].mine" false
 same "… and what she ticked is not back" ".wishes.find(w=>w.id===$TEA).mine" 0
 
+echo "── links in mails"
+req anon GET "/api/auth/mail-link?code=made-up"; check "a made-up code from a mail is read without an error" 200; has "… as a link that doesn't work" '"link":null'
+req anon GET /api/auth/mail-link; check "… and so is no code at all" 200; has "… with the same answer" '"link":null'
+req anon POST /api/auth/mail-link '{"code":"made-up","newPassword":"correct horse battery"}'; check "using a made-up code changes nothing" 410; has "… with the code link_gone" link_gone
+req anon POST /api/auth/mail-link '{"newPassword":"correct horse battery"}'; check "… and a code is needed" 422
+req anon POST /api/auth/mail-link '{"code":"made-up","newPassword":"short"}'; check "… and a new password of 8 characters" 422; has "… naming the field" '"newPassword":"password_short"'
+status_of /auth/action; check "the page behind a mail's link opens without a code" 200; has "… and says the link doesn't work" 'Deze link werkt niet meer'
+status_of "/auth/action?mode=resetPassword&oobCode=made-up&lang=en"; check "a link from a mail in English goes on to the English page" 302
+status_of "/en/auth/action?mode=resetPassword&oobCode=made-up&lang=en"; check "… which opens" 200; has "… and says the same in English" 'This link no longer works'
+
 echo "── guard rails"
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -X POST -b "$TMP/mom.jar" -H 'Origin: https://evil.example' -H 'Content-Type: application/json' --data '{"title":"x"}' "$BASE/api/lists"); check "a request from another site is refused" 403
 head -c 20000 /dev/zero | tr '\0' 'a' > "$TMP/long"

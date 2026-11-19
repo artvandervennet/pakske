@@ -1,4 +1,5 @@
 import { count, eq } from 'drizzle-orm'
+import type { MailLink } from '../../shared/schemas/mail-link'
 import type { Db } from '../db/client'
 import { users } from '../db/schema'
 import { DomainError } from './errors'
@@ -64,6 +65,15 @@ export interface Identity {
   requestEmailChange: (idToken: string, newEmail: string, options?: { locale?: string, continueUrl?: string }) => Promise<'sent' | 'email_exists' | 'reauth_needed'>
   /** Deletes the account at Firebase; one that is already gone counts as deleted. */
   deleteAccount: (idToken: string) => Promise<'deleted' | 'reauth_needed'>
+  /** Reads the code of a link from a mail without using it up. null for one that is used, expired or made up. */
+  checkMailLink: (code: string) => Promise<MailLink | null>
+  /** Sets the password a reset link is for, which uses the link up. null when it no longer works. */
+  confirmPasswordReset: (code: string, password: string) => Promise<{ email: string } | null>
+  /**
+   * Does what a link that confirms, changes or puts back an address is for, which uses it up.
+   * Answers the account and the address it has now, or null when the link no longer works.
+   */
+  applyMailLink: (code: string) => Promise<{ uid: string, email: string } | null>
 }
 
 type User = typeof users.$inferSelect
@@ -325,4 +335,23 @@ export async function deleteAccount(
     if ((await identity.deleteAccount(login.idToken)) === 'reauth_needed') throw new DomainError('reauth_needed')
   }
   return deleteUser(db, user.id)
+}
+
+/**
+ * Does what the link in a mail from Firebase is for, and answers what that was, or null when the
+ * link no longer works. A reset link needs the new password. An address that changes or comes
+ * back counts here at once; without this it would wait for the next login (`withAddress`).
+ */
+export async function followMailLink(db: Db, identity: Identity, code: string, password?: string): Promise<MailLink | null> {
+  const link = await identity.checkMailLink(code)
+  if (!link) return null
+  if (link.kind === 'reset_password') {
+    if (password === undefined) throw new DomainError('validation')
+    return (await identity.confirmPasswordReset(code, password)) ? link : null
+  }
+  const applied = await identity.applyMailLink(code)
+  if (!applied) return null
+  const user = link.kind === 'verify_email' ? undefined : findByUid(db, applied.uid)
+  if (user) withAddress(db, user, applied.email || link.email)
+  return link
 }

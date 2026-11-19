@@ -1,4 +1,5 @@
 import type { FirebaseLogin, GoogleCredential, GoogleLogin, Identity } from '../server/domain/accounts'
+import type { MailLink } from '../shared/schemas/mail-link'
 
 interface Account {
   uid: string
@@ -23,6 +24,7 @@ interface Account {
  * `tooOld` holds the ids of accounts that logged in long ago: their refreshed login says so.
  * `refusing` holds the ids of accounts Firebase itself refuses to change the address of or to
  * delete without a fresher login, whatever the login says.
+ * `mailLink` plays Firebase mailing a link and answers the code in it. A code works once.
  */
 export function fakeIdentity() {
   const accounts: Account[] = []
@@ -30,6 +32,7 @@ export function fakeIdentity() {
   const changes: { uid: string, email: string, locale?: string, continueUrl?: string }[] = []
   const tooOld = new Set<string>()
   const refusing = new Set<string>()
+  const links = new Map<string, MailLink & { uid: string }>()
   let next = 1
 
   const loginOf = (account: Account): FirebaseLogin =>
@@ -116,6 +119,48 @@ export function fakeIdentity() {
     async setName(idToken, name) {
       byToken(idToken, 'id')!.name = name
     },
+    async checkMailLink(code) {
+      const link = links.get(code)
+      if (!link || !accounts.some(a => a.uid === link.uid)) return null
+      const { uid: _uid, ...rest } = link
+      return rest
+    },
+    async confirmPasswordReset(code, password) {
+      const link = links.get(code)
+      const account = accounts.find(a => a.uid === link?.uid)
+      if (!link || !account || link.kind !== 'reset_password') return null
+      links.delete(code)
+      account.password = password
+      // A new password ends the logins from before it.
+      account.ended = true
+      return { email: account.email }
+    },
+    async applyMailLink(code) {
+      const link = links.get(code)
+      const account = accounts.find(a => a.uid === link?.uid)
+      if (!link || !account || link.kind === 'reset_password') return null
+      if (link.kind !== 'verify_email' && accounts.some(a => a !== account && a.email === link.email)) return null
+      links.delete(code)
+      account.emailVerified = true
+      if (link.kind !== 'verify_email') {
+        account.email = link.email
+        account.ended = true
+      }
+      return { uid: account.uid, email: account.email }
+    },
+  }
+
+  /**
+   * Firebase mails a link to the account that has `email` now: for a new password, to confirm
+   * that address, to change it to `other`, or to put `other` back.
+   */
+  function mailLink(kind: MailLink['kind'], email: string, other?: string): string {
+    const account = accounts.find(a => a.email === email)
+    if (!account) throw new Error(`no account has ${email}`)
+    const code = `code-${links.size + 1}-${kind}`
+    const moves = kind === 'change_email' || kind === 'recover_email'
+    links.set(code, { uid: account.uid, kind, email: moves ? other! : email, ...(moves ? { previous: email } : {}) })
+    return code
   }
 
   /** The person clicks the link Firebase mailed to their new address. */
@@ -129,7 +174,7 @@ export function fakeIdentity() {
     account.ended = true
   }
 
-  return { identity, accounts, sent, changes, tooOld, refusing, confirm }
+  return { identity, accounts, sent, changes, tooOld, refusing, confirm, mailLink }
 }
 
 export const googleCredential = (sub: string, email: string): GoogleCredential =>

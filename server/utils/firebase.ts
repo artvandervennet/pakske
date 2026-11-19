@@ -1,3 +1,4 @@
+import type { MailLink } from '../../shared/schemas/mail-link'
 import type { FirebaseLogin, GoogleLogin, Identity } from '../domain/accounts'
 
 // Firebase Authentication through its REST API, from the server only: the browser talks to this
@@ -27,6 +28,15 @@ const WEAK = ['WEAK_PASSWORD', 'PASSWORD_DOES_NOT_MEET_REQUIREMENTS']
 // Firebase wants a login from the last few minutes before it changes an address or deletes an
 // account, and these are its ways of saying this one won't do.
 const REAUTH = ['CREDENTIAL_TOO_OLD_LOGIN_AGAIN', 'TOKEN_EXPIRED', 'INVALID_ID_TOKEN', 'USER_NOT_FOUND', 'USER_DISABLED']
+// A link from a mail that no longer does anything: used, expired, made up, or for an account
+// that is gone or switched off. And a new address someone else took before the link was clicked.
+const LINK_GONE = ['EXPIRED_OOB_CODE', 'INVALID_OOB_CODE', 'USER_DISABLED', 'USER_NOT_FOUND', 'EMAIL_NOT_FOUND', 'EMAIL_EXISTS', 'MISSING_OOB_CODE']
+const LINK_KINDS: Record<string, MailLink['kind']> = {
+  PASSWORD_RESET: 'reset_password',
+  VERIFY_EMAIL: 'verify_email',
+  VERIFY_AND_CHANGE_EMAIL: 'change_email',
+  RECOVER_EMAIL: 'recover_email',
+}
 const ENDED = ['TOKEN_EXPIRED', 'USER_DISABLED', 'USER_NOT_FOUND', 'INVALID_REFRESH_TOKEN', 'INVALID_GRANT_TYPE', 'MISSING_REFRESH_TOKEN']
 
 /**
@@ -234,6 +244,47 @@ export function firebaseIdentity(apiKey: string, emulatorHost?: string): Identit
         }
       }
       return send(options.continueUrl)
+    },
+
+    // Firebase reads every kind of code through `resetPassword`, and only uses one up there
+    // when a new password comes along.
+    async checkMailLink(code) {
+      try {
+        const answer = await tooMany(() => accounts<{ email?: string, newEmail?: string, requestType?: string }>('accounts:resetPassword', { oobCode: code }))
+        const kind = LINK_KINDS[answer.requestType ?? '']
+        if (!kind) return null
+        // A link to a new address names the account's address as `email` and the new one as
+        // `newEmail`; one that puts an address back names that one as `email`.
+        const [email, previous] = kind === 'change_email' ? [answer.newEmail, answer.email] : [answer.email, answer.newEmail]
+        if (!email) return null
+        return { kind, email: email.toLowerCase(), ...(previous ? { previous: previous.toLowerCase() } : {}) }
+      }
+      catch (error) {
+        if (error instanceof FirebaseError && LINK_GONE.includes(error.reason)) return null
+        throw error
+      }
+    },
+
+    async confirmPasswordReset(code, password) {
+      try {
+        const answer = await strongEnough('newPassword', () => tooMany(() => accounts<{ email?: string }>('accounts:resetPassword', { oobCode: code, newPassword: password })))
+        return { email: (answer.email ?? '').toLowerCase() }
+      }
+      catch (error) {
+        if (error instanceof FirebaseError && LINK_GONE.includes(error.reason)) return null
+        throw error
+      }
+    },
+
+    async applyMailLink(code) {
+      try {
+        const answer = await tooMany(() => accounts<{ localId?: string, email?: string }>('accounts:update', { oobCode: code }))
+        return { uid: answer.localId ?? '', email: (answer.email ?? '').toLowerCase() }
+      }
+      catch (error) {
+        if (error instanceof FirebaseError && LINK_GONE.includes(error.reason)) return null
+        throw error
+      }
     },
 
     async deleteAccount(idToken) {

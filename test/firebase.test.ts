@@ -161,3 +161,62 @@ describe('a login kept in the cookie', () => {
     expect(await firebase({ id_token: 'x', refresh_token: 'rt-2', user_id: 'uid-1' }).identity.gone('rt')).toBe(false)
   })
 })
+
+describe("a link from one of Firebase's mails", () => {
+  it('is read without a new password, which uses nothing up', async () => {
+    const { identity, calls } = firebase({ email: 'Art@Example.test', requestType: 'PASSWORD_RESET' })
+    expect(await identity.checkMailLink('code')).toEqual({ kind: 'reset_password', email: 'art@example.test' })
+    expect(calls[0]!.url).toContain('/v1/accounts:resetPassword?key=key')
+    expect(calls[0]!.body).toEqual({ oobCode: 'code' })
+  })
+
+  it('names the address the account gets, and the one it has or loses', async () => {
+    const change = firebase({ email: 'art@example.test', newEmail: 'Art@New.test', requestType: 'VERIFY_AND_CHANGE_EMAIL' })
+    expect(await change.identity.checkMailLink('code')).toEqual({ kind: 'change_email', email: 'art@new.test', previous: 'art@example.test' })
+    // Firebase may leave the current address out of a link to a new one.
+    const bare = firebase({ newEmail: 'art@new.test', requestType: 'VERIFY_AND_CHANGE_EMAIL' })
+    expect(await bare.identity.checkMailLink('code')).toEqual({ kind: 'change_email', email: 'art@new.test' })
+    const back = firebase({ email: 'art@example.test', newEmail: 'art@new.test', requestType: 'RECOVER_EMAIL' })
+    expect(await back.identity.checkMailLink('code')).toEqual({ kind: 'recover_email', email: 'art@example.test', previous: 'art@new.test' })
+    const verify = firebase({ email: 'art@example.test', requestType: 'VERIFY_EMAIL' })
+    expect(await verify.identity.checkMailLink('code')).toEqual({ kind: 'verify_email', email: 'art@example.test' })
+  })
+
+  it.each(['EXPIRED_OOB_CODE', 'INVALID_OOB_CODE', 'USER_DISABLED', 'EMAIL_NOT_FOUND'])('no longer works when Firebase says %s', async (error) => {
+    expect(await firebase({ error }).identity.checkMailLink('code')).toBeNull()
+    expect(await firebase({ error }).identity.confirmPasswordReset('code', 'long enough')).toBeNull()
+    expect(await firebase({ error }).identity.applyMailLink('code')).toBeNull()
+  })
+
+  it('is no link this site has a page for when it is of another kind', async () => {
+    expect(await firebase({ email: 'art@example.test', requestType: 'EMAIL_SIGNIN' }).identity.checkMailLink('code')).toBeNull()
+  })
+
+  it('sets the new password with the code', async () => {
+    const { identity, calls } = firebase({ email: 'Art@Example.test', requestType: 'PASSWORD_RESET' })
+    expect(await identity.confirmPasswordReset('code', 'long enough')).toEqual({ email: 'art@example.test' })
+    expect(calls[0]!.url).toContain('/v1/accounts:resetPassword?key=key')
+    expect(calls[0]!.body).toEqual({ oobCode: 'code', newPassword: 'long enough' })
+  })
+
+  it('answers a password Firebase finds too weak on the form', async () => {
+    const weak = await refusal(firebase({ error: 'WEAK_PASSWORD : Password should be at least 6 characters' }).identity.confirmPasswordReset('code', 'short'))
+    expect(weak).toMatchObject({ statusCode: 422, code: 'validation', fields: { newPassword: 'password_short' } })
+  })
+
+  it('is used on the account, and answers which account and its address now', async () => {
+    const { identity, calls } = firebase({ localId: 'uid-1', email: 'Art@New.test', emailVerified: true })
+    expect(await identity.applyMailLink('code')).toEqual({ uid: 'uid-1', email: 'art@new.test' })
+    expect(calls[0]!.url).toContain('/v1/accounts:update?key=key')
+    expect(calls[0]!.body).toEqual({ oobCode: 'code' })
+  })
+
+  it('no longer works when someone else took the new address meanwhile', async () => {
+    expect(await firebase({ error: 'EMAIL_EXISTS' }).identity.applyMailLink('code')).toBeNull()
+  })
+
+  it('still breaks on an answer nobody expected', async () => {
+    await expect(firebase({ error: 'INTERNAL_ERROR' }).identity.checkMailLink('code')).rejects.toThrow('INTERNAL_ERROR')
+    await expect(firebase({ error: 'INTERNAL_ERROR' }).identity.applyMailLink('code')).rejects.toThrow('INTERNAL_ERROR')
+  })
+})

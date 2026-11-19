@@ -265,6 +265,31 @@
     "agreeTerms": "voorwaarden",
     "agreePrivacy": "privacypagina"
   },
+  "mailLink": {
+    "goneTitle": "Deze link werkt niet meer",
+    "gone": "De link is al gebruikt of verlopen.",
+    "goneReset": "Vraag een nieuwe mail aan",
+    "toLogin": "Naar inloggen",
+    "resetTitle": "Nieuw wachtwoord kiezen",
+    "resetLead": "Voor het account van {email}.",
+    "resetSave": "Wachtwoord opslaan",
+    "resetDone": "Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.",
+    "verifyTitle": "E-mailadres bevestigen",
+    "verifyLead": "Bevestig dat {email} van jou is.",
+    "verifyConfirm": "E-mailadres bevestigen",
+    "verifyDone": "{email} is bevestigd.",
+    "changeTitle": "Nieuw e-mailadres bevestigen",
+    "changeLead": "Je account krijgt het adres {email}. Daarna log je daarmee in.",
+    "changeLeadFrom": "Je account gaat van {previous} naar {email}. Daarna log je in met het nieuwe adres.",
+    "changeConfirm": "Nieuw adres bevestigen",
+    "changeDone": "Je logt voortaan in met {email}.",
+    "recoverTitle": "E-mailadres terugzetten",
+    "recoverLead": "Het e-mailadres van je account werd gewijzigd. Zet {email} terug als je dat niet zelf deed.",
+    "recoverLeadFrom": "Het e-mailadres van je account werd gewijzigd naar {previous}. Zet {email} terug als je dat niet zelf deed.",
+    "recoverConfirm": "Adres terugzetten",
+    "recoverDone": "Je logt weer in met {email}. Veranderde iemand anders het adres, kies dan ook een nieuw wachtwoord.",
+    "recoverReset": "Nieuw wachtwoord kiezen"
+  },
   "settings": {
     "title": "Instellingen",
     "profileTitle": "Profiel",
@@ -489,7 +514,8 @@
     "google_taken": "Dat Google-account hoort al bij een ander account hier.",
     "password_needed": "Stel eerst een wachtwoord in, anders kun je niet meer inloggen.",
     "firebase_missing": "Inloggen is nog niet ingesteld. Vraag het aan wie de site beheert.",
-    "reauth_needed": "Log uit en opnieuw in, en probeer het dan nog eens."
+    "reauth_needed": "Log uit en opnieuw in, en probeer het dan nog eens.",
+    "link_gone": "Deze link werkt niet meer. Hij is al gebruikt of verlopen."
   },
   "fields": {
     "required": "Vul dit in.",

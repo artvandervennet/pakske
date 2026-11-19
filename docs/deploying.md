@@ -33,15 +33,27 @@ Firebase Authentication (Google's) holds the passwords and the Google logins, an
 
 1. At https://console.firebase.google.com, make a project (Analytics isn't needed).
 2. Under Build → Authentication → Sign-in method, turn on Email/Password. Under Settings → User account linking, keep "Link accounts that use the same email".
-3. Under Authentication → Settings → Password policy, set the minimum length to 8 and require enforcement. The site asks for 8 characters itself; the page Firebase's mail opens for a new password is Firebase's own, and without this it takes 6.
+3. Under Authentication → Settings → Password policy, set the minimum length to 8 and require enforcement. The site asks for 8 characters itself, also on the page a password mail opens. Until step 6 is done that page is Firebase's own, and without this it takes 6.
 4. Under Settings → Authorised domains, add the site's address, so the mail's button leads back to the login page.
 5. Under Templates, set the template language to Dutch, and paste in the sender's name, subject and message from `docs/mails/` (its README says what goes where). If the console answers that template updates are unavailable for the project, only Firebase support can change that; the mails then go out in Firebase's own words.
-6. Under Project settings → General, set the public-facing name to the site's name. Firebase's own mails use it.
-7. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`.
+6. Under Templates, open any template with the pencil, press "customize action URL" and fill in `https://<the site's address>/auth/action`. It counts for every template. From then on the link in a mail opens the site's own page for it (see [The page behind a mail's link](#the-page-behind-a-mails-link)). It is saved like a template, so a project that can't change its templates may be refused this too; the mails then keep opening Firebase's page, which works as before.
+7. Under Project settings → General, set the public-facing name to the site's name. Firebase's own mails use it.
+8. Under Project settings → General, copy the Web API key into `.env` as `NUXT_FIREBASE_API_KEY`, and run `docker compose up -d`.
 
 The free plan sends 150 password mails a day.
 
-Under Settings someone can ask for another email address. Firebase mails the new address a link, and the address changes at Firebase when that link is clicked; a typo can't lock anyone out. The site takes the new address over the next time it hears from Firebase about the account: at a login, or when Settings is opened. Until then Settings shows the old one. When Firebase has ended the account's logins because of the change, a browser that was still logged in keeps working, but Settings there answers "log out and in again" to anything that needs Firebase.
+Under Settings someone can ask for another email address. Firebase mails the new address a link, and the address changes at Firebase when that link is clicked; a typo can't lock anyone out. The site takes the new address over the next time it hears from Firebase about the account: at a login, or when Settings is opened. Until then Settings shows the old one. A link that opened the site's own page changes the address here in the same step. When Firebase has ended the account's logins because of the change, a browser that was still logged in keeps working, but Settings there answers "log out and in again" to anything that needs Firebase.
+
+### The page behind a mail's link
+
+`/auth/action` is the page for the links in Firebase's mails, once step 6 points them there. Firebase adds to the address what the link is for (`mode`), a one-time code (`oobCode`) and the language the mail was asked in (`lang`); a mail asked for in English opens `/en/auth/action`. The page covers the four links Firebase mails:
+
+- **A new password** (`resetPassword`): a field for the password, at least 8 characters. Saving it logs the person in.
+- **Confirming an address** (`verifyEmail`). The site never sends this mail; the page is there for when Firebase does.
+- **A new address** (`verifyAndChangeEmail`): the link mailed to the new address from Settings.
+- **The old address back** (`recoverEmail`): the link mailed to the old address after a change. Afterwards the page offers a mail for a new password, for when someone else made the change.
+
+Opening the page only reads the code (`GET /api/auth/mail-link`) and says what the link will do. It happens when the person presses the button (`POST /api/auth/mail-link`), so a mail program that opens links to scan them uses nothing up. A code works once; after that, and for an expired or made-up one, the page says the link no longer works.
 
 Deleting an account under Settings deletes it at Firebase first and then here. Firebase only does that, and only mails a new address, for a login of the last few minutes: with a password the site logs in again on the spot, and someone who only uses Google is asked to log out and in first.
 

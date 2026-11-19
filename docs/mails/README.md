@@ -19,7 +19,9 @@ When each one goes out:
 
 The link Firebase mails to a new address ("E-mailadres wijzigen" in Settings) has no template in the console, so that mail stays in Firebase's own words.
 
-Each mail has Dutch on top and English under it. Firebase stops translating a template once you change it, so one text has to serve both languages. The page behind the button still follows the language of the site (`X-Firebase-Locale` in `server/utils/firebase.ts`).
+Each mail has Dutch on top and English under it. Firebase stops translating a template once you change it, so one text has to serve both languages. The page behind the button still follows the language of the site (`X-Firebase-Locale` in `server/utils/firebase.ts`, which comes back as `lang` in the link).
+
+`%LINK%` opens Firebase's own page, or the site's `/auth/action` once the project's action URL is set (step 6 under [Logging in: Firebase](../deploying.md#logging-in-firebase)).
 
 The placeholders are Firebase's: `%LINK%`, `%EMAIL%`, `%NEW_EMAIL%`, `%SECOND_FACTOR%` and `%DISPLAY_NAME%`. Firebase only knows a name the site has told it, which it does when an account is made, at every login, and when the name changes in Settings (`tellName` in `server/domain/accounts.ts`). An account that hasn't logged in since the site started doing that gets "Dag ," until it does.
 

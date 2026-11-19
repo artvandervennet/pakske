@@ -265,6 +265,31 @@
     "agreeTerms": "terms",
     "agreePrivacy": "privacy page"
   },
+  "mailLink": {
+    "goneTitle": "This link no longer works",
+    "gone": "The link was already used, or it has expired.",
+    "goneReset": "Ask for a new email",
+    "toLogin": "Go to log in",
+    "resetTitle": "Choose a new password",
+    "resetLead": "For the account of {email}.",
+    "resetSave": "Save password",
+    "resetDone": "Your password has changed. Log in with your new password.",
+    "verifyTitle": "Confirm your email address",
+    "verifyLead": "Confirm that {email} is yours.",
+    "verifyConfirm": "Confirm email address",
+    "verifyDone": "{email} is confirmed.",
+    "changeTitle": "Confirm your new email address",
+    "changeLead": "Your account gets the address {email}. After that you log in with it.",
+    "changeLeadFrom": "Your account goes from {previous} to {email}. After that you log in with the new address.",
+    "changeConfirm": "Confirm new address",
+    "changeDone": "From now on you log in with {email}.",
+    "recoverTitle": "Put your email address back",
+    "recoverLead": "The email address of your account was changed. Put {email} back if that wasn’t you.",
+    "recoverLeadFrom": "The email address of your account was changed to {previous}. Put {email} back if that wasn’t you.",
+    "recoverConfirm": "Put address back",
+    "recoverDone": "You log in with {email} again. If someone else changed the address, choose a new password as well.",
+    "recoverReset": "Choose a new password"
+  },
   "settings": {
     "title": "Settings",
     "profileTitle": "Profile",
@@ -489,7 +514,8 @@
     "google_taken": "That Google account already belongs to another account here.",
     "password_needed": "Set a password first, or you won’t be able to log in any more.",
     "firebase_missing": "Logging in isn’t set up yet. Ask whoever runs the site.",
-    "reauth_needed": "Log out and in again, then try once more."
+    "reauth_needed": "Log out and in again, then try once more.",
+    "link_gone": "This link no longer works. It was already used, or it has expired."
   },
   "fields": {
     "required": "Fill this in.",

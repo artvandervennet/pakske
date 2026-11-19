@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changePassword, linkGoogle, logIn, logInWithGoogle, register, renameAtFirebase, requestEmailChange, signInMethods, unlinkGoogle } from '../server/domain/accounts'
+import { changePassword, followMailLink, linkGoogle, logIn, logInWithGoogle, register, renameAtFirebase, requestEmailChange, signInMethods, unlinkGoogle } from '../server/domain/accounts'
 import { listMyLists } from '../server/domain/lists'
 import { createUser, findUserByEmail, findUserById, updateDisplayName } from '../server/domain/users'
 import { fakeIdentity, googleCredential } from './fake-identity'
@@ -336,6 +336,87 @@ describe('changing the address', () => {
     // Logged in again, a wrong password is a wrong password.
     const again = await logIn(db, identity, 'art@new.test', 'correct horse', legacyCheck)
     expect(await rejection(changePassword(db, identity, again!.user, 'wrong', 'battery staple', legacyCheck, again!.login.refreshToken))).toBe('wrong_password')
+  })
+})
+
+// The page the links in Firebase's mails open reads a link first and uses it on a button.
+describe("a link from one of Firebase's mails", () => {
+  async function art() {
+    const db = makeDb()
+    const fake = fakeIdentity()
+    const { user, login } = await register(db, fake.identity, { email: 'art@example.test', displayName: 'Art', password: 'correct horse' })
+    const follow = (code: string, password?: string) => followMailLink(db, fake.identity, code, password)
+    return { db, ...fake, user, login, follow }
+  }
+
+  it('sets the new password, once', async () => {
+    const { db, identity, mailLink, follow } = await art()
+    const code = mailLink('reset_password', 'art@example.test')
+    expect(await identity.checkMailLink(code)).toEqual({ kind: 'reset_password', email: 'art@example.test' })
+    expect(await follow(code, 'battery staple')).toEqual({ kind: 'reset_password', email: 'art@example.test' })
+    expect(await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)).toBeNull()
+    expect(await logIn(db, identity, 'art@example.test', 'battery staple', legacyCheck)).not.toBeNull()
+    // The link is used up: a second password does nothing.
+    expect(await follow(code, 'third password')).toBeNull()
+    expect(await logIn(db, identity, 'art@example.test', 'battery staple', legacyCheck)).not.toBeNull()
+  })
+
+  it('changes no password without one, and leaves the link for a second try', async () => {
+    const { db, identity, mailLink, follow } = await art()
+    const code = mailLink('reset_password', 'art@example.test')
+    expect(await rejection(follow(code))).toBe('validation')
+    expect(await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)).not.toBeNull()
+    expect(await follow(code, 'battery staple')).not.toBeNull()
+  })
+
+  it('confirms an address and changes nothing else', async () => {
+    const { db, accounts, mailLink, user, follow } = await art()
+    expect(accounts[0]!.emailVerified).toBe(false)
+    expect(await follow(mailLink('verify_email', 'art@example.test'))).toEqual({ kind: 'verify_email', email: 'art@example.test' })
+    expect(accounts[0]!.emailVerified).toBe(true)
+    expect(findUserById(db, user.id)?.email).toBe('art@example.test')
+  })
+
+  it('gives the account its new address here at once, not at the next login', async () => {
+    const { db, identity, mailLink, user, follow } = await art()
+    const code = mailLink('change_email', 'art@example.test', 'art@new.test')
+    expect(await identity.checkMailLink(code)).toEqual({ kind: 'change_email', email: 'art@new.test', previous: 'art@example.test' })
+    // Reading the link changes nothing.
+    expect(findUserById(db, user.id)?.email).toBe('art@example.test')
+    expect(await follow(code)).toMatchObject({ kind: 'change_email', email: 'art@new.test' })
+    expect(findUserById(db, user.id)?.email).toBe('art@new.test')
+    expect(await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck)).toBeNull()
+    expect((await logIn(db, identity, 'art@new.test', 'correct horse', legacyCheck))?.user.id).toBe(user.id)
+  })
+
+  it('puts the old address back, here too', async () => {
+    const { db, identity, mailLink, user, follow } = await art()
+    await follow(mailLink('change_email', 'art@example.test', 'art@new.test'))
+    const back = mailLink('recover_email', 'art@new.test', 'art@example.test')
+    expect(await follow(back)).toEqual({ kind: 'recover_email', email: 'art@example.test', previous: 'art@new.test' })
+    expect(findUserById(db, user.id)?.email).toBe('art@example.test')
+    expect((await logIn(db, identity, 'art@example.test', 'correct horse', legacyCheck))?.user.id).toBe(user.id)
+  })
+
+  it('keeps the address here when another account here has the new one by then', async () => {
+    const { db, mailLink, user, follow } = await art()
+    const code = mailLink('change_email', 'art@example.test', 'art@new.test')
+    createUser(db, { email: 'art@new.test', displayName: 'Other', passwordHash: 'hash:x' })
+    expect(await follow(code)).not.toBeNull()
+    expect(findUserById(db, user.id)?.email).toBe('art@example.test')
+  })
+
+  it('does nothing for a link that is made up, used, or for an account that is gone', async () => {
+    const { identity, accounts, mailLink, follow } = await art()
+    expect(await follow('made-up')).toBeNull()
+    expect(await follow('made-up', 'battery staple')).toBeNull()
+    const used = mailLink('verify_email', 'art@example.test')
+    await follow(used)
+    expect(await identity.checkMailLink(used)).toBeNull()
+    expect(await follow(used)).toBeNull()
+    const orphan = mailLink('reset_password', 'art@example.test')
+    accounts.splice(0, 1)
+    expect(await follow(orphan, 'battery staple')).toBeNull()
   })
 })
 
