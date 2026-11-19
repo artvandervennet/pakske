@@ -27,7 +27,9 @@ async function logout() {
 </script>
 
 <template>
-  <art-header :key="headerKey" :label="t('nav.label')" data-paint="deep">
+  <!-- The banner role makes the wordmark and the buttons part of a landmark too; <art-header>
+       itself only gives its links one (a nav). -->
+  <art-header :key="headerKey" role="banner" :label="t('nav.label')" data-paint="deep">
     <!-- The link to the page you are on carries aria-current="page": NuxtLink sets it when its
          address is the current one, whatever the query, and <art-header> paints its stroke
          under that link.

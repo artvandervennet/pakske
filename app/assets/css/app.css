@@ -10,6 +10,10 @@
 :root:root,
 :root [data-paint="deep"] { --focus: var(--accent); }
 
+/* <main> takes the focus after the skip link and after a navigation (useRouteFocus). It is the
+   page, not a control: no ring around all of it. */
+#main:focus { outline: none; }
+
 /* ── Before the components load ───────────────────────────────────────────
    The server sends plain buttons, links and headings. These rules give them roughly their
    final shape, so the page doesn't jump when the custom elements upgrade. */

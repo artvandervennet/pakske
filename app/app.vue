@@ -1,14 +1,11 @@
 <script setup lang="ts">
-const { t } = useI18n()
-const localeHead = useLocaleHead({ seo: false })
-
-useHead(() => ({
-  htmlAttrs: { lang: localeHead.value.htmlAttrs?.lang },
-  titleTemplate: title => (title ? `${title} · ${t('site.name')}` : t('site.name')),
-}))
+useSiteHead()
+useRouteFocus()
 </script>
 
 <template>
+  <!-- Says the new page's title to a screen reader after a navigation inside the site. -->
+  <NuxtRouteAnnouncer />
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
