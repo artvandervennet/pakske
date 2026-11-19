@@ -285,12 +285,9 @@ async function befriend(owner: Befriendable) {
   }
 }
 
-// "Vrienden", for an owner: which friends find this list among other people's lists on their Lists page.
-const friendsDialog = useTemplateRef<{ open: () => Promise<void> }>('friendsDialog')
-const friendsStatus = ref('')
-function onFriendsSaved(shown: number) {
-  friendsStatus.value = t('list.friendsSaved', { n: shown }, shown)
-}
+// "Delen": the sheet with every way this list gets to other people (ShareSheet.vue).
+const shareSheet = useTemplateRef<{ open: () => void }>('shareSheet')
+const shareButton = useTemplateRef<HTMLButtonElement>('shareButton')
 
 // "Nieuwe link", in edit mode: the list gets another address and the one it had stops opening it.
 // It asks first. Afterwards the page goes on at the new address, where it says so once: the
@@ -339,41 +336,8 @@ async function onNewLinkClose() {
   }
 }
 
-// "Lijst samen beheren": a link that makes someone a co-owner of the list. It shows under the
-// band's buttons, with the focus on its address. Someone with friends who could be sent the list
-// is first asked whether it goes to some of them; the line under the buttons says who it went to.
-const sendListDialog = useTemplateRef<{ open: () => Promise<void> }>('sendListDialog')
-function startInvite() {
-  void sendListDialog.value?.open()
-}
-function onListSent(to: string[]) {
-  friendsStatus.value = t('list.sent', { names: names(to) }, to.length)
-}
-
-const listLink = ref<string | null>(null)
-const listLinkBox = useTemplateRef<{ focus: () => void, share: () => Promise<boolean> }>('listLinkBox')
-const inviting = ref(false)
+// What went wrong with a button in the title band.
 const bandError = ref('')
-
-async function inviteCoOwner() {
-  if (inviting.value) return
-  inviting.value = true
-  bandError.value = ''
-  try {
-    const made = await $fetch<{ invite: string }>(`/api/lists/${token.value}/invites`, { method: 'POST', body: { kind: 'list' } })
-    listLink.value = localePath(`/j/${made.invite}`)
-    await nextTick()
-    listLinkBox.value?.focus()
-    // And straight on to the share sheet, where there is one. Not waited for: the link is made.
-    void listLinkBox.value?.share()
-  }
-  catch (error) {
-    bandError.value = parse(error).message
-  }
-  finally {
-    inviting.value = false
-  }
-}
 
 // Edit mode, for an owner: choose wishes to delete or share, move them, and delete or leave the
 // list itself. The Edit button in the title band starts it with nothing chosen; holding a row
@@ -654,7 +618,10 @@ async function addWish(title: string) {
       </template>
       <template #actions>
         <!-- A deleted list only opens for people who bought something on it: no one to share it with. -->
-        <ShareButton v-if="!list.deleted && !list.old" :path="localePath(`/l/${list.token}`)" :share="{ title: list.title, text: shareText }" />
+        <!-- A deleted list and an address a list no longer has can't be shared. -->
+        <art-button v-if="!list.deleted && !list.old" variant="secondary">
+          <button ref="shareButton" type="button" @click="shareSheet?.open()"><AppIcon name="share" />{{ t('share.open') }}</button>
+        </art-button>
         <div v-if="befriendable.length" class="befriend">
           <template v-for="owner in befriendable" :key="owner.id">
             <art-button v-if="befriendState(owner) === 'none'" variant="quiet" size="s">
@@ -671,15 +638,6 @@ async function addWish(title: string) {
           <art-button v-if="!editing" variant="secondary">
             <button ref="editButton" type="button" @click="startEditing()"><AppIcon name="pencil" />{{ t('listEdit.start') }}</button>
           </art-button>
-          <art-button variant="secondary">
-            <button type="button" @click="friendsDialog?.open()">{{ t('list.friends') }}</button>
-          </art-button>
-          <art-button variant="secondary">
-            <button type="button" :aria-disabled="inviting || undefined" @click="startInvite">{{ t('list.invite') }}</button>
-          </art-button>
-          <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" :share="{ title: list.title, text: t('list.inviteShareText', { title: list.title }) }" />
-          <!-- Always there for an owner, so the words are announced when they appear. -->
-          <p class="form-message" role="status">{{ friendsStatus }}</p>
           <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
         </template>
       </template>
@@ -844,8 +802,7 @@ async function addWish(title: string) {
       </button>
     </div>
 
-    <ListFriendsDialog v-if="canManage" ref="friendsDialog" :token="list.token" :title="list.title" @saved="onFriendsSaved" />
-    <SendListDialog v-if="canManage" ref="sendListDialog" :token="list.token" :title="list.title" @link="inviteCoOwner" @sent="onListSent" />
+    <ShareSheet v-if="!list.deleted && !list.old" ref="shareSheet" :token="list.token" :title="list.title" :text="shareText" :owner="canManage" @close="shareButton?.focus()" />
 
     <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 
@@ -897,6 +854,7 @@ async function addWish(title: string) {
         {{ t('list.newLinkBody') }}
         <template v-if="shared">{{ t('list.newLinkBodyShared', { names: otherOwners }, list.owners.length - 1) }}</template>
         <template v-if="shownFriends">{{ ' ' + t('list.newLinkBodyFriends', { n: shownFriends }, shownFriends) }}</template>
+        {{ ' ' + t('list.newLinkBodyInvite') }}
       </p>
       <form method="dialog" class="actions">
         <art-button variant="secondary">
