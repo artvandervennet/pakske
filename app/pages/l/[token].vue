@@ -406,18 +406,7 @@ const editCount = useTemplateRef<HTMLElement>('editCount')
 // (app.css adds it to the scroll padding), so a row that gets the focus scrolls to under the
 // bar and not to behind it.
 const editBar = useTemplateRef<HTMLElement>('editBar')
-let barObserver: ResizeObserver | undefined
-watch(editBar, (bar) => {
-  barObserver?.disconnect()
-  const root = document.documentElement
-  if (!bar) return root.style.removeProperty('--edit-bar-height')
-  barObserver = new ResizeObserver(() => root.style.setProperty('--edit-bar-height', `${bar.offsetHeight}px`))
-  barObserver.observe(bar)
-}, { flush: 'post' })
-onBeforeUnmount(() => {
-  barObserver?.disconnect()
-  document.documentElement.style.removeProperty('--edit-bar-height')
-})
+useEditBarHeight(editBar)
 
 /** Starts edit mode; the focus goes to the chosen wish's box, else to the bar. */
 async function startEditing(wishId?: number) {

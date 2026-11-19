@@ -37,6 +37,16 @@
     "visitedNone": "No list from others matches “{query}”.",
     "deleted": "Deleted",
     "remove": "Remove",
+    "editLabel": "Edit lists",
+    "pickedMine": "Tick lists to delete them | {n} list ticked | {n} lists ticked",
+    "pickedVisited": "Tick lists to remove them from here | {n} list ticked | {n} lists ticked",
+    "deleteTitle": "Delete these {n} lists?",
+    "deleteBody": "The lists disappear, with every wish on them. You can’t undo this.",
+    "deleteBodyShared": "A list you manage together you only leave: it stays with its other owners.",
+    "deleteConfirm": "Delete lists",
+    "leaveTitle": "Leave these {n} lists?",
+    "leaveBody": "You will no longer own these lists, nor the wishes on them that aren’t on another list of yours. The lists stay with their other owners.",
+    "leaveConfirm": "Leave lists",
     "login": "Log in to make lists of your own"
   },
   "notice": {

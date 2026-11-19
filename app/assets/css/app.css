@@ -1181,7 +1181,8 @@ textarea.inline-edit { overflow: hidden; }
   background: var(--surface-sunken);
   box-shadow: inset 0 0 0 1px var(--rule);
 }
-.joint-bar-count { flex: 1 1 8rem; font-weight: var(--weight-medium); }
+/* Gesso caps a paragraph at a reading measure; in a wide bar that would leave "Klaar" in the middle. */
+.joint-bar-count { flex: 1 1 8rem; max-inline-size: none; font-weight: var(--weight-medium); }
 .joint-bar > art-button { flex: none; }
 .joint-bar-actions { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 @media (width < 40rem) { .joint-bar { padding: var(--space-2) var(--space-3); } }

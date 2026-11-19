@@ -41,3 +41,15 @@
 .lists-all,
 .lists-login { margin-block-start: var(--space-2); font-weight: var(--weight-medium); }
 :is(.lists-all, .lists-login) > a { display: inline-block; padding-block: var(--space-2); }
+
+/* ── Edit mode ────────────────────────────────────────────────────────────
+   A row is the label of its box, so tapping its name ticks it. The box's target is as big as a
+   finger and would make the row taller; the margins take that room back. A ticked row is
+   tinted, like a ticked wish. */
+.row.picking > .tick-box { margin: calc(var(--space-2) * -1); margin-inline-end: calc(var(--space-3) * -1); }
+.row.picking label { cursor: pointer; }
+.row-pick { display: flex; flex: 1 1 12rem; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); min-inline-size: 0; }
+.row-pick > .row-title { flex: 1 1 12rem; }
+.row.picking:has(.tick-box input:checked) { background: color-mix(in oklch, var(--accent) 10%, transparent); }
+/* The names of the lists a question is about, under it; a long choice scrolls inside the dialog. */
+.dialog-lists { max-block-size: 30vh; overflow: auto; margin-block: var(--space-3); padding-inline-start: 1.25em; }

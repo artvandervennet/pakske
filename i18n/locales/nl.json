@@ -37,6 +37,16 @@
     "visitedNone": "Geen lijst van anderen past bij “{query}”.",
     "deleted": "Verwijderd",
     "remove": "Weghalen",
+    "editLabel": "Lijsten bewerken",
+    "pickedMine": "Vink lijsten aan om ze te verwijderen | {n} lijst aangevinkt | {n} lijsten aangevinkt",
+    "pickedVisited": "Vink lijsten aan om ze hier weg te halen | {n} lijst aangevinkt | {n} lijsten aangevinkt",
+    "deleteTitle": "Deze {n} lijsten verwijderen?",
+    "deleteBody": "De lijsten verdwijnen, met alle wensen erop. Dat kun je niet ongedaan maken.",
+    "deleteBodyShared": "Een lijst die je samen beheert, verlaat je alleen: die blijft van de andere eigenaars.",
+    "deleteConfirm": "Lijsten verwijderen",
+    "leaveTitle": "Deze {n} lijsten verlaten?",
+    "leaveBody": "Je bent dan geen eigenaar meer van deze lijsten, en ook niet van de wensen erop die niet op een andere lijst van jou staan. De lijsten blijven van de andere eigenaars.",
+    "leaveConfirm": "Lijsten verlaten",
     "login": "Log in om zelf lijsten te maken"
   },
   "notice": {
