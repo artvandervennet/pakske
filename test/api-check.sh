@@ -544,6 +544,35 @@ req art DELETE "/api/notices/$NOTICE"; check "art dismisses his own" 204
 req art DELETE "/api/notices/$NOTICE"; check "… and a second time finds nothing" 404
 req lot GET /api/home; has "lot's notice is still there" "\"id\":\"$LOTNOTICE\""
 
+echo "── a new link"
+# On a list of its own, so art's other lists stay as the checks around this expect.
+req art POST /api/lists '{"title":"Nieuwjaar"}'; check "art makes a list for it" 201; RELIST=$(json .token)
+req art POST "/api/lists/$RELIST/wishes" '{"title":"Kaarsen","quantity":3}'; check "… with a wish asked for three times" 201; CANDLES=$(json .id)
+req art POST "/api/lists/$RELIST/wishes" '{"title":"Slingers"}'; check "… and another" 201; GARLAND=$(json .id)
+req mom PUT "/api/lists/$RELIST/wishes/$CANDLES/purchase" '{"quantity":2}'; check "mom takes two candles" 204
+req lot GET "/api/lists/$RELIST"; check "lot opens it and ticks nothing" 200
+req anon POST "/api/lists/$RELIST/new-link"; check "a new link needs a login" 401
+req mom POST "/api/lists/$RELIST/new-link"; check "mom cannot give art's list a new link" 404
+req art POST "/api/lists/$RELIST/new-link"; check "art gives it one" 200; NEWLIST=$(json .token)
+if [ -n "$NEWLIST" ] && [ "$NEWLIST" != "$RELIST" ]; then ok "… which is another address"; else bad "… which is another address: got \"$NEWLIST\""; fi
+req anon GET "/api/lists/$NEWLIST"; check "the new address opens for a visitor" 200; has "… with the wishes" '"title":"Kaarsen"'
+req anon GET "/api/lists/$RELIST"; check "the old one is nothing for a visitor" 404
+req lot GET "/api/lists/$RELIST"; check "… and for lot, who ticked nothing" 404
+req lot GET /api/lists; lacks "the list left lot's visited lists" "Nieuwjaar"
+req art GET "/api/lists/$RELIST"; check "art is told where the list went" 200; has "… with the new address" "\"movedTo\":\"$NEWLIST\""
+req art PATCH "/api/lists/$RELIST" '{"title":"Oud"}'; check "art cannot change the list through the old address" 404
+req art GET /api/lists; has "art's lists have it at the new address" "$NEWLIST"; lacks "… and not at the old one" "$RELIST"
+req mom GET "/api/lists/$RELIST"; check "mom still gets what she ticked, at the old address" 200; has "… marked old" '"old":true'; has "… her candles" '"title":"Kaarsen"'; lacks "… and no other wish" "Slingers"; lacks "… and not the new address" "$NEWLIST"
+req mom PUT "/api/lists/$RELIST/wishes/$CANDLES/purchase" '{"quantity":3}'; check "she cannot take more there" 409; has "… because it left that address" wish_removed
+req mom PUT "/api/lists/$RELIST/wishes/$GARLAND/purchase" '{"quantity":1}'; check "… or tick another wish" 404
+req mom POST "/api/lists/$RELIST/wishes/$CANDLES/notes" '{"body":"x"}'; check "… or write a note" 404
+req mom POST "/api/lists/$RELIST/wishes/$CANDLES/copy" "{\"list\":\"$MOMLIST\"}"; check "… or copy the wish" 404
+req mom PUT "/api/lists/$RELIST/wishes/$CANDLES/purchase" '{"quantity":1}'; check "she lowers what she ticked" 204
+req sis GET "/api/lists/$NEWLIST"; same "sis sees one candle taken, at the new address" ".wishes.find(w=>w.id===$CANDLES).bought" 1
+req mom DELETE "/api/lists/$RELIST/wishes/$CANDLES/purchase"; check "mom takes it back" 204
+req mom GET "/api/lists/$RELIST"; check "then the old address is nothing to her either" 404
+req mom GET /api/lists; lacks "none of that put the list on mom's visited lists" "Nieuwjaar"
+
 echo "── deleting a list"
 req art DELETE "/api/lists/$TOKEN"; check "art deletes his list" 204
 req art DELETE "/api/lists/$TOKEN"; check "a second delete finds nothing" 404
