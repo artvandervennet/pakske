@@ -53,6 +53,7 @@
   "share": {
     "copy": "Link kopiëren",
     "copied": "Link gekopieerd",
+    "copiedShort": "Gekopieerd",
     "manual": "Kopieer deze link",
     "title": "Deze wens delen | Deze {n} wensen delen",
     "how": "Hoe wil je delen?",

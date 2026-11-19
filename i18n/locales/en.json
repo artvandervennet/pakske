@@ -53,6 +53,7 @@
   "share": {
     "copy": "Copy link",
     "copied": "Link copied",
+    "copiedShort": "Copied",
     "manual": "Copy this link",
     "title": "Share this wish | Share these {n} wishes",
     "how": "How do you want to share?",

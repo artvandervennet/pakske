@@ -216,9 +216,13 @@ art-splatter:not(:defined) { display: inline-block; inline-size: 10rem; aspect-r
   color: var(--danger);
 }
 
-/* Candidate for Gesso: a button that copies a link and says so beside it. */
+/* Candidate for Gesso: a button that copies a link and says so in its own words. Both wordings
+   share one cell, so the button is as wide as the longer one and nothing beside it moves when
+   they swap. */
 .share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.share-status { font-size: var(--step--1); font-weight: var(--weight-medium); }
+.share-faces { display: inline-grid; }
+.share-face { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.share-face.away { visibility: hidden; }
 .share > .field { flex: 1 1 100%; }
 
 /* ── Wishes ───────────────────────────────────────────────────────────────*/

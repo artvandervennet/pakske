@@ -1,11 +1,15 @@
 <script setup lang="ts">
-// Copies the full address of a page on this site. Without a clipboard (the site served over
-// plain http on a home network, or permission refused) it shows the address to copy by hand.
+// Copies the full address of a page on this site, and says so in the button itself for a few
+// seconds: nothing appears beside it, so what stands next to it stays where it is. A screen
+// reader doesn't read a button's new words while the focus is on it, so the same is said in a
+// status line nobody sees. Without a clipboard (the site served over plain http on a home
+// network, or permission refused) it shows the address to copy by hand.
 const props = defineProps<{ path: string }>()
 const { t } = useI18n()
 
 const id = useId()
 const status = ref('')
+const copied = ref(false)
 const address = ref('')
 const field = ref<HTMLInputElement>()
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -32,8 +36,13 @@ function say(message: string) {
   // without being read out.
   status.value = message === lastStatus ? `${message} ` : message
   lastStatus = status.value
-  // Emptied afterwards, so no stale "copied" stays behind for someone reading the page later.
-  timer = setTimeout(() => (status.value = ''), 4000)
+  copied.value = true
+  // Back to what the button does, and emptied, so no stale "copied" stays behind for someone
+  // reading the page later.
+  timer = setTimeout(() => {
+    copied.value = false
+    status.value = ''
+  }, 3000)
 }
 
 onBeforeUnmount(() => clearTimeout(timer))
@@ -42,9 +51,16 @@ onBeforeUnmount(() => clearTimeout(timer))
 <template>
   <div class="share">
     <art-button variant="secondary">
-      <button type="button" @click="copy"><AppIcon name="share" />{{ t('share.copy') }}</button>
+      <!-- Both wordings lie on top of each other and one shows, so the button is always as wide
+           as the longer one. The hidden one is no part of the button's name. -->
+      <button type="button" @click="copy">
+        <span class="share-faces">
+          <span class="share-face" :class="{ away: copied }"><AppIcon name="share" />{{ t('share.copy') }}</span>
+          <span class="share-face" :class="{ away: !copied }"><AppIcon name="check" />{{ t('share.copiedShort') }}</span>
+        </span>
+      </button>
     </art-button>
-    <span class="share-status" role="status">{{ status }}</span>
+    <span class="visually-hidden" role="status">{{ status }}</span>
     <div v-if="address" class="field">
       <label :for="id">{{ t('share.manual') }}</label>
       <input :id="id" ref="field" type="text" readonly :value="address" @focus="field?.select()">
