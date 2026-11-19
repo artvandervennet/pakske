@@ -8,6 +8,6 @@ export function useSiteHead() {
 
   useHead(() => ({
     htmlAttrs: { lang: lang.value },
-    titleTemplate: title => (title ? `${title} · ${t('site.name')}` : t('site.name')),
+    titleTemplate: title => (title ? `${title} - ${t('site.name')}` : t('site.name')),
   }))
 }
