@@ -8,7 +8,8 @@ import { shareMessage } from '#shared/utils/share'
 // network, or permission refused) it shows the address to copy by hand.
 // With `share` it is "Delen" instead, and opens the device's own share sheet with those words
 // and the address, to send on with WhatsApp or anything else there. A browser without a share
-// sheet gets the copy button, as if `share` wasn't given.
+// sheet gets the copy button, as if `share` wasn't given. Whoever just made the link can open
+// the sheet at once (`share()`), without a second press.
 const props = defineProps<{ path: string, share?: { title: string, text: string } }>()
 const { t } = useI18n()
 
@@ -27,19 +28,30 @@ onMounted(() => {
   sharing.value = props.share !== undefined && typeof navigator.share === 'function'
 })
 
-async function press() {
-  if (!sharing.value || !props.share) return copy()
+/**
+ * Opens the share sheet. False when there is none here or the browser wouldn't open it, which
+ * it only does for a press: the button is still there to press then.
+ */
+async function openSheet() {
+  if (!sharing.value || !props.share) return false
   try {
     // The link goes in the words and not beside them as `url`: given both, the apps in the
     // sheet of a Mac or an iPhone send the address alone.
     await navigator.share({ title: props.share.title, text: shareMessage(props.share.text, location.origin + props.path) })
+    return true
   }
   catch (failure) {
-    // Closing the sheet without choosing is no failure. Anything else: the link at least.
-    if (failure instanceof DOMException && failure.name === 'AbortError') return
-    await copy()
+    // Closing the sheet without choosing is no failure.
+    return failure instanceof DOMException && failure.name === 'AbortError'
   }
 }
+
+/** The button itself: the sheet, or the link at least. */
+async function press() {
+  if (!await openSheet()) await copy()
+}
+
+defineExpose({ share: openSheet })
 
 async function copy() {
   const url = location.origin + props.path
@@ -81,7 +93,7 @@ onBeforeUnmount(() => clearTimeout(timer))
            as the longest. The hidden ones are no part of the button's name. -->
       <button type="button" @click="press">
         <span class="share-faces">
-          <span v-if="share" class="share-face" :class="{ away: copied || !sharing }"><AppIcon name="share" />{{ t('share.open') }}</span>
+          <span v-if="props.share" class="share-face" :class="{ away: copied || !sharing }"><AppIcon name="share" />{{ t('share.open') }}</span>
           <span class="share-face" :class="{ away: copied || sharing }"><AppIcon name="share" />{{ t('share.copy') }}</span>
           <span class="share-face" :class="{ away: !copied }"><AppIcon name="check" />{{ t('share.copiedShort') }}</span>
         </span>

@@ -71,6 +71,8 @@
     "readyTitle": "Je link is klaar",
     "copyLinkText": "Stuur deze link naar wie een kopie mag hebben. Hij werkt 30 dagen.",
     "linkedLinkText": "Stuur deze link naar de persoon met wie je wilt delen. Hij werkt één keer.",
+    "copyShareText": "Hey, ik deel een wens met je. Open deze link om een kopie op je eigen lijst te zetten. | Hey, ik deel {n} wensen met je. Open deze link om er een kopie van op je eigen lijst te zetten.",
+    "linkedShareText": "Hey, zullen we deze wens delen? Open deze link en de wens staat op onze beide lijsten. De link werkt één keer. | Hey, zullen we deze {n} wensen delen? Open deze link en de wensen staan op onze beide lijsten. De link werkt één keer.",
     "done": "Klaar"
   },
   "list": {
@@ -92,6 +94,7 @@
     "deleteCancel": "Annuleren",
     "invite": "Lijst samen beheren",
     "inviteText": "Stuur deze link naar de persoon met wie je deze lijst wilt beheren. Hij werkt één keer. Wie hem opent, wordt mede-eigenaar van de lijst en van alle wensen erop.",
+    "inviteShareText": "Hey, zullen we de lijst “{title}” samen beheren? Open deze link en je wordt mede-eigenaar. De link werkt één keer.",
     "leave": "Lijst verlaten",
     "leaveTitle": "“{title}” verlaten?",
     "leaveBody": "Je bent dan geen eigenaar meer van deze lijst, en ook niet van de wensen erop die niet op een andere lijst van jou staan. De lijst blijft van {names}.",

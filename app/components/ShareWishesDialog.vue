@@ -15,10 +15,15 @@ const id = useId()
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 const heading = useTemplateRef<HTMLElement>('heading')
-const linkBox = useTemplateRef<{ focus: () => void }>('linkBox')
+const linkBox = useTemplateRef<{ focus: () => void, share: () => Promise<boolean> }>('linkBox')
 
 // The wishes this opening is about: the page may clear its ticks while the link is on view.
 const ids = ref<number[]>([])
+// The words that go along with the link in the share sheet.
+const shareWords = computed(() => ({
+  title: t('site.name'),
+  text: t(mode.value === 'copy' ? 'share.copyShareText' : 'share.linkedShareText', { n: ids.value.length }, ids.value.length),
+}))
 const mode = ref<'copy' | 'linked'>('copy')
 const path = ref<string | null>(null)
 const busy = ref(false)
@@ -51,6 +56,8 @@ async function make() {
     // The button that was pressed is gone with the first step: on to the address, selected.
     await nextTick()
     linkBox.value?.focus()
+    // And straight on to the share sheet, where there is one. Not waited for: the link is made.
+    void linkBox.value?.share()
   }
   catch (failure) {
     const parsed = parse(failure)
@@ -101,7 +108,7 @@ defineExpose({ open })
       </form>
     </template>
     <template v-else>
-      <OneTimeLink ref="linkBox" :path="path" :text="mode === 'copy' ? t('share.copyLinkText') : t('share.linkedLinkText')" />
+      <OneTimeLink ref="linkBox" :path="path" :text="mode === 'copy' ? t('share.copyLinkText') : t('share.linkedLinkText')" :share="shareWords" />
       <form method="dialog" class="actions">
         <art-button>
           <button value="done">{{ t('share.done') }}</button>

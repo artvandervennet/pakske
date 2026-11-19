@@ -256,7 +256,7 @@ async function onNewLinkClose() {
 // "Lijst samen beheren": a link that makes someone a co-owner of the list. It shows under the
 // band's buttons, with the focus on its address.
 const listLink = ref<string | null>(null)
-const listLinkBox = useTemplateRef<{ focus: () => void }>('listLinkBox')
+const listLinkBox = useTemplateRef<{ focus: () => void, share: () => Promise<boolean> }>('listLinkBox')
 const inviting = ref(false)
 const bandError = ref('')
 
@@ -269,6 +269,8 @@ async function inviteCoOwner() {
     listLink.value = localePath(`/j/${made.invite}`)
     await nextTick()
     listLinkBox.value?.focus()
+    // And straight on to the share sheet, where there is one. Not waited for: the link is made.
+    void listLinkBox.value?.share()
   }
   catch (error) {
     bandError.value = parse(error).message
@@ -566,7 +568,7 @@ async function addWish(title: string) {
           <art-button variant="secondary">
             <button type="button" :aria-disabled="inviting || undefined" @click="inviteCoOwner">{{ t('list.invite') }}</button>
           </art-button>
-          <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" />
+          <OneTimeLink v-if="listLink" ref="listLinkBox" :path="listLink" :text="t('list.inviteText')" :share="{ title: list.title, text: t('list.inviteShareText', { title: list.title }) }" />
           <p v-if="bandError" class="form-message" role="alert">{{ bandError }}</p>
         </template>
       </template>
