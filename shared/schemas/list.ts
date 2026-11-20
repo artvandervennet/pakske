@@ -218,12 +218,37 @@ export interface NoticeView {
   createdAt: string
 }
 
+/** Something of someone else's that the person ticked, as a row on the home page. */
+export interface GivenWish {
+  id: number
+  title: string
+  /** `/uploads/<file>`, or null. */
+  image: string | null
+  /** How many of it the person gives. */
+  mine: number
+  /** How many the wish asks for; null means unlimited. */
+  quantity: number | null
+  /** The list on the person's page that shows it, where they can change what they give. */
+  token: string
+  listTitle: string
+  /** No longer on that list (taken off, deleted, or the list deleted): there for a while yet. */
+  removed: boolean
+}
+
+/** What the person gives to the same people. */
+export interface GivenGroup {
+  /** Display names of who it is for. Empty when the list they are on has no owner any more. */
+  names: string[]
+  /** The one ticked last first. */
+  wishes: GivenWish[]
+}
+
 /** How many lists of each kind the home page shows. The lists page has them all. */
 export const HOME_LISTS = 5
 
 /**
  * What the home page shows: the few lists of each kind the person had to do with last, how many
- * there are in all, and the Secret Santa groups the person is in.
+ * there are in all, everything the person gives, and the Secret Santa groups the person is in.
  */
 export interface HomeView {
   /** The most recently opened or joined first. */
@@ -232,6 +257,11 @@ export interface HomeView {
   /** Other people's lists: what friends show the person first, then what they opened, most recent first. */
   opened: OpenedList[]
   openedTotal: number
+  /**
+   * What the person ticked on other people's lists, per person it is for: the people they
+   * ticked something for last first. Empty for someone who isn't logged in.
+   */
+  given: GivenGroup[]
   /** The one joined last first; empty for someone who isn't logged in. */
   santa: SantaGroupRow[]
 }

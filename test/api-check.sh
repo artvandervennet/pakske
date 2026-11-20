@@ -154,6 +154,11 @@ req mom PUT "/api/lists/$TOKEN/wishes/99999/purchase" '{"quantity":1}'; check "a
 req sis PUT "/api/lists/$MOMLIST/wishes/$BOOK/purchase" '{"quantity":1}'; check "sis cannot buy art's wish through mom's list" 404
 req mom PUT "/api/lists/$MOMLIST/wishes/$BOOK/purchase" '{"quantity":1}'; check "mom cannot buy art's wish through her own list" 404
 req mom GET "/api/lists/$TOKEN"; has "mom sees what was bought, added up" '"bought":3'
+req mom GET /api/home; same "mom's home page has what she gives, under who it is for, the last tick first" ".given.map(g=>g.names+': '+g.wishes.map(w=>w.title+' '+w.mine).join(', ')).join('; ')" "Art: Sokken 1, Slimme stekkers 2"
+has "… each with the list to open it on" "\"token\":\"$TOKEN\",\"listTitle\":\"Verjaardag Art\",\"removed\":false"
+lacks "… and nothing of what sis gives" Puzzels
+req art GET /api/home; same "art's home page has nothing he gives, whatever was bought for him" ".given.length" 0
+req anon GET /api/home; same "… and neither has a visitor's" ".given.length" 0
 
 echo "── two buyers at the same moment"
 req art POST "/api/lists/$TOKEN/wishes" '{"title":"Laatste exemplaar","quantity":1}'; LAST=$(json .id)
@@ -213,6 +218,7 @@ status_of /en/register; has "the form that makes an account links to the terms" 
 echo "── the owner ticks his own wishes"
 req art PUT "/api/lists/$TOKEN/wishes/$BOOK/purchase" '{"quantity":1}'; check "art ticks his own free wish" 204
 req art GET "/api/lists/$TOKEN"; has "… and his list shows it as his" '"mine":1'
+req art GET /api/home; same "… and his home page doesn't count it as something he gives" ".given.length" 0
 for secret in purchases notes bought removed Moeke Zus geheimpje; do lacks "… and still has no '$secret'" "$secret"; done
 req art PUT "/api/lists/$TOKEN/wishes/$SOCKS/purchase" '{"quantity":1}'; check "art ticks the socks mom already has" 409; has "… with the code quantity_exceeded" quantity_exceeded
 REFUSAL=$(said)
@@ -228,6 +234,7 @@ req art DELETE "/api/lists/$TOKEN/wishes/$SOCKS"; check "a second delete finds n
 req art DELETE "/api/lists/$TOKEN/wishes/$PUZZLES"; check "art deletes another bought wish, same answer" 204
 req art GET "/api/lists/$TOKEN"; lacks "art no longer sees the socks" Sokken
 req mom GET "/api/lists/$TOKEN"; has "mom, who bought the socks, still sees them" Sokken; has "… marked as removed" '"removed":true'
+req mom GET /api/home; same "… and her home page marks them the same way" ".given[0].wishes.find(w=>w.title==='Sokken').removed" true
 req sis GET "/api/lists/$TOKEN"; lacks "sis, who bought none of them, no longer sees the socks" Sokken; has "… but still the puzzles she bought" Puzzels
 req sis POST "/api/lists/$TOKEN/wishes/$SOCKS/notes" '{"body":"Wie heeft ze?"}'; check "… and cannot write a note on them" 404
 req sis PUT "/api/lists/$TOKEN/wishes/$SOCKS/purchase" '{"quantity":1}'; check "sis cannot newly buy a removed wish" 409; has "… with the code wish_removed" wish_removed
@@ -243,6 +250,7 @@ req art DELETE "/api/lists/$TOKEN/wishes/$CANDLE" '{"clearForBuyers":"yes"}'; ch
 req art DELETE "/api/lists/$TOKEN/wishes/$CANDLE" '{"clearForBuyers":true}'; check "art deletes the candle for whoever bought it as well, same answer" 204
 req art POST "/api/lists/$TOKEN/wishes/delete" "{\"wishIds\":[$SOAP],\"clearForBuyers\":true}"; check "… and the soap, from edit mode" 204
 req mom GET "/api/lists/$TOKEN"; lacks "mom no longer sees the candle" Kaarsje; lacks "… nor the soap" Zeepje; has "… but still the socks, deleted the usual way" Sokken
+req mom GET /api/home; lacks "her home page has no candle either" Kaarsje; lacks "… nor the soap" Zeepje; has "… but still the socks" Sokken
 req mom POST "/api/lists/$TOKEN/wishes/$CANDLE/notes" '{"body":"Waar is hij?"}'; check "… and cannot write a note on the candle" 404
 req mom DELETE "/api/lists/$TOKEN/wishes/$CANDLE/purchase"; check "… but can still take back what she was giving" 204
 
@@ -796,6 +804,7 @@ req art GET "/api/lists/$RELIST"; check "art is told where the list went" 200; h
 req art PATCH "/api/lists/$RELIST" '{"title":"Oud"}'; check "art cannot change the list through the old address" 404
 req art GET /api/lists; has "art's lists have it at the new address" "$NEWLIST"; lacks "… and not at the old one" "$RELIST"
 req mom GET "/api/lists/$RELIST"; check "mom still gets what she ticked, at the old address" 200; has "… marked old" '"old":true'; has "… her candles" '"title":"Kaarsen"'; lacks "… and no other wish" "Slingers"; lacks "… and not the new address" "$NEWLIST"
+req mom GET /api/home; lacks "her home page doesn't give the new address away either" "$NEWLIST"; lacks "… and leaves the candles out, on a list she has no link of now" Kaarsen
 req mom PUT "/api/lists/$RELIST/wishes/$CANDLES/purchase" '{"quantity":3}'; check "she cannot take more there" 409; has "… because it left that address" wish_removed
 req mom PUT "/api/lists/$RELIST/wishes/$GARLAND/purchase" '{"quantity":1}'; check "… or tick another wish" 404
 req mom POST "/api/lists/$RELIST/wishes/$CANDLES/notes" '{"body":"x"}'; check "… or write a note" 404

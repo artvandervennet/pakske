@@ -55,6 +55,12 @@ Rules that keep an owner from finding out by a detour:
 - Pages and API answers are sent with `Cache-Control: private, no-store`. Logging in and out reloads the page.
 - Note ids are random, so a gap in a sequence can't hint at notes written elsewhere.
 
+The home page shows someone what they give, per person it is for (`listGiven` in `server/domain/purchases.ts`). It holds what the lists on their page would show them of their own, and nothing else:
+
+- The purchases table is read for that person's own rows only, so what anyone else ticked can't change it, and an owner's home page says nothing about what was bought for them. A wish they own themselves is left out: that tick means "I have this".
+- A row links to a list that shows the wish, and only to one the person opened or that a friend shows them. A wish that no such list shows is left out, also when a list they never had the link of shows it. So what is on a list they took off their page is gone from the overview until they open that list again, and so is what is on a list that got a new link.
+- A wish that left its list stays in the overview, marked "Taken off the list", for as long as it stays on the list's page for its buyer, and goes at the same moment.
+
 Only `purchases.ts`, `notes.ts` and `list-view.ts` in `server/domain/` read purchases or notes. Tests read the sources of the files behind wishes, lists, placements, sharing, undo, links and notices to keep it that way.
 
 `test/visibility.test.ts` builds two databases that differ only in what buyers, and the other owners of a joint wish, did. It checks that each owner and a visitor get identical results from both. An owner's own purchase is the one difference, and only that owner sees it.

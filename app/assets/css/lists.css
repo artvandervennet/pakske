@@ -42,6 +42,20 @@
 .lists-login { margin-block-start: var(--space-2); font-weight: var(--weight-medium); }
 :is(.lists-all, .lists-login) > a { display: inline-block; padding-block: var(--space-2); }
 
+/* ── What you give ────────────────────────────────────────────────────────
+   On the home page: a list per person, each under that person's name. The name is what the eye
+   looks for, so it is in the ink of the page and not in the grey of a label. */
+.given-for {
+  margin-block: var(--space-8) var(--space-2);
+  font: var(--weight-bold) var(--step-0)/1.3 var(--font-body);
+  letter-spacing: 0;
+}
+.given-for:first-child { margin-block-start: 0; }
+/* The picture and the words stay on one line; only the tape may go under them, and there it
+   keeps to the row's far end, where it is on a wide screen. */
+.given-row > .row-text { flex-basis: 8rem; }
+.given-row > art-tape { margin-inline-start: auto; }
+
 /* ── Edit mode ────────────────────────────────────────────────────────────
    A row is the label of its box, so tapping its name ticks it. The box's target is as big as a
    finger and would make the row taller; the margins take that room back. A ticked row is

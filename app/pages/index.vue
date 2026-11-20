@@ -15,6 +15,10 @@ const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
 const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
 const openedTotal = computed(() => home.value?.openedTotal ?? 0)
+// Everything the person ticked on other people's lists, per person it is for. On the page only
+// for someone who gives something.
+const given = computed(() => home.value?.given ?? [])
+const names = useNames()
 // Secret Santa is something extra: it is on this page only for someone who is in a group.
 const santa = computed(() => home.value?.santa ?? [])
 // Without it a failed load would look like having no lists at all.
@@ -34,7 +38,7 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
 // Gesso paints a page's sections 1, 2, 3 in order, whichever of them are there.
 const paints = computed(() => {
   let paint = 0
-  return { yours: loggedIn.value ? ++paint : 0, opened: ++paint, santa: ++paint }
+  return { yours: loggedIn.value ? ++paint : 0, opened: ++paint, given: given.value.length ? ++paint : 0, santa: ++paint }
 })
 </script>
 
@@ -114,6 +118,23 @@ const paints = computed(() => {
         </div>
       </div>
     </div>
+
+    <section v-if="given.length" class="band section" :data-paint="paints.given" aria-labelledby="given-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="given-title" class="section-title">{{ t('home.given') }}</h2>
+        </div>
+        <div class="section-body given">
+          <!-- One list per person: its heading names it, so a screen reader says who a list is for. -->
+          <template v-for="(group, index) in given" :key="index">
+            <h3 :id="`given-for-${index}`" class="given-for">{{ group.names.length ? t('home.givenFor', { names: names(group.names) }) : t('home.givenForNobody') }}</h3>
+            <ul class="rows" :aria-labelledby="`given-for-${index}`">
+              <GivenRow v-for="wish in group.wishes" :key="wish.id" :wish="wish" />
+            </ul>
+          </template>
+        </div>
+      </div>
+    </section>
 
     <section v-if="santa.length" class="band section" :data-paint="paints.santa" aria-labelledby="santa-title">
       <div class="inner">

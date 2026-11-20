@@ -13,6 +13,7 @@ Built with Nuxt 4 and [Gesso](https://github.com/artvandervennet/gesso), in Dutc
 
 - **Lists behind a link.** No page lists other people's lists; the link is the only way in.
 - **Giving without spoiling it.** Buyers see who gives what and can write notes to each other. A wish's owners never see purchases or notes. [Who sees what](docs/who-sees-what.md) has the rules, how the server keeps them, and the one limit.
+- **What you give, in one place.** The home page lists everything you ticked, under the name of who it is for.
 - **Giving anonymously.** A buyer can give without their name, per wish or as their account's default.
 - **One, several or without a limit.** A wish asks for a number, and each buyer takes their share of it.
 - **Links and a picture.** A wish has up to five links. Without a photo of your own, the server fetches the cover of the first link.
