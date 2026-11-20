@@ -1,6 +1,7 @@
 import { ownersToBefriend } from '../../../domain/friends'
 import { getListView, oldLinkView } from '../../../domain/list-view'
 import { coOwnersOf } from '../../../domain/lists'
+import { threadsFor } from '../../../domain/messages'
 import { drawnOwnersOf } from '../../../domain/santa'
 import { rememberList } from '../../../domain/visits'
 
@@ -34,5 +35,7 @@ export default defineEventHandler(async (event) => {
     coOwners: viewerId !== null && view.viewerOwnsList && !view.deleted ? coOwnersOf(db, viewerId, token) : undefined,
     // Whose name they drew among the owners: the page says so, and that a tick here is anonymous.
     drewOwners: viewerId === null ? [] : drawnOwnersOf(db, viewerId, token),
+    // What was written to the owners: all of it for an owner, without names; their own for anyone else.
+    threads: viewerId === null ? [] : threadsFor(db, viewerId, token),
   }
 })

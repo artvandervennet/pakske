@@ -783,6 +783,36 @@ req mom GET "/api/santa/$SANTA"; check "it is gone for mom" 404
 req mom GET /api/notices; lacks "… with what she was told about it" santa_drawn
 for who in art mom sis lot; do eval "SLIST=\$SL_$who"; req $who DELETE "/api/lists/$SLIST" '{}'; done; check "the lists made for it are deleted again" 204
 
+echo "── writing to a list's owners"
+req art POST /api/lists '{"title":"Vragen"}'; ASK=$(json .token)
+req anon POST /api/lists/$ASK/messages '{"body":"Welke maat?"}'; check "writing to the owners needs a login" 401
+req anon GET /api/lists/$ASK; lacks "… and a visitor gets no conversations" '"body"'
+req mom GET /api/lists/$ASK; check "mom opens the list" 200; has "… with no conversation yet" '"threads":[]'
+req mom POST /api/lists/$ASK/messages '{"body":" "}'; check "an empty message is refused" 422; has "… naming the field" '"body":"required"'
+req mom POST /api/lists/$ASK/messages '{"body":"Welke maat?"}'; check "mom writes to the owner" 201; ASK_MSG=$(json .id); ASK_THREAD=$(json .thread)
+req sis GET /api/lists/$ASK; req sis POST /api/lists/$ASK/messages '{"body":"Heb je al een fiets?"}'; check "sis writes too" 201
+req art GET /api/lists/$ASK; has "the owner reads what mom wrote" '"body":"Welke maat?"'; has "… and what sis wrote" '"body":"Heb je al een fiets?"'
+lacks "… without mom's name" Moeke; lacks "… or sis's" Zus; lacks "… or an account's id" '"userId"'
+same "… as two conversations" '.threads.length' 2
+req art GET /api/notices; has "the owner gets a notice that names nobody" '"kind":"list_message","actor":"","actorId":0,"picture":null'
+req art POST /api/lists/$ASK/messages '{"body":"Hallo?"}'; check "an owner can't write without a conversation to answer" 403
+req art POST /api/lists/$ASK/messages '{"body":"Medium.","thread":"not-an-id"}'; check "a conversation's id has to look like one" 422
+req art POST /api/lists/$ASK/messages '{"body":"Medium.","thread":"00000000-0000-4000-8000-000000000000"}'; check "an unknown conversation is not found" 404
+req art POST /api/lists/$ASK/messages "{\"body\":\"Medium.\",\"thread\":\"$ASK_THREAD\"}"; check "the owner answers mom" 201
+req mom GET /api/lists/$ASK; has "mom reads the answer, with the owner's name" '"owner":"Art"'; same "… in her one conversation" '.threads.length' 1
+lacks "… and nothing of what sis wrote" fiets
+req mom GET /api/notices; has "mom gets a notice about the answer" '"kind":"message_answered","actor":"Art"'
+req sis GET /api/lists/$ASK; lacks "sis reads nothing of mom's conversation" maat
+req art DELETE /api/messages/$ASK_MSG; check "the owner can't delete what mom wrote" 404
+req sis DELETE /api/messages/$ASK_MSG; check "… and neither can sis" 404
+req sis DELETE /api/lists/$ASK/threads/$ASK_THREAD; check "only an owner deletes a conversation" 404
+req mom DELETE /api/messages/$ASK_MSG; check "mom deletes her own message" 204
+req art GET /api/lists/$ASK; lacks "… and it is gone for the owner" 'Welke maat?'
+req art DELETE /api/lists/$ASK/threads/$ASK_THREAD; check "the owner deletes the conversation" 204
+req mom GET /api/lists/$ASK; has "… and mom's is gone with it" '"threads":[]'
+req art DELETE /api/lists/$ASK '{}'; check "art deletes the list" 204
+req mom POST /api/lists/$ASK/messages '{"body":"Nog iets"}'; check "a deleted list takes no message" 404
+
 echo "── a new link"
 # On a list of its own, so art's other lists stay as the checks around this expect.
 req art POST /api/lists '{"title":"Nieuwjaar"}'; check "art makes a list for it" 201; RELIST=$(json .token)

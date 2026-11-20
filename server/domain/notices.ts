@@ -1,14 +1,16 @@
 import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { friendships, listFriends, listOwners, lists, listWishes, notices, santaGroups, santaMembers, users, wishes, wishLinks } from '../db/schema'
+import { friendships, listFriends, listOwners, lists, listVisits, listWishes, notices, santaGroups, santaMembers, users, wishes, wishLinks } from '../db/schema'
 import type { NoticeKind, NoticeView } from '../../shared/schemas/list'
 import { waitingSend } from './invites'
 import { onListNow } from './placement'
 
-// Messages for one person inside the site: what other owners did with their wishes and lists,
-// and what happened in a Secret Santa group they are in. They are made only by owner actions
-// (linking, unlinking, links used, lists joined, something sent to a friend) and by joining,
-// leaving and drawing in a group, so nothing a buyer does can ever show up here.
+// Word for one person inside the site: what other owners did with their wishes and lists, what
+// happened in a Secret Santa group they are in, and that someone wrote to them on a list. They
+// are made by owner actions (linking, unlinking, links used, lists joined, something sent to a
+// friend), by joining, leaving and drawing in a group, and by a message someone chose to write
+// (`./messages`), so nothing a buyer ticks can ever show up here. A notice that someone wrote
+// to a list's owners names nobody.
 // (`./invites` uses `addNotice` and this file its `waitingSend`: each only calls the other's
 // functions, never at load.)
 
@@ -46,16 +48,23 @@ export function listNotices(db: Db, userId: number): NoticeView[] {
   return rows.flatMap(({ notice, actor, imageFile, friend }) => {
     const invite = notice.inviteId === null ? null : waitingSend(db, notice.inviteId, userId)
     if (notice.inviteId !== null && invite === null) return []
-    const token = notice.kind === 'list_shown' ? shownToken(db, userId, notice.listId) : noticeToken(db, userId, notice.wishId, notice.listId)
+    const token = notice.kind === 'list_shown'
+      ? shownToken(db, userId, notice.listId)
+      : notice.kind === 'message_answered'
+        ? shownToken(db, userId, notice.listId) ?? openedToken(db, userId, notice.listId)
+        : noticeToken(db, userId, notice.wishId, notice.listId)
+    // Someone wrote to the list's owners: that notice says so and names nobody. Its row has the
+    // recipient as its actor, so there is no one to name.
+    const nameless = notice.kind === 'list_message'
     const undoable = notice.kind === 'wish_linked' && token !== null && notice.wishId !== null
       && db.select({ id: wishLinks.id }).from(wishLinks)
         .where(and(eq(wishLinks.wishId, notice.wishId), eq(wishLinks.userId, notice.actorId))).get() !== undefined
     return [{
       id: notice.id,
       kind: notice.kind as NoticeKind,
-      actor,
-      actorId: notice.actorId,
-      picture: friend !== null && imageFile ? `/uploads/${imageFile}` : null,
+      actor: nameless ? '' : actor,
+      actorId: nameless ? 0 : notice.actorId,
+      picture: !nameless && friend !== null && imageFile ? `/uploads/${imageFile}` : null,
       title: notice.title,
       more: notice.more,
       token,
@@ -106,6 +115,20 @@ function shownToken(db: Db, userId: number, listId: number | null): string | nul
     .where(and(eq(listFriends.listId, listId), eq(listFriends.userId, userId), isNull(listFriends.hiddenAt), isNull(lists.deletedAt)))
     .get()
   return shown?.token ?? null
+}
+
+/**
+ * Where a notice about an answer leads when no friend shows the list: the list the person wrote
+ * on, while it is among the lists they opened. A list that got a new link since is no longer
+ * among them (`relinkList`), so the notice never hands out an address they weren't given.
+ */
+function openedToken(db: Db, userId: number, listId: number | null): string | null {
+  if (listId === null) return null
+  const opened = db.select({ token: lists.token }).from(listVisits)
+    .innerJoin(lists, eq(lists.id, listVisits.listId))
+    .where(and(eq(listVisits.listId, listId), eq(listVisits.userId, userId), isNull(lists.deletedAt)))
+    .get()
+  return opened?.token ?? null
 }
 
 /** Where a notice about a Secret Santa group leads: the group, while the recipient is in it. */

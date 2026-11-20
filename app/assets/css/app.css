@@ -395,6 +395,8 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
   box-shadow: inset 0 0 0 1px var(--rule);
 }
 .person-picture.study { background: linear-gradient(var(--study-angle), var(--study-a) 55%, var(--study-b) 55%); }
+/* Nobody's picture: where a notice names no one, a drawing stands in for the person. */
+.person-picture.nobody { display: grid; place-items: center; color: var(--ink-muted); }
 /* The profile picture in Settings, with what can be done to it beside it. */
 .profile-picture { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-6); margin-block-end: var(--space-6); --picture-size: 5rem; }
 .profile-picture-text { display: grid; gap: var(--space-1); min-inline-size: 0; }
@@ -965,6 +967,22 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
 .note > header strong { color: var(--ink); }
 .note > header .icon-button { margin-inline-start: auto; }
 .note > p { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Writing to a list's owners, in the band under the wishes: a conversation is its messages,
+   drawn like a wish's notes, with the field for the next one under them. An owner has
+   several, a rule between them. */
+.thread { display: grid; gap: var(--space-4); max-inline-size: 34rem; }
+.thread-messages { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
+.thread-messages > li { max-inline-size: none; }
+/* What the reader wrote themselves stands apart from what came back. */
+.thread-messages > .note.mine { background: var(--accent-wash); }
+.thread .form { gap: var(--space-3); }
+.thread .form > .actions { align-items: center; margin-block-start: 0; }
+.thread-sent { margin: 0; font-size: var(--step--1); color: var(--ink-muted); }
+.thread-lead { max-inline-size: 34rem; margin-block-end: var(--space-6); }
+.threads { display: grid; gap: var(--space-8); max-inline-size: 34rem; list-style: none; padding: 0; }
+.threads > li { max-inline-size: none; }
+.threads > li + li { padding-block-start: var(--space-8); border-block-start: 1px solid var(--rule); }
 
 /* Candidate for Gesso: text edited where it is read. A real field without a field's edge or
    fill, in the type of the text it holds. The cue that it is editable is quiet: a line under

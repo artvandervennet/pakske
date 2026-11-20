@@ -49,7 +49,7 @@ Rules that keep an owner from finding out by a detour:
 - Lowering an amount below what is bought is always accepted. Buyers then see that none are left.
 - Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it, for thirty days. A list with more than one owner can't be deleted, whatever is on it.
 - Linking, copying, unlinking, undo, share links and leaving a list never read purchases or notes, so they answer the same whatever was bought. An already bought wish can be linked or copied like any other.
-- Notices are about who owns what: a wish linked or unlinked, wishes made joint through a link, a new co-owner. Buying, ticking and writing notes never make one. Neither does a copy, by button or by link: it changes nothing for the owners of the original.
+- Notices are about who owns what: a wish linked or unlinked, wishes made joint through a link, a new co-owner. Buying, ticking and writing notes never make one. A message to the owners does, without a name (see Writing to the owners below). Neither does a copy, by button or by link: it changes nothing for the owners of the original.
 - Buying and writing notes never change a wish's `updatedAt` or its place in the list.
 - An owner of a wish or of the list gets a fixed 403 when they try to write a note on it, also on a wish they took off. Deleting a note that isn't yours answers "not found", the same as a note that doesn't exist.
 - Pages and API answers are sent with `Cache-Control: private, no-store`. Logging in and out reloads the page.
@@ -66,6 +66,21 @@ Only `purchases.ts`, `notes.ts` and `list-view.ts` in `server/domain/` read purc
 `test/visibility.test.ts` builds two databases that differ only in what buyers, and the other owners of a joint wish, did. It checks that each owner and a visitor get identical results from both. An owner's own purchase is the one difference, and only that owner sees it.
 
 One limit: an owner can register a second account and open their own list as a buyer. Nothing in the code can stop that.
+
+## Writing to the owners
+
+Someone who opened a list can write to its owners, to ask or tell them something, and the owners read it without a name. This is the one thing a buyer does that an owner is shown, and only because the buyer chose to write.
+
+- `server/domain/messages.ts` keeps one conversation per person and list (`list_threads`, with its messages in `list_messages`). `threadsFor` builds what one viewer reads: an owner of the list gets every conversation, each as a random id and its messages; anyone else gets their own. A message says whether an owner wrote it and, only then, that owner's name. The account a conversation is with is read to find the person's own conversation and to tell them of an answer, and is in no answer to anyone.
+- An owner answers in a conversation, with their name. On a joint list every owner reads every conversation and any of them can answer.
+- The owners get a notice that someone wrote. It names nobody: its row has the owner themselves as its actor, and `listNotices` sends it without a name, an id or a picture. Whoever wrote gets a notice with the name of the owner who answered. A person has one notice per list for each of the two; a newer message replaces it.
+- The notice about an answer leads to the list only while the person still has it: a friend shows it to them, or it is among the lists they opened. After a new link it is neither, so the notice never hands out an address they weren't given.
+- Everyone can delete a message they wrote; deleting someone else's answers "not found", like a message that doesn't exist. An owner can delete a whole conversation on their list. A conversation whose last message is deleted is gone, and what its writer sends next starts a new one with a new id, which the owners can't tell from a first message by someone else.
+- When the person who wrote deletes their account, the conversation stays as it was (`list_threads.user_id` becomes null), so an owner can't match a conversation that went to an account that went. An answer in it then reaches nobody. An owner's answer stays too when that owner's account goes, without a name.
+- Writing is for someone logged in, on a list that isn't deleted and has an owner to read it. An owner can't start a conversation: they have nobody to write to but someone who wrote first.
+- `server/domain/messages.ts` reads neither purchases nor notes, and a test reads its source to keep it that way. A test checks that a message leaves an owner's view of their wishes as it was.
+
+The limits. The site doesn't say who wrote, but the words can: a message that mentions something only one person knows names that person. An owner who gave the link to one person knows who has it. And who wrote is in the database, where whoever runs the server can read it.
 
 ## Secret Santa
 

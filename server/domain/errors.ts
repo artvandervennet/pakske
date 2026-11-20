@@ -10,6 +10,7 @@ export type DomainErrorCode
     | 'wish_limit'
     | 'wish_limit_ever'
     | 'note_limit'
+    | 'message_limit'
     | 'quantity_exceeded'
     | 'wish_removed'
     | 'list_shared'

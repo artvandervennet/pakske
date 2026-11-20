@@ -224,6 +224,15 @@ export const purchaseInput = z.object({ quantity: amount, anonymous: z.boolean('
 
 export const noteInput = z.object({ body: requiredText(1000) })
 
+/**
+ * A message on a list. `thread` is the conversation an owner answers in; someone who writes to
+ * the owners has one conversation and names none.
+ */
+export const messageInput = z.strictObject({
+  body: requiredText(1000),
+  thread: z.string('invalid').regex(/^[0-9a-f-]{36}$/, 'invalid').optional(),
+})
+
 /** The notices "Alles wissen" removes: the ones the page shows, by id. */
 export const noticeIdsInput = z.strictObject({
   ids: z.array(z.string('invalid').min(1, 'invalid').max(64, 'too_long'), 'required').min(1, 'required').max(500, 'too_long'),

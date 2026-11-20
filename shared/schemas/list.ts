@@ -97,6 +97,25 @@ export type OwnerWish = z.infer<typeof ownerWishSchema>
 export type BuyerWish = z.infer<typeof buyerWishSchema>
 export type WishView = AnonWish | OwnerWish | BuyerWish
 
+/** One message in a conversation between someone who opened a list and its owners. */
+export interface ThreadMessage {
+  id: string
+  /** An owner's answer. Otherwise it is from the person the conversation is with, who is never named. */
+  fromOwner: boolean
+  /** The display name of the owner who answered. Null for the other side, and for an owner whose account is gone. */
+  owner: string | null
+  mine: boolean
+  body: string
+  createdAt: string
+}
+
+/** A conversation with a list's owners. Its id is random and says nothing about who it is with. */
+export interface ListThread {
+  id: string
+  /** Oldest first; never empty. */
+  messages: ThreadMessage[]
+}
+
 /** A list as one viewer gets it. The page shows this and nothing else. */
 export interface ListView {
   token: string
@@ -125,6 +144,11 @@ export interface ListView {
    * otherwise.
    */
   drewOwners?: string[]
+  /**
+   * What was written to the list's owners. Added by the route for someone logged in: an owner
+   * gets every conversation, without who each is with; anyone else their own, if they wrote.
+   */
+  threads?: ListThread[]
 }
 
 /** A list someone else owns that is on this person's page: a friend shows it to them, or they opened its link. */
@@ -190,14 +214,19 @@ export interface InviteView {
   mine: MyLists
 }
 
-export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed' | 'santa_joined' | 'santa_joined_late' | 'santa_drawn' | 'santa_redrawn' | 'santa_removed'
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed' | 'santa_joined' | 'santa_joined_late' | 'santa_drawn' | 'santa_redrawn' | 'santa_removed' | 'list_message' | 'message_answered'
 
-/** A notice as its recipient gets it. Notices are about owners, lists and Secret Santa groups, never about buyers. */
+/**
+ * A notice as its recipient gets it. Notices are about owners, lists and Secret Santa groups,
+ * never about what anyone ticked. One says that someone wrote to a list's owners (`list_message`):
+ * that one names nobody.
+ */
 export interface NoticeView {
   id: string
   kind: NoticeKind
-  /** The display name of the person who did it, as it is now. */
+  /** The display name of the person who did it, as it is now. Empty for `list_message`. */
   actor: string
+  /** 0 for `list_message`: who wrote to the owners is never sent. */
   actorId: number
   /** Their profile picture, when they are a friend of the recipient: nobody else is shown one. */
   picture: string | null
@@ -205,7 +234,10 @@ export interface NoticeView {
   title: string
   /** How many more wishes besides the one named. */
   more: number
-  /** A live list of the recipient's that shows what the notice is about, or null. */
+  /**
+   * A live list of the recipient's that shows what the notice is about, or null. For an answer to
+   * what they wrote on someone else's list: that list, while they can still open it.
+   */
   token: string | null
   wishId: number | null
   /** For something a friend sent: the token of the page where the recipient says yes. */

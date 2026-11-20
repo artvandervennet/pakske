@@ -289,6 +289,35 @@ export const santaMembers = sqliteTable('santa_members', {
   index('santa_members_user_idx').on(t.userId),
 ])
 
+// What someone who opened a list writes to its owners, and what the owners answer: one
+// conversation per person and list. The owners read it without a name. They are sent the
+// conversation's random id and its words, never `userId` (server/domain/messages.ts).
+export const listThreads = sqliteTable('list_threads', {
+  // Random, like note ids: the only handle an owner gets on who wrote says nothing about them.
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  listId: integer('list_id').notNull().references(() => lists.id, { onDelete: 'cascade' }),
+  // Who wrote to the owners. Null once that account is deleted: the conversation stays, so an
+  // owner can't tell from one that went which account it belonged to.
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+}, t => [
+  uniqueIndex('list_threads_list_user_idx').on(t.listId, t.userId),
+])
+
+export const listMessages = sqliteTable('list_messages', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  threadId: text('thread_id').notNull().references(() => listThreads.id, { onDelete: 'cascade' }),
+  // An owner's answer, which carries their name. Otherwise it is from the person the
+  // conversation is with, who is never named.
+  fromOwner: integer('from_owner', { mode: 'boolean' }).notNull(),
+  // Who wrote it. Null once that account is deleted: the message stays.
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  body: text('body').notNull(),
+  createdAt: createdAt(),
+}, t => [
+  index('list_messages_thread_idx').on(t.threadId),
+])
+
 export const notices = sqliteTable('notices', {
   // Random, like note ids, so the numbers say nothing about notices for other people.
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

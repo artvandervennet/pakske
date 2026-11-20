@@ -3,7 +3,8 @@ import type { RequestsView } from '#shared/schemas/friends'
 import type { NoticeView } from '#shared/schemas/list'
 
 // The rows behind the bell: friend requests that wait for an answer, then the notices, newest
-// first. A row is the sender's picture, the sentence, and when it happened. Only a real choice
+// first. A row is the sender's picture, the sentence, and when it happened; a message without a
+// name has a speech balloon where the picture would be. Only a real choice
 // is a button: yes or no to a friend request, "Bekijken" on something a friend sent (which
 // leads to where the answer is given), and undoing what can be undone. Where a notice only
 // points somewhere, its sentence is the link. A small cross wipes it.
@@ -23,6 +24,8 @@ const when = (iso: string) => ago(new Date(iso), now, locale.value)
 /** Where a notice points: a list of the recipient's, at the wish it is about, a friend's row, or a Secret Santa group. */
 function destination(notice: NoticeView) {
   if (notice.santa) return localePath(`/s/${notice.santa}`)
+  // Something written on a list: to where that is read, under the wishes.
+  if (notice.token && (notice.kind === 'list_message' || notice.kind === 'message_answered')) return { path: localePath(`/l/${notice.token}`), hash: '#messages' }
   if (notice.token) return localePath(`/l/${notice.token}${notice.wishId === null ? '' : `#wish-${notice.wishId}`}`)
   if (notice.kind === 'friend_accepted' || notice.kind === 'friend_link_used') return { path: localePath('/friends'), hash: `#friend-${notice.actorId}` }
   return null
@@ -47,7 +50,9 @@ function destination(notice: NoticeView) {
       </div>
     </li>
     <li v-for="notice in notices" :key="notice.id" class="notice-item" :class="{ fresh: notice.fresh }">
-      <PersonPicture :person="{ id: notice.actorId, picture: notice.picture }" />
+      <!-- Someone wrote to the owners of a list: the notice names nobody, so it has no person to draw. -->
+      <span v-if="notice.kind === 'list_message'" class="person-picture nobody" aria-hidden="true"><AppIcon name="message" /></span>
+      <PersonPicture v-else :person="{ id: notice.actorId, picture: notice.picture }" />
       <div class="notice-main">
         <p :id="`notice-${notice.id}`" class="notice-text">
           <NuxtLink v-if="!notice.invite && destination(notice)" class="notice-link" :to="destination(notice)!">{{ noticeLine(notice, t) }}</NuxtLink>

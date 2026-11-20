@@ -18,6 +18,7 @@ const STATUS: Record<DomainErrorCode, number> = {
   wish_limit: 409,
   wish_limit_ever: 409,
   note_limit: 409,
+  message_limit: 409,
   quantity_exceeded: 409,
   wish_removed: 409,
   list_shared: 409,
@@ -90,7 +91,10 @@ export function tokenParam(event: H3Event, name = 'token'): string {
   return token
 }
 
-/** The id of a friend request from the route: random, like a note's. Anything else is "not found". */
+/**
+ * The id of a friend request, a conversation or a message from the route: random, like a note's.
+ * Anything else is "not found".
+ */
 export function requestParam(event: H3Event, name = 'id'): string {
   const id = String(getRouterParam(event, name))
   if (!/^[0-9a-f-]{36}$/.test(id)) fail(404, 'not_found')

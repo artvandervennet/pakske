@@ -24,6 +24,12 @@ const names = useNames()
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
+// Writing to the owners, in a band under the wishes (ListMessages.vue): for everyone who opened
+// a list that has owners to read it, and for an owner once someone wrote. Not at an address the
+// list no longer has, and not on a deleted list, which its owners can't open.
+const threads = computed(() => list.value.threads ?? [])
+const showMessages = computed(() => !list.value.old && !list.value.deleted && !gone.value
+  && list.value.owners.length > 0 && (!list.value.viewerOwnsList || threads.value.length > 0))
 // Whose name the viewer drew in a Secret Santa, when that is an owner of this list: what they
 // tick here is given without their name, and the page says so before they do.
 const drew = computed(() => names(list.value.drewOwners ?? []))
@@ -834,6 +840,8 @@ async function addWish(title: string) {
         </div>
       </div>
     </section>
+
+    <ListMessages v-if="showMessages" :token="list.token" :threads="threads" :owners="list.owners" :owns="list.viewerOwnsList" @changed="refreshList" />
 
     <TickWarning v-if="hasOwnWishes" ref="warning" />
     <PictureViewer ref="pictureViewer" />
