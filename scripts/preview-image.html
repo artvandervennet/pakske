@@ -1,0 +1,43 @@
+<!doctype html>
+<!--
+  The picture a chat app shows with a link to the site: public/preview.png, 1200 by 630. It is
+  the hero of the home page, made of the same Gesso parts, so it follows the theme. The name
+  sits in the middle, inside the square that some apps cut the picture down to.
+
+  To make it again, from the repository's folder:
+
+    python3 -m http.server 8377
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --hide-scrollbars \
+      --window-size=1200,630 --virtual-time-budget=5000 --screenshot=public/preview.png \
+      http://localhost:8377/scripts/preview-image.html
+
+  A chat app keeps the picture it fetched under its address. A changed picture needs a new file
+  name, and that name in app/composables/useSiteHead.ts.
+-->
+<html lang="nl" data-scheme="light">
+<head>
+  <meta charset="utf-8">
+  <title>Pakske</title>
+  <link rel="stylesheet" href="../node_modules/@vandervennet/gesso/css/fonts.css">
+  <link rel="stylesheet" href="../node_modules/@vandervennet/gesso/css/core.css">
+  <link rel="stylesheet" href="../node_modules/@vandervennet/gesso/css/base.css">
+  <link rel="stylesheet" href="../node_modules/@vandervennet/gesso/css/layout.css">
+  <link rel="stylesheet" href="../app/assets/css/theme.css">
+  <style>
+    html, body { inline-size: 1200px; block-size: 630px; margin: 0; overflow: hidden; }
+    /* The paint, and under it the page it runs down over. */
+    body { display: grid; grid-template-rows: 1fr 124px; background: var(--surface); }
+    .hero { display: grid; place-items: center; }
+    .hero h1 { margin: 0; padding-block-end: 0.12em; font-size: 10rem; }
+    .band-drip { --art-drip-height: 7rem; }
+  </style>
+  <script type="module" src="../node_modules/@vandervennet/gesso/components/art-stroke.js"></script>
+  <script type="module" src="../node_modules/@vandervennet/gesso/components/art-decor.js"></script>
+</head>
+<body>
+  <div class="band hero" data-paint="deep">
+    <h1><art-stroke pigment="stroke" seed="pakske">Pakske</art-stroke></h1>
+    <art-drip class="band-drip" pigment="--surface" flush></art-drip>
+  </div>
+</body>
+</html>

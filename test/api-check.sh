@@ -47,6 +47,9 @@ same() { # same <description> <json expression> <expected>
 }
 # status_of <path>: the status of a plain GET, for files
 status_of() { STATUS=$(curl -s -o "$BODY" -w '%{http_code}' "$BASE$1"); }
+# preview <path>: the page a chat app gets when someone sends that link: no login, and on to
+# wherever the site sends it.
+preview() { STATUS=$(curl -s -L -o "$BODY" -w '%{http_code}' -A WhatsApp "$BASE$1"); }
 
 register() { req "$1" POST /api/auth/register "{\"email\":\"$1@example.test\",\"displayName\":\"$2\",\"password\":\"correct horse battery\"}"; }
 login() { req "$1" POST /api/auth/login "{\"email\":\"$2@example.test\",\"password\":\"correct horse battery\"}"; }
@@ -205,6 +208,10 @@ page art; check "art opens the page of his list" 200
 for secret in Moeke Zus geheimpje; do lacks "… and the HTML has no '$secret'" "$secret"; done
 page page-visitor; check "a visitor opens the page" 200
 for secret in Moeke Zus geheimpje; do lacks "… and the HTML has no '$secret'" "$secret"; done
+has "… and says what a chat app shows of the link: the list's name, which says whose it is" 'property="og:title" content="Verjaardag Art"'
+has "… with the site's picture, by its whole address" "property=\"og:image\" content=\"$BASE/preview.png\""
+status_of /preview.png; check "… which is there" 200
+preview /en; has "the home page says what the site is, in the page's language" 'property="og:title" content="Pakske, wishlists for family and friends"'
 page sis; check "sis opens the page" 200
 has "… and the HTML names mom, who bought" Moeke; has "… and holds mom's note" geheimpje
 
@@ -360,6 +367,7 @@ upload art "/api/lists/$XMAS/wishes/$LAMP/image" "$TMP/pic.png"; check "… with
 req art POST "/api/lists/$XMAS/wishes" '{"title":"Vaas"}'; check "art adds a vase" 201; VASE=$(json .id)
 upload art "/api/lists/$XMAS/wishes/$VASE/image" "$TMP/pic.png"; check "… with a picture" 200; VASEIMG=$(json .image)
 req art POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$TRAIN]}"; check "art makes a link for the train" 201; INVITE=$(json .invite)
+preview "/j/$INVITE"; check "a chat app that fetches the link gets the login page" 200; has "… which says something is shared" 'property="og:title" content="Iemand deelt iets met je op Pakske"'; has "… at the link's own address" "property=\"og:url\" content=\"$BASE/j/$INVITE\""; lacks "… and not what" Speelgoedtrein
 if [ "${#INVITE}" = 22 ]; then ok "… its token has 22 characters"; else bad "the link's token is \"$INVITE\""; fi
 if [ "$INVITE" != "$XMAS" ]; then ok "… and is not the list's token"; else bad "the link hands out the list's token"; fi
 req mom POST "/api/lists/$XMAS/invites" "{\"kind\":\"wishes\",\"mode\":\"linked\",\"wishIds\":[$TRAIN]}"; check "mom cannot make a link on art's list" 404
@@ -621,6 +629,7 @@ req mom GET /api/friends; same "mom sees her friend's profile picture" ".friends
 req mom GET "/api/lists/$FLIST"; lacks "… which no list hands out" "$ARTPIC"
 req mom GET /api/friends; same "mom has a friend" ".friends.length" 1; has "… art" '"name":"Art"'; lacks "… without his address" "art@example.test"; same "… and no request left" ".requests.outgoing.length" 0
 req art POST /api/friends/links; check "art makes a friend link" 201; FLINK=$(json .token)
+preview "/f/$FLINK"; check "a chat app that fetches it gets the login page" 200; has "… which says someone wants to be friends" 'property="og:title" content="Iemand wil vrienden worden op Pakske"'
 req art GET "/api/friends/links/$FLINK"; check "it is his own" 200; has "… to send, not to use" '"state":"own"'
 req sis GET "/api/friends/links/$FLINK"; check "sis opens it" 200; has "… from art" '"from":"Art"'; has "… and it is open" '"state":"open"'
 req sis POST "/api/friends/links/$FLINK/accept"; check "sis accepts" 200
@@ -705,6 +714,8 @@ req art POST /api/santa "{\"title\":\"\",\"list\":\"$SL_art\"}"; check "a group 
 req art POST /api/santa "{\"title\":\"Kerst\",\"list\":\"$SL_mom\"}"; check "a group takes no list of someone else's" 404
 req art POST /api/santa "{\"title\":\"Kerst\",\"list\":\"$SL_art\"}"; check "art makes a group, with his list in it" 201; SANTA=$(json .token)
 req anon GET "/api/santa/$SANTA"; check "a group needs a login to open" 401
+preview "/s/$SANTA"; check "a chat app that fetches its link gets the login page" 200; has "… which says it is a Secret Santa" 'property="og:title" content="Je bent uitgenodigd voor een Secret Santa"'; lacks "… and not which" Kerst
+preview "/l/$SL_art"; has "the list he put in is passed on with its name and whose it is" 'property="og:title" content="Voor Secret Santa van Art"'; has "… and how many wishes are on it" 'property="og:description" content="Een verlanglijstje met één wens.'
 req art GET "/api/santa/$SANTA"; check "art opens it" 200; has "… as a member" '"role":"member"'; has "… who runs it" '"organiser":true'; same "… and is alone in it" ".members.length" 1; same "… with nobody drawn" ".pick" null
 req art GET /api/santa; same "it is on his page" ".length" 1; has "… by name" '"title":"Kerst"'
 req art GET /api/home; same "… and on his home page" ".santa.length" 1

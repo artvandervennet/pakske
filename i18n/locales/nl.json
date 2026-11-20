@@ -118,6 +118,16 @@
     "copyShareText": "Hey, ik deel een wens met je. Open deze link om een kopie op je eigen lijst te zetten. | Hey, ik deel {n} wensen met je. Open deze link om er een kopie van op je eigen lijst te zetten.",
     "linkedShareText": "Hey, zullen we deze wens delen? Open deze link en de wens staat op onze beide lijsten. De link werkt één keer. | Hey, zullen we deze {n} wensen delen? Open deze link en de wensen staan op onze beide lijsten. De link werkt één keer."
   },
+  "preview": {
+    "title": "Pakske, verlanglijstjes voor familie en vrienden",
+    "image": "Pakske, in lichte letters op rode verf die naar beneden druipt",
+    "list": "{title} van {names}",
+    "listLead": "Een verlanglijstje. Vink af wat jij koopt: wie de lijst maakte, ziet dat niet. | Een verlanglijstje met één wens. Vink af wat jij koopt: wie de lijst maakte, ziet dat niet. | Een verlanglijstje met {n} wensen. Vink af wat jij koopt: wie de lijst maakte, ziet dat niet.",
+    "santa": "Je bent uitgenodigd voor een Secret Santa",
+    "invite": "Iemand deelt iets met je op Pakske",
+    "inviteLead": "Log in of maak een account om te zien wat het is.",
+    "friend": "Iemand wil vrienden worden op Pakske"
+  },
   "list": {
     "owners": "van {names}",
     "wishes": "Wensen",

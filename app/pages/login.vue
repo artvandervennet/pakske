@@ -10,6 +10,21 @@ useHead({ title: () => t('auth.loginTitle') })
 const origin = useRequestURL().origin
 const next = computed(() => safeNextPath(route.query.next, origin))
 
+// A link that needs a login brings whoever opens it here, and so also what a chat app sends to
+// fetch the link when someone passes it on. For those the preview says what kind of link it
+// is, read from the address alone. Whose it is and what is behind it stay for after the login.
+const shared = sharedLinkKind(next.value)
+if (shared) {
+  usePreview(() => ({
+    ...{
+      santa: { title: t('preview.santa'), description: t('santa.joinLead') },
+      invite: { title: t('preview.invite'), description: t('preview.inviteLead') },
+      friend: { title: t('preview.friend'), description: t('friends.lead') },
+    }[shared],
+    path: next.value,
+  }))
+}
+
 if (user.value) await navigateTo(next.value ?? localePath('/'))
 
 // Back from Google with a reason it didn't work (server/routes/auth/google.get.ts).

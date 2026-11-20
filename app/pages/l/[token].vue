@@ -23,6 +23,18 @@ const names = useNames()
 // Empty for a list whose owners' accounts are gone: the page then names nobody.
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
+// What a chat app shows with the link: whose list it is and how many wishes are on it, as the
+// page shows them to anyone who has the link. No wish is named: the preview stays in the chat
+// when the list changes or gets a new link. A list named after its owners ("Verjaardag Art")
+// doesn't say "van Art" again.
+usePreview(() => {
+  const { title, owners: whose } = list.value
+  const n = list.value.wishes.filter(wish => !(wish.role === 'buyer' && wish.removed)).length
+  return {
+    title: whose.length && !namesAll(title, whose) ? t('preview.list', { title, names: owners.value }) : title,
+    description: t('preview.listLead', { n }, n),
+  }
+})
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
 // Writing to the owners, in a band under the wishes (ListMessages.vue): for everyone who opened
 // a list that has owners to read it, and for an owner once someone wrote. Not at an address the

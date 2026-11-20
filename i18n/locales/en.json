@@ -118,6 +118,16 @@
     "copyShareText": "Hey, I’m sharing a wish with you. Open this link to put a copy on a list of your own. | Hey, I’m sharing {n} wishes with you. Open this link to put copies on a list of your own.",
     "linkedShareText": "Hey, shall we share this wish? Open this link and the wish is on both our lists. The link works once. | Hey, shall we share these {n} wishes? Open this link and the wishes are on both our lists. The link works once."
   },
+  "preview": {
+    "title": "Pakske, wishlists for family and friends",
+    "image": "Pakske, in light letters on red paint that drips down",
+    "list": "{title} by {names}",
+    "listLead": "A wishlist. Tick what you’re buying: whoever made the list won’t see it. | A wishlist with one wish. Tick what you’re buying: whoever made the list won’t see it. | A wishlist with {n} wishes. Tick what you’re buying: whoever made the list won’t see it.",
+    "santa": "You’re invited to a Secret Santa",
+    "invite": "Someone is sharing something with you on Pakske",
+    "inviteLead": "Log in or make an account to see what it is.",
+    "friend": "Someone wants to be friends on Pakske"
+  },
   "list": {
     "owners": "by {names}",
     "wishes": "Wishes",
