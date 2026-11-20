@@ -25,8 +25,8 @@ export interface SantaMember {
   picture: string | null
   you: boolean
   organiser: boolean
-  /** They put a list in, which is still theirs. Which list is for whoever draws them. */
-  hasList: boolean
+  /** The list they put in, while it is still theirs: every member of the group gets its link. */
+  list: { token: string, title: string } | null
   /**
    * The names are drawn, others have one and they don't: the draw waits to be done again.
    * False for everyone once the draw no longer counts (`lapsed`), when nobody has a name.

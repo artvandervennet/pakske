@@ -3,8 +3,9 @@ import { SANTA_MIN_MEMBERS, type SantaMember, type SantaView } from '#shared/sch
 
 // A Secret Santa group, at its own address, which is also its invitation. Someone who isn't in
 // it gets its name, who runs it and one button to join, with the list they put in. A member
-// gets the members, their own list, and after the draw the one name they drew, behind a button:
-// the page is often opened with the others in the room.
+// gets the members, each with the list they put in for the whole group to open, their own list,
+// and after the draw the one name they drew, behind a button: the page is often opened with the
+// others in the room.
 //
 // Joining stays possible after the draw. Whoever joins then has no name until the person who
 // runs the group draws again, which gives everyone a new one and tells everyone. Leaving and
@@ -103,7 +104,7 @@ const me = computed(() => group.value?.members.find(member => member.you))
 const nextOrganiser = computed(() => group.value?.members.find(member => !member.organiser)?.name ?? '')
 
 const memberMeta = (member: SantaMember) =>
-  [member.organiser ? t('santa.organiser') : '', member.waiting ? t('santa.waiting') : '', t(member.hasList ? 'santa.hasList' : 'santa.noListYet')].filter(Boolean).join(' · ')
+  [member.organiser ? t('santa.organiser') : '', member.waiting ? t('santa.waiting') : '', member.list ? '' : t('santa.noListYet')].filter(Boolean).join(' · ')
 
 // What a button did is said in a line that is always there: the button itself often goes.
 const busy = ref(false)
@@ -361,7 +362,10 @@ async function onEndClose() {
               <PersonPicture :person="member" />
               <div :id="`santa-member-${member.id}`" class="row-text">
                 <span class="row-title">{{ member.name }}<template v-if="member.you"> ({{ t('santa.you') }})</template></span>
-                <span class="row-meta">{{ memberMeta(member) }}</span>
+                <!-- The list they put in, for every member to open. Its name alone would say
+                     little to a screen reader that lists the page's links. -->
+                <NuxtLink v-if="member.list" class="santa-member-list" :to="localePath(`/l/${member.list.token}`)" :aria-label="t('santa.memberList', { name: member.name, title: member.list.title })">{{ member.list.title }}</NuxtLink>
+                <span v-if="memberMeta(member)" class="row-meta">{{ memberMeta(member) }}</span>
               </div>
               <art-button v-if="group.organiser && !member.you" variant="quiet" size="s">
                 <button type="button" :aria-describedby="`santa-member-${member.id}`" :aria-disabled="busy || undefined" @click="askToRemove(member)">{{ t('santa.remove') }}</button>

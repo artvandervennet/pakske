@@ -19,7 +19,7 @@ Built with Nuxt 4 and [Gesso](https://github.com/artvandervennet/gesso), in Dutc
 - **One, several or without a limit.** A wish asks for a number, and each buyer takes their share of it.
 - **Links and a picture.** A wish has up to five links. Without a photo of your own, the server fetches the cover of the first link.
 - **Sharing wishes.** A share link gives someone a copy of your wishes, or makes you both owners of the same wish. A list can have several owners too.
-- **Secret Santa, on the side.** A group joins by a link, each member with a list of their own, and the names are drawn. Each member sees the one name they drew; nobody else does, the organiser included. When someone joins later, leaves or is taken out, the names are drawn again, and everyone is told.
+- **Secret Santa, on the side.** A group joins by a link, each member with a list of their own, and the names are drawn. Every member finds the others' lists without a link being sent. Each member sees the one name they drew; nobody else does, the organiser included. When someone joins later, leaves or is taken out, the names are drawn again, and everyone is told.
 - **Accounts through Firebase.** Firebase Authentication holds the passwords and the Google logins and sends the mails; everything else is in one SQLite file.
 
 ## Run it locally

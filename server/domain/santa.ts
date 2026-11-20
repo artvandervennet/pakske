@@ -11,7 +11,8 @@ import { newListToken } from './tokens'
 
 // Secret Santa: a group whose members each draw one other member to give something to. It stands
 // beside the lists and changes nothing about them: a member puts one of their own lists in, and
-// whoever draws them is handed its link, which opens for them as it does for anyone.
+// every other member is handed its link, on the group's page and among their lists of others.
+// It opens for them as it does for anyone who has the link.
 //
 // The one secret here is who drew whom. The name in `gives_to` is read for the member it belongs
 // to and for nobody else, the person who runs the group included, so no answer of this file can
@@ -95,9 +96,9 @@ function assertGroupRoom(db: Db, userId: number): void {
 const chosenListId = (db: Db, userId: number, listToken: string | null) => (listToken === null ? null : ownedListId(db, userId, listToken))
 
 /** A list a member put in, while it exists and is still theirs; null otherwise, and for none. */
-function listOf(db: Db, userId: number, listId: number | null): { token: string, title: string } | null {
+function listOf(db: Db, userId: number, listId: number | null): { id: number, token: string, title: string } | null {
   if (listId === null) return null
-  return db.select({ token: lists.token, title: lists.title }).from(lists)
+  return db.select({ id: lists.id, token: lists.token, title: lists.title }).from(lists)
     .innerJoin(listOwners, eq(listOwners.listId, lists.id))
     .where(and(eq(lists.id, listId), eq(listOwners.userId, userId), isNull(lists.deletedAt)))
     .get() ?? null
@@ -274,6 +275,11 @@ export function getGroup(db: Db, viewerId: number, token: string): SantaView | u
   // A profile picture goes to friends only, here as everywhere.
   const pictureOf = (member: { userId: number, imageFile: string | null }) =>
     member.imageFile && areFriends(db, viewerId, member.userId) ? `/uploads/${member.imageFile}` : null
+  /** The list a member put in, as every member of the group gets it. */
+  const putIn = (member: { userId: number, listId: number | null }) => {
+    const list = listOf(db, member.userId, member.listId)
+    return list && { token: list.token, title: list.title }
+  }
   const drawn = group.drawnAt !== null
   // Someone with a name went, and with them every name.
   const lapsed = drawn && !anyName(members)
@@ -294,12 +300,12 @@ export function getGroup(db: Db, viewerId: number, token: string): SantaView | u
       picture: pictureOf(member),
       you: member.userId === viewerId,
       organiser: index === 0,
-      hasList: listOf(db, member.userId, member.listId) !== null,
+      list: putIn(member),
       waiting: drawn && !lapsed && member.givesTo === null,
     })),
     lists: mine.lists,
     list: listOf(db, viewerId, me.listId)?.token ?? null,
-    pick: drew ? { id: drew.userId, name: drew.name, picture: pictureOf(drew), list: listOf(db, drew.userId, drew.listId) } : null,
+    pick: drew ? { id: drew.userId, name: drew.name, picture: pictureOf(drew), list: putIn(drew) } : null,
     waits,
   }
 }
@@ -323,6 +329,37 @@ export function listGroups(db: Db, userId: number): SantaGroupRow[] {
         organiser: members[0]?.userId === userId,
       }
     })
+}
+
+/**
+ * The lists the other members of this person's groups put in: every member is shown them
+ * without anyone sending a link, for as long as both are in the group and the list stays put
+ * in. Each with the names of the groups it comes from, the group joined last first. Never a
+ * list the person owns themselves.
+ */
+export function listGroupLists(db: Db, userId: number): { id: number, token: string, title: string, groups: string[] }[] {
+  const own = new Set(db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, userId)).all().map(row => row.listId))
+  const groups = db.select({ group: santaGroups }).from(santaMembers)
+    .innerJoin(santaGroups, eq(santaGroups.id, santaMembers.groupId))
+    .where(eq(santaMembers.userId, userId))
+    .orderBy(desc(santaMembers.joinedAt), desc(santaGroups.id))
+    .all()
+  const found = new Map<number, { id: number, token: string, title: string, groups: string[] }>()
+  for (const { group } of groups) {
+    for (const member of membersOf(db, group.id)) {
+      const list = member.userId === userId ? null : listOf(db, member.userId, member.listId)
+      if (!list || own.has(list.id)) continue
+      const entry = found.get(list.id) ?? { ...list, groups: [] }
+      if (!entry.groups.includes(group.title)) entry.groups.push(group.title)
+      found.set(list.id, entry)
+    }
+  }
+  return [...found.values()]
+}
+
+/** The ids of the lists a person's groups show them now. */
+export function groupListIds(db: Db, userId: number): Set<number> {
+  return new Set(listGroupLists(db, userId).map(list => list.id))
 }
 
 /** Everyone whose name this person drew, in whichever group. */

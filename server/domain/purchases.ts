@@ -6,7 +6,7 @@ import { listOwners, listVisits, lists, listWishes, purchases, users, wishOwners
 import { DomainError } from './errors'
 import { shownListIds } from './friends'
 import { wishOnList } from './placement'
-import { drewAnOwnerOf } from './santa'
+import { drewAnOwnerOf, groupListIds } from './santa'
 
 /**
  * Sets how many of a wish this person is buying. An owner of the wish is treated like any buyer.
@@ -79,7 +79,8 @@ export function removePurchase(db: Db, token: string, wishId: number, userId: nu
  * the last first.
  *
  * It is what the lists on their page would show them of their own, and nothing more. A purchase
- * counts when a list they opened, or one a friend shows them, has the wish: the row then links
+ * counts when a list they opened, or one a friend or a Secret Santa group shows them, has the
+ * wish: the row then links
  * to that list, an address they have already. A wish on no such list is left out, whatever
  * other list shows it, or the row would hand them a list they never had the link of. So is a
  * wish they own themselves (that tick says "I have this", not "I give this"), and a wish that
@@ -102,11 +103,11 @@ export function listGiven(db: Db, userId: number, now = new Date()): GivenGroup[
     .where(and(eq(wishOwners.userId, userId), inArray(wishOwners.wishId, wishIds))).all().map(row => row.wishId))
   const ownLists = new Set(db.select({ listId: listOwners.listId }).from(listOwners)
     .where(eq(listOwners.userId, userId)).all().map(row => row.listId))
-  // The lists on the person's page, with when they last opened each. A list a friend shows them
-  // has no visit; it ranks after the ones they opened.
+  // The lists on the person's page, with when they last opened each. A list a friend or a
+  // Secret Santa group shows them has no visit; it ranks after the ones they opened.
   const openedAt = new Map(db.select({ listId: listVisits.listId, openedAt: listVisits.openedAt }).from(listVisits)
     .where(eq(listVisits.userId, userId)).all().map(row => [row.listId, row.openedAt.getTime()]))
-  for (const listId of shownListIds(db, userId)) if (!openedAt.has(listId)) openedAt.set(listId, 0)
+  for (const listId of [...shownListIds(db, userId), ...groupListIds(db, userId)]) if (!openedAt.has(listId)) openedAt.set(listId, 0)
 
   const placements = db.select({ wishId: listWishes.wishId, removedAt: listWishes.removedAt, clearedAt: listWishes.clearedAt, list: lists })
     .from(listWishes)

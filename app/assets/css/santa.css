@@ -1,9 +1,11 @@
 /* Secret Santa: the group's page. Written against Gesso's role tokens, like app.css. */
 
-/* A member: their picture, their name with a line of detail, and for whoever runs the group
-   the button that takes them out. */
+/* A member: their picture, their name over the list they put in and a line of detail, and for
+   whoever runs the group the button that takes them out. The list is a link as wide as its
+   own words, so a press beside it does nothing. */
 .santa-members > .row { flex-wrap: nowrap; gap: var(--space-4); }
 .santa-members > .row > art-button { flex: none; }
+.santa-member-list { justify-self: start; max-inline-size: 100%; overflow-wrap: anywhere; }
 
 /* The name the person drew. It starts as a button and a sentence; shown, it is a card with the
    name in the display face, so it reads at arm's length and nothing else on the page looks

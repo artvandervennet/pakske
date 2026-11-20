@@ -466,7 +466,7 @@
     "nameHint": "Bijvoorbeeld “Kerst bij oma”.",
     "create": "Groep maken",
     "listLegend": "Welke lijst zet je erin?",
-    "listHint": "Wie jouw naam trekt, krijgt deze lijst te zien. Je kunt later nog een andere kiezen.",
+    "listHint": "Iedereen in de groep vindt deze lijst bij “Van anderen”, ook wie jouw naam trekt. Je kunt later nog een andere kiezen.",
     "noList": "Geen lijst",
     "yourList": "Je lijst",
     "listSaved": "Opgeslagen.",
@@ -474,8 +474,9 @@
     "members": "Deelnemers",
     "you": "jij",
     "organiser": "organiseert",
-    "hasList": "lijst gekozen",
     "noListYet": "nog geen lijst",
+    "memberList": "Lijst van {name}: {title}",
+    "listVia": "via Secret Santa “{title}”",
     "waiting": "nog zonder naam",
     "invite": "Uitnodigen",
     "inviteNote": "Wie de link opent, kan meedoen.",
@@ -545,7 +546,7 @@
     "goneTitle": "Deze groep bestaat niet",
     "goneLead": "De link klopt niet, of de groep is verwijderd.",
     "howTitle": "Hoe het werkt",
-    "how1": "Iedereen doet mee met een eigen account en zet er een verlanglijstje in.",
+    "how1": "Iedereen doet mee met een eigen account en zet er een verlanglijstje in. De hele groep kan dat openen.",
     "how2": "Wie de groep organiseert, trekt de namen zodra iedereen er is. Elk krijgt één naam, nooit de eigen naam. Komt er later iemand bij of gaat er iemand weg, dan worden de namen opnieuw getrokken.",
     "how3": "Alleen jij ziet wie je trok. De anderen niet, en wie de groep organiseert ook niet.",
     "onList": "Je trok {names} voor Secret Santa. Wat je hier aanvinkt, geef je anoniem, tenzij je dat bij een wens zelf uitzet."
@@ -654,7 +655,7 @@
       "picture": "De foto van een wens heeft een eigen, willekeurig adres. Wie dat adres heeft, kan de foto openen.",
       "hidden": "Anderen zien je e-mailadres nooit. Geen pagina toont de accounts of andermans lijsten, en zoekmachines wordt gevraagd weg te blijven. Niemand ziet wie zijn lijst opende, op één geval na: opent een vriend je lijst via de link, dan zie je bij je vrienden dat die hem heeft.",
       "friends": "Een vriend ziet je naam en je profielfoto, en vindt de lijsten die je voor die vriend aanzet. Niemand ziet wie jouw vrienden zijn. Vraag je de eigenaar van een lijst om vrienden te worden, dan ziet die je naam en vanaf welke lijst je het vroeg. Weiger je een verzoek, dan krijgt wie het stuurde daar geen bericht van. Stuur je een vriend wensen of een lijst, dan krijgt die een melding met je naam; sluit die de melding, dan krijg jij daar geen bericht van.",
-      "santa": "In een Secret Santa-groep zien de deelnemers elkaars naam, en of je er een lijst in zette. Wie de link van de groep heeft, ziet de naam van de groep, wie ze organiseert en hoeveel mensen meedoen. Wiens naam je trok, toont de site alleen aan jou: niet aan de andere deelnemers, en niet aan wie de groep organiseert. Het staat wel in de database. Wie jouw naam trok, krijgt de link van de lijst die je erin zette. Wat je aanvinkt op een lijst van de persoon die je trok, geef je anoniem, tenzij je dat bij de wens zelf uitzet."
+      "santa": "In een Secret Santa-groep zien de deelnemers elkaars naam, en of je er een lijst in zette. Wie de link van de groep heeft, ziet de naam van de groep, wie ze organiseert en hoeveel mensen meedoen. Wiens naam je trok, toont de site alleen aan jou: niet aan de andere deelnemers, en niet aan wie de groep organiseert. Het staat wel in de database. De lijst die je erin zet, krijgen alle deelnemers te zien: ze staat bij hun lijsten “Van anderen” zolang jullie in dezelfde groep zitten en je de lijst erin laat. Wat je aanvinkt op een lijst van de persoon die je trok, geef je anoniem, tenzij je dat bij de wens zelf uitzet."
     },
     "where": {
       "title": "Waar het staat, en wie er nog bij betrokken is",

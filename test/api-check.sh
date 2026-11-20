@@ -715,6 +715,15 @@ req mom POST "/api/santa/$SANTA/join" '{}'; check "joining says which list, or n
 req mom POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_art\"}"; check "… and never someone else's list" 404
 req mom POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_mom\"}"; check "mom joins with her list" 204
 req art GET /api/notices; has "art is told that mom joined" '"kind":"santa_joined"'; has "… with where the group is" "\"santa\":\"$SANTA\""
+# The lists the members put in are shown to every member, without anyone sending a link.
+req mom GET "/api/santa/$SANTA"; same "the group has everyone's list beside their name" ".members.map(m=>m.list&&m.list.token).join()" "$SL_art,$SL_mom"
+req mom GET /api/lists; same "mom finds art's list among those of others, with the group's name" ".opened.filter(l=>l.token==='$SL_art').map(l=>l.santa.join()).join()" Kerst
+req art GET /api/home; same "… and art finds hers on his home page" ".opened.filter(l=>l.token==='$SL_mom').length" 1
+req mom GET "/api/lists/$SL_art"; check "she opens it" 200; has "… as someone who doesn't own it" '"viewerOwnsList":false'
+req mom DELETE "/api/home/opened/$SL_art"; check "taking it off her page is no error" 204
+req mom GET /api/lists; same "… and leaves it there: it goes with the group" ".opened.filter(l=>l.token==='$SL_art').length" 1
+req eng GET /api/lists; same "someone outside the group finds none of them" ".opened.filter(l=>l.santa).length" 0
+req eng GET "/api/santa/$SANTA"; lacks "… and the group's link names no list" "$SL_art"
 req art POST "/api/santa/$SANTA/draw"; check "two people are too few to draw" 409; has "… with the code santa_too_few" santa_too_few
 req sis POST "/api/santa/$SANTA/join" '{"list":null}'; check "sis joins without a list" 204
 req sis PUT "/api/santa/$SANTA/list" "{\"list\":\"$SL_sis\"}"; check "… and puts one in afterwards" 204
@@ -759,7 +768,7 @@ req eng GET "/api/lists/$PICKLIST"; same "someone else reads no name on it" ".wi
 req art PUT "/api/lists/$PICKLIST/wishes/$GIFT/purchase" '{"quantity":1,"anonymous":false}'; check "art can still give it with his name" 204
 req eng GET "/api/lists/$PICKLIST"; same "… and then it is there" ".wishes[0].purchases[0].name" Art
 req art DELETE "/api/lists/$PICKLIST/wishes/$GIFT/purchase"; check "art takes the tick back" 204
-req art DELETE "/api/home/opened/$PICKLIST"; req eng DELETE "/api/home/opened/$PICKLIST"; check "… and the list goes off their pages again" 204
+req eng DELETE "/api/home/opened/$PICKLIST"; check "… and the outsider takes the list off their page again" 204
 # Someone who joins after the draw has no name until the names are drawn again, for everyone.
 req eng POST "/api/santa/$SANTA/join" '{"list":null}'; check "someone joins after the draw" 204
 req eng GET "/api/santa/$SANTA"; has "… without a name" '"waits":"late"'; same "… so nobody to buy for yet" ".pick" null
@@ -791,6 +800,7 @@ STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/art.jar" "$BASE/s/$SANTA"
 if grep -q "gives_to\|givesTo" "$BODY"; then bad "the page as sent names a column of the draw"; else ok "… and holds nothing of the draw but his own name"; fi
 req art DELETE "/api/santa/$SANTA"; check "art ends the group" 204
 req mom GET "/api/santa/$SANTA"; check "it is gone for mom" 404
+req mom GET /api/lists; same "… and the others' lists are off her page" ".opened.filter(l=>l.santa).length" 0
 req mom GET /api/notices; lacks "… with what she was told about it" santa_drawn
 for who in art mom sis lot; do eval "SLIST=\$SL_$who"; req $who DELETE "/api/lists/$SLIST" '{}'; done; check "the lists made for it are deleted again" 204
 

@@ -3,15 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { and, eq } from 'drizzle-orm'
 import type { Db } from '../server/db/client'
 import { purchases, santaGroups, santaMembers } from '../server/db/schema'
+import { answerRequest, askFriend, listRequests, setShownToOne } from '../server/domain/friends'
 import { deleteList, leaveList } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
-import { setPurchase } from '../server/domain/purchases'
+import { listGiven, setPurchase } from '../server/domain/purchases'
 import {
-  createGroup, deleteGroup, drawNames, drawnOwnersOf, drawOrder, getGroup, joinGroup, leaveGroup, listGroups, removeMember, renameGroup,
+  createGroup, deleteGroup, drawNames, drawnOwnersOf, drawOrder, getGroup, joinGroup, leaveGroup, listGroupLists, listGroups, removeMember, renameGroup,
   SANTA_MAX_GROUPS, SANTA_MAX_MEMBERS, setGroupList,
 } from '../server/domain/santa'
 import { LIST_TOKEN } from '../server/domain/tokens'
 import { deleteUser, updateProfile } from '../server/domain/users'
+import { listOpenedLists, listOthersLists, rememberList, takeOffPage } from '../server/domain/visits'
 import type { SantaGuestView, SantaMemberView } from '../shared/schemas/santa'
 import { addList, addOwner, addUser, addWishTo, codeOf, makeDb } from './helpers'
 
@@ -68,11 +70,11 @@ function assign(db: Db, token: string, pairs: [number, number][]) {
 
 describe('making a group', () => {
   it('gives it an address of its own and makes its maker the first member, who runs it', () => {
-    const { db, art, token } = setup()
+    const { db, art, lists, token } = setup()
     expect(token).toMatch(LIST_TOKEN)
     const view = member(db, art.id, token)
     expect(view).toMatchObject({ role: 'member', title: 'Kerst', drawn: false, organiser: true, pick: null })
-    expect(view.members).toEqual([{ id: art.id, name: 'Art', picture: null, you: true, organiser: true, hasList: true, waiting: false }])
+    expect(view.members).toEqual([{ id: art.id, name: 'Art', picture: null, you: true, organiser: true, list: { token: lists.art, title: 'Art' }, waiting: false }])
     expect(listGroups(db, art.id)).toEqual([{ token, title: 'Kerst', members: 1, drawn: false, again: false, organiser: true }])
   })
 
@@ -80,7 +82,7 @@ describe('making a group', () => {
     const { db, art, lists } = setup()
     const without = createGroup(db, art.id, 'Zonder', null).token
     expect(member(db, art.id, without)).toMatchObject({ list: null })
-    expect(member(db, art.id, without).members[0]!.hasList).toBe(false)
+    expect(member(db, art.id, without).members[0]!.list).toBeNull()
     expect(codeOf(() => createGroup(db, art.id, 'Gestolen', lists.lot))).toBe('not_found')
   })
 
@@ -174,11 +176,127 @@ describe('the list a member puts in', () => {
     const { db, art, lot, lists, token } = setup()
     joinGroup(db, lot.id, token, lists.lot)
     deleteList(db, art.id, lists.art)
-    expect(member(db, lot.id, token).members.map(row => row.hasList)).toEqual([false, true])
+    expect(member(db, lot.id, token).members.map(row => row.list?.title ?? null)).toEqual([null, 'Lotte'])
     expect(member(db, art.id, token).list).toBeNull()
     addOwner(db, lists.lot, art.id)
     leaveList(db, lot.id, lists.lot)
-    expect(member(db, art.id, token).members.map(row => row.hasList)).toEqual([false, false])
+    expect(member(db, art.id, token).members.map(row => row.list?.title ?? null)).toEqual([null, null])
+  })
+})
+
+describe('the lists of a group', () => {
+  const theirs = (db: Db, userId: number) => listOthersLists(db, userId).map(list => [list.title, list.santa ?? null])
+
+  it('are on the group\'s page for every member, each with whose it is', () => {
+    const { db, art, sis, lists, token } = full()
+    setGroupList(db, sis.id, token, null)
+    for (const viewer of [art, sis]) {
+      expect(member(db, viewer.id, token).members.map(row => row.list)).toEqual([
+        { token: lists.art, title: 'Art' }, { token: lists.lot, title: 'Lotte' }, { token: lists.mom, title: 'Mom' }, null,
+      ])
+    }
+  })
+
+  it('are not shown to someone who only has the link', () => {
+    const { db, token } = full()
+    const outsider = addUser(db, 'out')
+    expect(JSON.stringify(getGroup(db, outsider.id, token))).not.toMatch(/Lotte|"list"/)
+    expect(listGroupLists(db, outsider.id)).toEqual([])
+  })
+
+  it('are among a member\'s lists of others without anyone sending a link, and say which group put them there', () => {
+    const { db, art, lot, lists, token } = setup()
+    expect(theirs(db, lot.id)).toEqual([])
+    later()
+    joinGroup(db, lot.id, token, lists.lot)
+    expect(listOthersLists(db, lot.id)).toEqual([{ token: lists.art, title: 'Art', owners: ['Art'], deleted: false, santa: ['Kerst'] }])
+    expect(theirs(db, art.id)).toEqual([['Lotte', ['Kerst']]])
+  })
+
+  it('never include the member\'s own list, or one they own with someone', () => {
+    const { db, art, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    addOwner(db, lists.lot, art.id)
+    expect(theirs(db, art.id)).toEqual([])
+  })
+
+  it('follow what a member puts in: another list, none, a list that is deleted', () => {
+    const { db, art, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    const second = addList(db, art.id, 'Tweede')
+    setGroupList(db, art.id, token, second)
+    expect(theirs(db, lot.id)).toEqual([['Tweede', ['Kerst']]])
+    setGroupList(db, art.id, token, null)
+    expect(theirs(db, lot.id)).toEqual([])
+    setGroupList(db, art.id, token, second)
+    deleteList(db, art.id, second)
+    expect(theirs(db, lot.id)).toEqual([])
+  })
+
+  it('go off the page with the group: leaving it, being taken out, the group ending', () => {
+    const { db, art, lot, mom, token } = full()
+    expect(theirs(db, lot.id).map(([title]) => title).sort()).toEqual(['Art', 'Mom', 'Sis'])
+    leaveGroup(db, lot.id, token)
+    expect(theirs(db, lot.id)).toEqual([])
+    expect(theirs(db, mom.id).map(([title]) => title).sort()).toEqual(['Art', 'Sis'])
+    removeMember(db, art.id, token, mom.id)
+    expect(theirs(db, mom.id)).toEqual([])
+    deleteGroup(db, art.id, token)
+    expect(theirs(db, art.id)).toEqual([])
+  })
+
+  it('are not remembered as opened, so they leave with the group', () => {
+    const { db, art, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    rememberList(db, lot.id, lists.art)
+    expect(listOpenedLists(db, lot.id)).toEqual([])
+    expect(theirs(db, lot.id)).toEqual([['Art', ['Kerst']]])
+    leaveGroup(db, lot.id, token)
+    expect(theirs(db, art.id)).toEqual([])
+    expect(theirs(db, lot.id)).toEqual([])
+  })
+
+  it('are there once when the member opened the list before: as the group\'s, and as theirs again afterwards', () => {
+    const { db, lot, lists, token } = setup()
+    rememberList(db, lot.id, lists.art)
+    expect(theirs(db, lot.id)).toEqual([['Art', null]])
+    joinGroup(db, lot.id, token, lists.lot)
+    expect(theirs(db, lot.id)).toEqual([['Art', ['Kerst']]])
+    leaveGroup(db, lot.id, token)
+    expect(theirs(db, lot.id)).toEqual([['Art', null]])
+  })
+
+  it('are there once when a friend shows the list too, as the friend\'s', () => {
+    const { db, art, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    askFriend(db, lot.id, lists.art, art.id)
+    answerRequest(db, art.id, listRequests(db, art.id).incoming[0]!.id, true)
+    setShownToOne(db, art.id, lists.art, lot.id, true)
+    expect(theirs(db, lot.id)).toEqual([['Art', null]])
+  })
+
+  it('name every group that puts a list there, once', () => {
+    const { db, art, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    later()
+    const second = createGroup(db, lot.id, 'Nieuwjaar', lists.lot).token
+    joinGroup(db, art.id, second, lists.art)
+    expect(theirs(db, lot.id)).toEqual([['Art', ['Nieuwjaar', 'Kerst']]])
+  })
+
+  it('stay on the page when "Weghalen" is asked: they go with the group, not by themselves', () => {
+    const { db, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    takeOffPage(db, lot.id, lists.art)
+    expect(theirs(db, lot.id)).toEqual([['Art', ['Kerst']]])
+  })
+
+  it('count as lists the member has: what they tick there is among what they give', () => {
+    const { db, art, lot, lists, token } = setup()
+    joinGroup(db, lot.id, token, lists.lot)
+    const wish = addWishTo(db, art.id, lists.art, 'Sokken')
+    setPurchase(db, lists.art, wish.id, lot.id, 1)
+    expect(listGiven(db, lot.id)).toMatchObject([{ names: ['Art'], wishes: [{ title: 'Sokken', token: lists.art }] }])
   })
 })
 

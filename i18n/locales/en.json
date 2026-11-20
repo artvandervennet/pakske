@@ -466,7 +466,7 @@
     "nameHint": "For example “Christmas at gran’s”.",
     "create": "Make the group",
     "listLegend": "Which list do you put in?",
-    "listHint": "Whoever draws your name gets to see this list. You can choose another one later.",
+    "listHint": "Everyone in the group finds this list under “From others”, also whoever draws your name. You can choose another one later.",
     "noList": "No list",
     "yourList": "Your list",
     "listSaved": "Saved.",
@@ -474,8 +474,9 @@
     "members": "Members",
     "you": "you",
     "organiser": "runs the group",
-    "hasList": "list chosen",
     "noListYet": "no list yet",
+    "memberList": "List of {name}: {title}",
+    "listVia": "through Secret Santa “{title}”",
     "waiting": "no name yet",
     "invite": "Invite",
     "inviteNote": "Whoever opens the link can join.",
@@ -545,7 +546,7 @@
     "goneTitle": "This group doesn’t exist",
     "goneLead": "The link is wrong, or the group was deleted.",
     "howTitle": "How it works",
-    "how1": "Everyone joins with an account of their own and puts a wishlist in.",
+    "how1": "Everyone joins with an account of their own and puts a wishlist in. The whole group can open it.",
     "how2": "Whoever runs the group draws the names once everyone is in. Each gets one name, never their own. If someone joins or leaves later, the names are drawn again.",
     "how3": "Only you see whose name you drew. The others don’t, and neither does the person who runs the group.",
     "onList": "You drew {names} for Secret Santa. What you tick here is given anonymously, unless you switch that off on a wish yourself."
@@ -654,7 +655,7 @@
       "picture": "A wish’s picture has a random address of its own. Whoever has that address can open the picture.",
       "hidden": "Other people never see your email address. No page lists the accounts or other people’s lists, and search engines are asked to stay out. Nobody sees who opened their list, with one exception: when a friend opens your list by its link, you see among your friends that they have it.",
       "friends": "A friend sees your name and your profile picture, and finds the lists you switch on for them. Nobody sees who your friends are. If you ask the owner of a list to be friends, they see your name and which list you asked from. If you decline a request, whoever sent it isn’t told. If you send a friend wishes or a list, they get a notice with your name; if they close it, you aren’t told.",
-      "santa": "In a Secret Santa group the members see each other’s names, and whether you put a list in. Anyone who has the group’s link sees its name, who runs it and how many people are in. Whose name you drew, the site shows to you alone: not to the other members, and not to the person who runs the group. It is in the database, though. Whoever drew your name gets the link of the list you put in. What you tick on a list of the person you drew is given anonymously, unless you switch that off on the wish yourself."
+      "santa": "In a Secret Santa group the members see each other’s names, and whether you put a list in. Anyone who has the group’s link sees its name, who runs it and how many people are in. Whose name you drew, the site shows to you alone: not to the other members, and not to the person who runs the group. It is in the database, though. The list you put in is shown to every member: it is among their lists “From others” for as long as you are in the same group and leave the list in. What you tick on a list of the person you drew is given anonymously, unless you switch that off on the wish yourself."
     },
     "where": {
       "title": "Where it is kept, and who else is involved",

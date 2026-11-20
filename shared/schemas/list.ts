@@ -151,13 +151,21 @@ export interface ListView {
   threads?: ListThread[]
 }
 
-/** A list someone else owns that is on this person's page: a friend shows it to them, or they opened its link. */
+/**
+ * A list someone else owns that is on this person's page: a friend shows it to them, a member of
+ * a Secret Santa group they are in put it in, or they opened its link.
+ */
 export interface OpenedList {
   token: string
   title: string
   /** Display names of the list's owners. */
   owners: string[]
   deleted: boolean
+  /**
+   * The Secret Santa groups that put it on the page, by name. It then goes off the page with the
+   * group and can't be taken off by itself. Left out for every other list.
+   */
+  santa?: string[]
 }
 
 /** A list a friend shows this person, so it is on their Lists page without a link being sent. */

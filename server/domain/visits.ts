@@ -3,6 +3,7 @@ import type { Db } from '../db/client'
 import { listOwners, listVisits, lists, users } from '../db/schema'
 import type { OpenedList } from '../../shared/schemas/list'
 import { hideShownList, listShownLists, shownListIds } from './friends'
+import { groupListIds, listGroupLists } from './santa'
 
 /** A list by its token, deleted or not, with whether this person owns it. Undefined when no list has the token. */
 function findList(db: Db, userId: number, token: string) {
@@ -22,8 +23,9 @@ export function rememberList(db: Db, userId: number, token: string): void {
   const list = findList(db, userId, token)
   if (!list) return
   // A list a friend shows them is on their page without its link; opening it there is no visit,
-  // or it would stay behind as a visited list after the friend stops showing it.
-  if (!list.owns && shownListIds(db, userId).has(list.id)) return
+  // or it would stay behind as a visited list after the friend stops showing it. The same goes
+  // for a list a Secret Santa group shows them.
+  if (!list.owns && (shownListIds(db, userId).has(list.id) || groupListIds(db, userId).has(list.id))) return
   db.insert(listVisits).values({ userId, listId: list.id })
     .onConflictDoUpdate({ target: [listVisits.userId, listVisits.listId], set: { openedAt: new Date() } })
     .run()
@@ -70,24 +72,33 @@ export function listOpenedLists(db: Db, userId: number): OpenedList[] {
   // it. Either way it is under your own lists, deleted ones included, and not here.
   const owned = new Set(db.select({ listId: listOwners.listId }).from(listOwners).where(eq(listOwners.userId, userId)).all().map(r => r.listId))
   // A list a friend shows the person is under "from friends" while it is shown, not here as well.
+  // Neither is one a Secret Santa group shows them.
   const shown = shownListIds(db, userId)
-  return toOpened(db, rows.filter(row => !owned.has(row.id) && !shown.has(row.id)))
+  const viaGroup = groupListIds(db, userId)
+  return toOpened(db, rows.filter(row => !owned.has(row.id) && !shown.has(row.id) && !viaGroup.has(row.id)))
 }
 
 /**
  * Other people's lists on this person's page, as one row: the lists friends show them, the one
- * switched on last first, and then the lists they opened by a link, the one opened last first.
- * A list is never in it twice: while a friend shows it, it isn't a visited list as well.
+ * switched on last first; then the lists the members of their Secret Santa groups put in; and
+ * then the lists they opened by a link, the one opened last first. A list is never in it twice:
+ * while a friend or a group shows it, it isn't a visited list as well, and one that both show
+ * is the friend's.
  */
 export function listOthersLists(db: Db, userId: number): OpenedList[] {
   const shown = listShownLists(db, userId).map(({ token, title, owners }) => ({ token, title, owners, deleted: false }))
-  return [...shown, ...listOpenedLists(db, userId)]
+  const fromFriends = new Set(shown.map(list => list.token))
+  const viaGroup = listGroupLists(db, userId).filter(list => !fromFriends.has(list.token))
+  const groupsOf = new Map(viaGroup.map(list => [list.token, list.groups]))
+  const fromGroups = toOpened(db, viaGroup.map(list => ({ ...list, deletedAt: null }))).map(list => ({ ...list, santa: groupsOf.get(list.token)! }))
+  return [...shown, ...fromGroups, ...listOpenedLists(db, userId)]
 }
 
 /**
  * Takes someone else's list off this person's page, whichever way it got there: the visit is
  * forgotten, and a list a friend shows them is hidden for them alone. The friend isn't told and
- * the list's link keeps working; opening it again puts it back.
+ * the list's link keeps working; opening it again puts it back. A list a Secret Santa group
+ * shows them stays: it goes with the group, and the page offers no "Weghalen" for it.
  */
 export function takeOffPage(db: Db, userId: number, token: string): void {
   forgetList(db, userId, token)
