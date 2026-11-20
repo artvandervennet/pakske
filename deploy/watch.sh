@@ -50,9 +50,11 @@ if [ "${1:-}" = "setup" ]; then
     esac
     rm -f /tmp/pakske-watch-setup.$$
   }
-  # A site reports every minute. Five minutes without a report and it counts as down.
+  # A site reports every minute, give or take ten seconds: the timer counts from the end of the
+  # last round. A report is expected every two minutes, so one that is a little late doesn't
+  # show as late; six minutes without one and the site counts as down.
   for site in "${sites[@]}"; do
-    make "${site%%=*}" "Fetched from the Pi every minute: ${site#*=}" '"timeout":60,"grace":300'
+    make "${site%%=*}" "Fetched from the Pi every minute: ${site#*=}" '"timeout":120,"grace":240'
   done
   # The backup runs at 03:30 and may try again for a while: deploy/pakske-backup.timer.
   make pakske-backup "deploy/backup.sh, every night at 03:30" "\"schedule\":\"30 3 * * *\",\"tz\":\"$(timedatectl show -p Timezone --value 2>/dev/null || echo UTC)\",\"grace\":10800"

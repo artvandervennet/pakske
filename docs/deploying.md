@@ -201,7 +201,7 @@ Without restic, backing up and restoring work as below, with `NUXT_DATA_DIR` fro
 `deploy/watch.sh` fetches the site every minute at its public address, so through Cloudflare and the tunnel like any visitor, and reports the answer to [healthchecks.io](https://healthchecks.io). The backup and the deploy report there too. healthchecks.io then tells you, by mail or on your phone:
 
 - when the site answers with an error or not at all, two minutes in a row;
-- when the reports stop for five minutes: the Pi is off, or has no internet;
+- when the reports stop for six minutes: the Pi is off, or has no internet;
 - when a night's backup fails or doesn't happen;
 - when a deploy fails. The site then stays on the build before it.
 
@@ -231,8 +231,8 @@ What the Pi itself keeps:
 | --- | --- |
 | `~/.local/share/pakske/watch.log` | When a site went down, why, and when it came back. |
 | `~/.local/share/pakske/backup.log` | One line for each backup. |
-| `~/.local/share/pakske/deploy.log` | Each deploy, with its build. |
-| `~/.pm2/logs/pakske-error.log` | The site's own errors, each line with its time. |
+| `~/.local/share/pakske/deploy.log` | Each deploy, with its build. Past a megabyte the oldest half is dropped. |
+| `~/.pm2/logs/pakske-error.log` | The site's own errors, each line with its time. A wrong or old link is not one of them. |
 
 ## Back up
 

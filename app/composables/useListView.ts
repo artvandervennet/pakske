@@ -27,7 +27,7 @@ export async function useListView(token: MaybeRefOrGetter<string>) {
     return $fetch<Answer>(url())
   })
   if (result.error.value || !result.data.value) {
-    throw createError({ statusCode: result.error.value?.statusCode ?? 404, fatal: true })
+    throw pageError(result.error.value?.statusCode ?? 404)
   }
   const first = result.data.value
   // Also set by a later refresh: a page left open while the list got a new link somewhere else.
