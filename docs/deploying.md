@@ -196,6 +196,44 @@ On a new Pi, clone the repository and write `~/.config/pakske-backup.env` again:
 
 Without restic, backing up and restoring work as below, with `NUXT_DATA_DIR` from `~/.config/pakske.env` in place of the volume, and `pm2 stop pakske` and `pm2 start pakske` in place of `docker compose down` and `up`.
 
+### Knowing when something is down
+
+`deploy/watch.sh` fetches the site every minute at its public address, so through Cloudflare and the tunnel like any visitor, and reports the answer to [healthchecks.io](https://healthchecks.io). The backup and the deploy report there too. healthchecks.io then tells you, by mail or on your phone:
+
+- when the site answers with an error or not at all, two minutes in a row;
+- when the reports stop for five minutes: the Pi is off, or has no internet;
+- when a night's backup fails or doesn't happen;
+- when a deploy fails. The site then stays on the build before it.
+
+It also tells you when each of these is fine again. Its free plan has 20 checks; this uses one for each site you watch and two more. What it gets from the Pi is a check's name, the status the site answered with and how long it took, and the one line the backup or the deploy logs. Nothing about the people who use the site.
+
+1. Make an account at healthchecks.io. Under the project's Settings, copy the ping key, and make a read-write API key.
+2. For a message on your phone as well as a mail: install the [ntfy](https://ntfy.sh) app, subscribe to a topic with a name nobody would guess, and add that topic at healthchecks.io under Integrations → ntfy. Anyone who knows the topic's name can read what is sent to it.
+3. On the Pi:
+
+```sh
+cp ~/pakske/deploy/watch-env.example ~/.config/pakske-watch.env && chmod 600 ~/.config/pakske-watch.env
+# fill it in: the two keys, and the address of your site in WATCH_SITES
+~/pakske/deploy/watch.sh setup
+cp ~/pakske/deploy/pakske-watch.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now pakske-watch.timer
+```
+
+`watch.sh setup` makes the checks with their schedules and gives each one every way of telling you that the project has. Run it again after adding a site to `WATCH_SITES` or an integration at healthchecks.io.
+
+`WATCH_SITES` can name other sites on the same Pi, as `name=address` pairs with a space between them. An address counts as up when it answers with a status from 200 to 299.
+
+To see that it works, `pm2 stop pakske`: within three minutes the message arrives, and `pm2 start pakske` brings the one that says it is back.
+
+What the Pi itself keeps:
+
+| File | What is in it |
+| --- | --- |
+| `~/.local/share/pakske/watch.log` | When a site went down, why, and when it came back. |
+| `~/.local/share/pakske/backup.log` | One line for each backup. |
+| `~/.local/share/pakske/deploy.log` | Each deploy, with its build. |
+| `~/.pm2/logs/pakske-error.log` | The site's own errors, each line with its time. |
+
 ## Back up
 
 Everything is in the volume: `pakske.db` and the `uploads/` folder. This copies both into `backup/` while the site keeps running:

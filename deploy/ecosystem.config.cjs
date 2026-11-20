@@ -15,6 +15,8 @@ module.exports = {
       interpreter: `${state}/node/current/bin/node`,
       node_args: `--env-file=${home}/.config/pakske.env`,
       env: { NODE_ENV: 'production' },
+      // every line in ~/.pm2/logs/pakske-*.log starts with when it was written
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
     },
   ],
 }

@@ -20,15 +20,21 @@ KEEP_DAYS=30
 # after a dead SD card has to go on where the old one stopped.
 BACKUP_HOST=pakske
 
+# healthchecks.io hears how each backup went, when ~/.config/pakske-watch.env has its key.
+# shellcheck source=deploy/report.sh
+. "$(dirname "$0")/report.sh"
+
 say() { echo "$(date '+%F %T') $*"; }
 fail() {
   say "BACKUP FAILED: $1"
+  report pakske-backup fail "$1"
   exit 1
 }
 # For what trying again won't mend: the settings. pakske-backup.service tries a failed backup
 # again after ten minutes, since the network may have been away, but not one that ends this way.
 unset_up() {
   say "BACKUP FAILED: $1"
+  report pakske-backup fail "$1"
   exit 2
 }
 
@@ -72,6 +78,7 @@ fi
 mkdir -p "$STATE_DIR"
 exec 9>"$STATE_DIR/backup.lock"
 flock -n 9 || fail "another backup is still running"
+report pakske-backup start
 
 data_dir="$(sed -n 's/^NUXT_DATA_DIR=//p' "$ENV_FILE")"
 [ -f "$data_dir/pakske.db" ] || fail "no database at $data_dir/pakske.db (NUXT_DATA_DIR in $ENV_FILE)"
@@ -121,4 +128,6 @@ fi
 "$restic" check --quiet || fail "the repository did not pass restic's check"
 
 snapshots="$("$restic" snapshots --host "$BACKUP_HOST" --json | "$STATE_DIR/node/current/bin/node" -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).length')"
-say "Backed up: $(cat "$staging/accounts"), $(find "$data_dir/uploads" -type f | wc -l | tr -d ' ') pictures. Backups in the repository: $snapshots."
+done_line="Backed up: $(cat "$staging/accounts"), $(find "$data_dir/uploads" -type f | wc -l | tr -d ' ') pictures. Backups in the repository: $snapshots."
+say "$done_line"
+report pakske-backup ok "$done_line"
