@@ -10,7 +10,10 @@ export interface SantaGroupRow {
   token: string
   title: string
   members: number
+  /** The names were drawn, at least once. */
   drawn: boolean
+  /** … and have to be drawn again: someone in the group has no name. Says nothing about who. */
+  again: boolean
   /** The person runs it: they joined first of the members it has now. */
   organiser: boolean
 }
@@ -24,7 +27,10 @@ export interface SantaMember {
   organiser: boolean
   /** They put a list in, which is still theirs. Which list is for whoever draws them. */
   hasList: boolean
-  /** The names are drawn and they are not part of it: the draw waits to be done again. */
+  /**
+   * The names are drawn, others have one and they don't: the draw waits to be done again.
+   * False for everyone once the draw no longer counts (`lapsed`), when nobody has a name.
+   */
   waiting: boolean
 }
 
@@ -36,7 +42,7 @@ export interface SantaGuestView {
   organiser: string
   members: number
   /**
-   * `drawn` once the names are drawn: joining is still possible, without a name until they are
+   * `drawn` while a draw counts: joining is still possible, without a name until the names are
    * drawn again. `full` at the most a group holds, which can't be joined.
    */
   state: 'open' | 'drawn' | 'full'
@@ -49,7 +55,13 @@ export interface SantaMemberView {
   role: 'member'
   token: string
   title: string
+  /** The names were drawn, at least once. */
   drawn: boolean
+  /**
+   * The draw no longer counts: someone with a name left or was taken out, and with that nobody
+   * has a name until they are drawn again.
+   */
+  lapsed: boolean
   /** The asker runs it. */
   organiser: boolean
   /** In the order they joined. */
@@ -63,10 +75,11 @@ export interface SantaMemberView {
    */
   pick: { id: number, name: string, picture: string | null, list: { token: string, title: string } | null } | null
   /**
-   * Why the asker has no name after the draw: `late` when they joined after it, `gone` when the
-   * person they drew no longer has an account and nobody was left to pass on. Null otherwise.
+   * Why the asker has no name after the draw: `lapsed` when the draw no longer counts, `late`
+   * when they joined after it, `gone` when the person they drew no longer has an account and
+   * nobody was left to pass on. Null otherwise.
    */
-  waits: 'late' | 'gone' | null
+  waits: 'lapsed' | 'late' | 'gone' | null
 }
 
 export type SantaView = SantaGuestView | SantaMemberView

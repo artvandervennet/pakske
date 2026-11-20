@@ -73,7 +73,7 @@ describe('making a group', () => {
     const view = member(db, art.id, token)
     expect(view).toMatchObject({ role: 'member', title: 'Kerst', drawn: false, organiser: true, pick: null })
     expect(view.members).toEqual([{ id: art.id, name: 'Art', picture: null, you: true, organiser: true, hasList: true, waiting: false }])
-    expect(listGroups(db, art.id)).toEqual([{ token, title: 'Kerst', members: 1, drawn: false, organiser: true }])
+    expect(listGroups(db, art.id)).toEqual([{ token, title: 'Kerst', members: 1, drawn: false, again: false, organiser: true }])
   })
 
   it('takes a list of the maker\'s own, or none, and never someone else\'s', () => {
@@ -286,15 +286,15 @@ describe('drawing the names', () => {
     expect(listNotices(db, art.id).some(notice => notice.kind === 'santa_drawn')).toBe(false)
   })
 
-  it('happens once: with a name for everyone, nobody draws again, leaves or is taken out', () => {
-    const { db, art, lot, mom, token } = full()
+  it('happens once: with a name for everyone, nobody draws again', () => {
+    const { db, art, lot, token } = full()
     drawNames(db, art.id, token)
     const before = draws(db, token)
     expect(codeOf(() => drawNames(db, art.id, token))).toBe('santa_drawn')
-    expect(codeOf(() => leaveGroup(db, lot.id, token))).toBe('santa_drawn')
-    expect(codeOf(() => removeMember(db, art.id, token, mom.id))).toBe('santa_drawn')
+    expect(codeOf(() => drawNames(db, lot.id, token))).toBe('forbidden')
     expect(draws(db, token)).toEqual(before)
-    expect(member(db, lot.id, token)).toMatchObject({ waits: null })
+    expect(member(db, lot.id, token)).toMatchObject({ drawn: true, lapsed: false, waits: null })
+    expect(listGroups(db, lot.id)).toMatchObject([{ drawn: true, again: false }])
     expect(member(db, lot.id, token).members.some(row => row.waiting)).toBe(false)
   })
 })
@@ -326,6 +326,7 @@ describe('someone who joins after the draw', () => {
     expect(member(db, lars.id, token)).toMatchObject({ drawn: true, pick: null, waits: 'late' })
     expect(member(db, art.id, token)).toMatchObject({ pick: { id: lot.id }, waits: null })
     expect(member(db, lot.id, token).members.map(row => row.waiting)).toEqual([false, false, false, false, true])
+    expect(listGroups(db, art.id)).toMatchObject([{ drawn: true, again: true }])
   })
 
   it('tells whoever runs the group that the names must be drawn again', () => {
@@ -344,7 +345,9 @@ describe('someone who joins after the draw', () => {
     expect(codeOf(() => removeMember(db, lot.id, token, lars.id))).toBe('forbidden')
     removeMember(db, art.id, token, lars.id)
     expect(names(member(db, art.id, token))).toEqual(['Art', 'Lot', 'Mom', 'Sis'])
-    expect(codeOf(() => leaveGroup(db, lot.id, token))).toBe('santa_drawn')
+    // Nobody had his name and he had nobody's: the draw is as it was, and nobody else is told.
+    expect(member(db, art.id, token)).toMatchObject({ lapsed: false, pick: { id: lot.id } })
+    expect(listNotices(db, lot.id)).toEqual([])
   })
 
   it('gets a name when the names are drawn again, as everyone does, the person who runs the group alone doing it', () => {
@@ -391,8 +394,106 @@ describe('someone who joins after the draw', () => {
     drawNames(db, art.id, token)
     const after = draws(db, token)
     expect(codeOf(() => drawNames(db, art.id, token))).toBe('santa_drawn')
-    expect(codeOf(() => leaveGroup(db, lars.id, token))).toBe('santa_drawn')
     expect(draws(db, token)).toEqual(after)
+  })
+})
+
+describe('someone with a name who leaves, or is taken out', () => {
+  /** The four drew: Art has Lotte, Lotte has Mom, Mom has Sis, Sis has Art. */
+  function drawn() {
+    const world = full()
+    const { db, art, lot, mom, sis, token } = world
+    assign(db, token, [[art.id, lot.id], [lot.id, mom.id], [mom.id, sis.id], [sis.id, art.id]])
+    later()
+    return world
+  }
+
+  it('can always go, and the draw goes with them: nobody keeps a name', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    leaveGroup(db, lot.id, token)
+    expect(draws(db, token)).toEqual({ [art.id]: null, [mom.id]: null, [sis.id]: null })
+    expect(names(member(db, art.id, token))).toEqual(['Art', 'Mom', 'Sis'])
+    expect(guest(db, lot.id, token)).toMatchObject({ role: 'guest', state: 'open' })
+  })
+
+  it('leaves everyone the same page: a draw that no longer counts, and nobody singled out', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    leaveGroup(db, lot.id, token)
+    // Art had her name and Mom was hers: neither reads differently from Sis.
+    for (const user of [art, mom, sis]) {
+      expect(member(db, user.id, token), user.displayName).toMatchObject({ drawn: true, lapsed: true, pick: null, waits: 'lapsed' })
+      expect(member(db, user.id, token).members.some(row => row.waiting)).toBe(false)
+    }
+    expect(listGroups(db, mom.id)).toMatchObject([{ drawn: true, again: true }])
+  })
+
+  it('tells everyone who stays, by the name of who went', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    leaveGroup(db, lot.id, token)
+    for (const user of [art, mom, sis]) {
+      expect(listNotices(db, user.id)[0], user.displayName).toMatchObject({ kind: 'santa_lapsed', actor: 'Lot', title: 'Kerst', santa: token, fresh: true })
+    }
+    expect(listNotices(db, lot.id).some(notice => notice.kind === 'santa_lapsed')).toBe(false)
+  })
+
+  it('is the same when the person who runs the group takes them out, who is told that instead', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    expect(codeOf(() => removeMember(db, mom.id, token, lot.id))).toBe('forbidden')
+    removeMember(db, art.id, token, lot.id)
+    expect(draws(db, token)).toEqual({ [art.id]: null, [mom.id]: null, [sis.id]: null })
+    expect(listNotices(db, lot.id)[0]).toMatchObject({ kind: 'santa_removed', actor: 'Art', santa: null })
+    for (const user of [mom, sis]) expect(listNotices(db, user.id)[0]).toMatchObject({ kind: 'santa_lapsed', actor: 'Lot', santa: token })
+    // Art did it himself: his page says so, and no notice.
+    expect(listNotices(db, art.id).some(notice => notice.kind === 'santa_lapsed')).toBe(false)
+  })
+
+  it('hands the group on when it is the person who runs it', () => {
+    const { db, art, lot, mom, token } = drawn()
+    leaveGroup(db, art.id, token)
+    expect(member(db, lot.id, token)).toMatchObject({ organiser: true, lapsed: true })
+    expect(member(db, mom.id, token).organiser).toBe(false)
+  })
+
+  it('lets the names be drawn again for everyone who stays, and tells them', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    leaveGroup(db, lot.id, token)
+    expect(codeOf(() => drawNames(db, mom.id, token))).toBe('forbidden')
+    later()
+    drawNames(db, art.id, token)
+    const again = draws(db, token)
+    expect(Object.values(again).sort()).toEqual([art.id, mom.id, sis.id])
+    for (const id of [art.id, mom.id, sis.id]) expect(again[id]).not.toBe(id)
+    expect(member(db, mom.id, token)).toMatchObject({ drawn: true, lapsed: false, waits: null })
+    expect(listNotices(db, mom.id)[0]).toMatchObject({ kind: 'santa_redrawn', actor: 'Art' })
+    expect(listGroups(db, mom.id)).toMatchObject([{ drawn: true, again: false }])
+  })
+
+  it('can leave fewer than a draw needs: it waits until someone joins', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    leaveGroup(db, lot.id, token)
+    leaveGroup(db, mom.id, token)
+    expect(codeOf(() => drawNames(db, art.id, token))).toBe('santa_too_few')
+    // A draw that no longer counts is joined like a group that never drew.
+    expect(guest(db, lot.id, token).state).toBe('open')
+    joinGroup(db, lot.id, token, null)
+    expect(listNotices(db, art.id)[0]).toMatchObject({ kind: 'santa_joined', actor: 'Lot' })
+    expect(member(db, lot.id, token)).toMatchObject({ lapsed: true, waits: 'lapsed' })
+    drawNames(db, art.id, token)
+    expect(Object.values(draws(db, token)).sort()).toEqual([art.id, lot.id, sis.id].sort())
+  })
+
+  it('tells nobody a second time while the draw no longer counts', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    leaveGroup(db, lot.id, token)
+    leaveGroup(db, mom.id, token)
+    expect(listNotices(db, sis.id).filter(notice => notice.kind === 'santa_lapsed')).toHaveLength(1)
+    expect(listNotices(db, art.id).filter(notice => notice.kind === 'santa_lapsed')).toHaveLength(1)
+  })
+
+  it('ends the group when the last one leaves', () => {
+    const { db, art, lot, mom, sis, token } = drawn()
+    for (const user of [art, lot, mom, sis]) leaveGroup(db, user.id, token)
+    expect(getGroup(db, art.id, token)).toBeUndefined()
   })
 })
 

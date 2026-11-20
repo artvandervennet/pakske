@@ -751,9 +751,7 @@ everyone_drew() {
 everyone_drew art mom sis lot
 req mom GET /api/notices; has "the members are told the names were drawn" '"kind":"santa_drawn"'
 req eng GET "/api/santa/$SANTA"; has "someone outside reads that the names are drawn" '"state":"drawn"'; lacks "… and nothing about the members" '"pick"'
-req lot POST "/api/santa/$SANTA/leave"; check "nobody who has a name leaves after the draw" 409; has "… with the code santa_drawn" santa_drawn
 req art GET "/api/santa/$SANTA"; MOMID=$(json ".members.find(m=>m.name==='Moeke').id"); PICKLIST=$(json .pick.list.token); PICKNAME=$(json .pick.name)
-req art DELETE "/api/santa/$SANTA/members/$MOMID"; check "… or is taken out" 409
 # What art ticks for the person he drew is without his name, though his account gives with it.
 req art GET "/api/lists/$PICKLIST"; check "art opens the list of the person he drew" 200; same "… which says whose name he drew" ".drewOwners.join()" "$PICKNAME"; GIFT=$(json ".wishes[0].id")
 req art PUT "/api/lists/$PICKLIST/wishes/$GIFT/purchase" '{"quantity":1}'; check "art ticks a wish there" 204
@@ -774,7 +772,20 @@ req art POST "/api/santa/$SANTA/draw"; check "art draws the names again" 204
 everyone_drew art mom sis lot eng
 for who in mom sis lot eng; do req $who GET /api/notices; has "$who is told the names were drawn again" '"kind":"santa_redrawn"'; done
 req art POST "/api/santa/$SANTA/draw"; check "with a name for everyone the draw stands" 409; has "… with the code santa_drawn" santa_drawn
-req eng POST "/api/santa/$SANTA/leave"; check "… and the latecomer stays too" 409
+# Anyone can leave or be taken out, also with a name. The draw then no longer counts for anyone.
+req eng POST "/api/santa/$SANTA/leave"; check "someone with a name leaves" 204
+req sis GET "/api/santa/$SANTA"; has "the draw no longer counts for those who stay" '"lapsed":true'; has "… who are all without a name" '"waits":"lapsed"'; same "… and none of them marked as the one who waits" ".members.filter(m=>m.waiting).length" 0
+for who in art mom sis lot; do req $who GET /api/notices; has "$who is told who went" '"kind":"santa_lapsed"'; done
+req sis GET /api/santa; has "the row says the names are to be drawn again" '"again":true'
+req art POST "/api/santa/$SANTA/draw"; check "art draws again for the four who stay" 204
+everyone_drew art mom sis lot
+req art DELETE "/api/santa/$SANTA/members/$MOMID"; check "art takes out someone who has a name" 204
+req mom GET /api/notices; has "who is told so" '"kind":"santa_removed"'
+req lot GET "/api/santa/$SANTA"; has "the draw no longer counts again" '"lapsed":true'; same "… with three left" ".members.length" 3
+req lot GET /api/notices; same "… and the others are told that she went" ".notices.slice(0,1).map(n=>n.kind+' '+n.actor).join()" "santa_lapsed Moeke"
+req mom POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_mom\"}"; check "she joins again with the link" 204
+req art POST "/api/santa/$SANTA/draw"; check "… and art draws once more" 204
+everyone_drew art mom sis lot
 status_of "/s/$SANTA"; check "the group's page sends a visitor to log in" 302
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/art.jar" "$BASE/s/$SANTA"); check "the page opens for a member" 200
 if grep -q "gives_to\|givesTo" "$BODY"; then bad "the page as sent names a column of the draw"; else ok "… and holds nothing of the draw but his own name"; fi

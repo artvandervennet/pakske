@@ -281,7 +281,8 @@ export const santaMembers = sqliteTable('santa_members', {
   // The list of their own they put in, for whoever draws them. Null when they chose none.
   listId: integer('list_id').references(() => lists.id, { onDelete: 'set null' }),
   // Whose name they drew. The name is only ever read for the member themselves: nobody else is
-  // told, the organiser included. Null until the draw, and after it for someone who joined later.
+  // told, the organiser included. Null until the draw, after it for someone who joined later,
+  // and for everyone once someone with a name left: the names are then drawn again.
   givesTo: integer('gives_to').references(() => users.id, { onDelete: 'set null' }),
   joinedAt: integer('joined_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 }, t => [

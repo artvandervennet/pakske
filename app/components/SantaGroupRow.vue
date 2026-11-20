@@ -2,15 +2,15 @@
 import type { SantaGroupRow } from '#shared/schemas/santa'
 
 // A Secret Santa group the person is in, as a row: its name is the link, and the line beside it
-// says how many are in and whether the names are drawn. Never whose name anyone drew: that is
-// on the group's own page, behind a button.
+// says how many are in and whether the names are drawn, or have to be drawn again. Never whose
+// name anyone drew: that is on the group's own page, behind a button.
 const props = defineProps<{ group: SantaGroupRow }>()
 
 const { t } = useI18n()
 const localePath = useLocalePath()
 
 const meta = computed(() =>
-  `${t('santa.rowMembers', { n: props.group.members }, props.group.members)} · ${t(props.group.drawn ? 'santa.rowDrawn' : 'santa.rowOpen')}`)
+  `${t('santa.rowMembers', { n: props.group.members }, props.group.members)} · ${t(props.group.again ? 'santa.rowAgain' : props.group.drawn ? 'santa.rowDrawn' : 'santa.rowOpen')}`)
 </script>
 
 <template>
