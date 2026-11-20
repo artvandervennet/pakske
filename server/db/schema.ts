@@ -271,7 +271,7 @@ export const santaGroups = sqliteTable('santa_groups', {
   token: text('token').notNull().unique(),
   title: text('title').notNull(),
   createdAt: createdAt(),
-  // Null until the names are drawn. After that nobody joins or leaves.
+  // Null until the names are drawn; the last time, when they were drawn again for a latecomer.
   drawnAt: integer('drawn_at', { mode: 'timestamp_ms' }),
 })
 
@@ -280,8 +280,8 @@ export const santaMembers = sqliteTable('santa_members', {
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   // The list of their own they put in, for whoever draws them. Null when they chose none.
   listId: integer('list_id').references(() => lists.id, { onDelete: 'set null' }),
-  // Whose name they drew. Only ever read for the member themselves: nobody else is told, the
-  // organiser included. Null until the draw.
+  // Whose name they drew. The name is only ever read for the member themselves: nobody else is
+  // told, the organiser included. Null until the draw, and after it for someone who joined later.
   givesTo: integer('gives_to').references(() => users.id, { onDelete: 'set null' }),
   joinedAt: integer('joined_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 }, t => [

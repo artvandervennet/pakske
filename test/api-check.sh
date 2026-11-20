@@ -726,20 +726,24 @@ req lot POST "/api/santa/$SANTA/leave"; check "lot leaves" 204
 req lot POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_lot\"}"; check "… and joins again with the link" 204
 req art POST "/api/santa/$SANTA/draw"; check "art draws the names" 204
 req art POST "/api/santa/$SANTA/draw"; check "… once" 409; has "… with the code santa_drawn" santa_drawn
-PICKS=""
-for who in art mom sis lot; do
-  req $who GET "/api/santa/$SANTA"; check "$who reads the group after the draw" 200
-  lacks "… with nothing about anyone else's name" givesTo
-  ME=$(json ".members.find(m=>m.you).id"); PICK=$(json .pick.id)
-  if [ "$PICK" != "$ME" ] && [ -n "$PICK" ]; then ok "… and drew someone else"; else bad "$who drew $PICK, and is $ME"; fi
-  PICKS="$PICKS $PICK"
-done
-DRAWN=$(echo $PICKS | tr ' ' '\n' | sort -n | paste -sd, -)
-if [ "$DRAWN" = "$(echo "$MEMBERS" | tr ',' '\n' | sort -n | paste -sd, -)" ]; then ok "every member was drawn by exactly one"; else bad "the names drawn are $DRAWN, the members $MEMBERS"; fi
+# everyone_drew <who…>: each of them reads the group, finds one name there that isn't their own
+# and nothing about anyone else's, and together the names are the members.
+everyone_drew() {
+  local picks="" who me pick
+  for who in "$@"; do
+    req $who GET "/api/santa/$SANTA"; check "$who reads the group" 200
+    lacks "… with nothing about anyone else's name" givesTo
+    me=$(json ".members.find(m=>m.you).id"); pick=$(json .pick.id)
+    if [ -n "$pick" ] && [ "$pick" != "$me" ]; then ok "… and drew someone else"; else bad "$who drew \"$pick\", and is $me"; fi
+    picks="$picks $pick"
+  done
+  req art GET "/api/santa/$SANTA"
+  if [ "$(echo $picks | tr ' ' '\n' | sort -n | paste -sd, -)" = "$(json ".members.map(m=>m.id).sort((a,b)=>a-b).join()")" ]; then ok "every member was drawn by exactly one"; else bad "the names drawn are$picks"; fi
+}
+everyone_drew art mom sis lot
 req mom GET /api/notices; has "the members are told the names were drawn" '"kind":"santa_drawn"'
 req eng GET "/api/santa/$SANTA"; has "someone outside reads that the names are drawn" '"state":"drawn"'; lacks "… and nothing about the members" '"pick"'
-req eng POST "/api/santa/$SANTA/join" '{"list":null}'; check "nobody joins after the draw" 409; has "… with the code santa_drawn" santa_drawn
-req lot POST "/api/santa/$SANTA/leave"; check "… or leaves" 409
+req lot POST "/api/santa/$SANTA/leave"; check "nobody who has a name leaves after the draw" 409; has "… with the code santa_drawn" santa_drawn
 req art GET "/api/santa/$SANTA"; MOMID=$(json ".members.find(m=>m.name==='Moeke').id"); PICKLIST=$(json .pick.list.token); PICKNAME=$(json .pick.name)
 req art DELETE "/api/santa/$SANTA/members/$MOMID"; check "… or is taken out" 409
 # What art ticks for the person he drew is without his name, though his account gives with it.
@@ -750,6 +754,19 @@ req art PUT "/api/lists/$PICKLIST/wishes/$GIFT/purchase" '{"quantity":1,"anonymo
 req eng GET "/api/lists/$PICKLIST"; same "… and then it is there" ".wishes[0].purchases[0].name" Art
 req art DELETE "/api/lists/$PICKLIST/wishes/$GIFT/purchase"; check "art takes the tick back" 204
 req art DELETE "/api/home/opened/$PICKLIST"; req eng DELETE "/api/home/opened/$PICKLIST"; check "… and the list goes off their pages again" 204
+# Someone who joins after the draw has no name until the names are drawn again, for everyone.
+req eng POST "/api/santa/$SANTA/join" '{"list":null}'; check "someone joins after the draw" 204
+req eng GET "/api/santa/$SANTA"; has "… without a name" '"waits":"late"'; same "… so nobody to buy for yet" ".pick" null
+req art GET /api/notices; has "art is told to draw again" '"kind":"santa_joined_late"'
+req art GET "/api/santa/$SANTA"; same "art still has the name he drew" ".pick.name" "$PICKNAME"; same "… and sees who waits" ".members.filter(m=>m.waiting).map(m=>m.name).join()" Eng
+req eng POST "/api/santa/$SANTA/leave"; check "the latecomer can leave again" 204
+req eng POST "/api/santa/$SANTA/join" '{"list":null}'; check "… and come back" 204
+req mom POST "/api/santa/$SANTA/draw"; check "only the person who runs the group draws again" 403
+req art POST "/api/santa/$SANTA/draw"; check "art draws the names again" 204
+everyone_drew art mom sis lot eng
+for who in mom sis lot eng; do req $who GET /api/notices; has "$who is told the names were drawn again" '"kind":"santa_redrawn"'; done
+req art POST "/api/santa/$SANTA/draw"; check "with a name for everyone the draw stands" 409; has "… with the code santa_drawn" santa_drawn
+req eng POST "/api/santa/$SANTA/leave"; check "… and the latecomer stays too" 409
 status_of "/s/$SANTA"; check "the group's page sends a visitor to log in" 302
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/art.jar" "$BASE/s/$SANTA"); check "the page opens for a member" 200
 if grep -q "gives_to\|givesTo" "$BODY"; then bad "the page as sent names a column of the draw"; else ok "… and holds nothing of the draw but his own name"; fi

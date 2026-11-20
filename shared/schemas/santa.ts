@@ -24,6 +24,8 @@ export interface SantaMember {
   organiser: boolean
   /** They put a list in, which is still theirs. Which list is for whoever draws them. */
   hasList: boolean
+  /** The names are drawn and they are not part of it: the draw waits to be done again. */
+  waiting: boolean
 }
 
 /** A group as someone who isn't in it gets it: enough to decide whether to join. */
@@ -33,7 +35,10 @@ export interface SantaGuestView {
   /** The display name of whoever runs it. */
   organiser: string
   members: number
-  /** `drawn` once the names are drawn and `full` at the most a group holds: neither can be joined. */
+  /**
+   * `drawn` once the names are drawn: joining is still possible, without a name until they are
+   * drawn again. `full` at the most a group holds, which can't be joined.
+   */
   state: 'open' | 'drawn' | 'full'
   /** The opener's own lists, to choose which one goes in. */
   mine: MyLists
@@ -54,9 +59,14 @@ export interface SantaMemberView {
   list: string | null
   /**
    * Whose name the asker drew, with the list that person put in. Null before the draw, and
-   * after it when that person's account is gone and nobody was left to pass on.
+   * after it while `waits` says why.
    */
   pick: { id: number, name: string, picture: string | null, list: { token: string, title: string } | null } | null
+  /**
+   * Why the asker has no name after the draw: `late` when they joined after it, `gone` when the
+   * person they drew no longer has an account and nobody was left to pass on. Null otherwise.
+   */
+  waits: 'late' | 'gone' | null
 }
 
 export type SantaView = SantaGuestView | SantaMemberView

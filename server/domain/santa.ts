@@ -13,10 +13,12 @@ import { newListToken } from './tokens'
 // beside the lists and changes nothing about them: a member puts one of their own lists in, and
 // whoever draws them is handed its link, which opens for them as it does for anyone.
 //
-// The one secret here is who drew whom. `gives_to` is read for the member it belongs to and for
-// nobody else, the person who runs the group included, so no answer of this file can be used to
-// work out the rest of the draw. Nothing in this file looks at what anyone ticked on a list, and
-// a test keeps it that way.
+// The one secret here is who drew whom. The name in `gives_to` is read for the member it belongs
+// to and for nobody else, the person who runs the group included, so no answer of this file can
+// be used to work out the rest of the draw. Of anyone else's, only whether there is a name: a
+// member without one after the draw joined later, or drew someone whose account is gone, and
+// waits for the names to be drawn again. Nothing in this file looks at what anyone ticked on a
+// list, and a test keeps it that way.
 
 /** The most people one group holds. */
 export const SANTA_MAX_MEMBERS = 50
@@ -36,7 +38,7 @@ function findGroup(db: Db, token: string): Group {
  * their account goes, the next one does, so a group is never stuck without anyone to start it.
  */
 function membersOf(db: Db, groupId: number) {
-  return db.select({ userId: santaMembers.userId, name: users.displayName, imageFile: users.imageFile, listId: santaMembers.listId, givesTo: santaMembers.givesTo })
+  return db.select({ userId: santaMembers.userId, name: users.displayName, imageFile: users.imageFile, listId: santaMembers.listId, givesTo: santaMembers.givesTo, joinedAt: santaMembers.joinedAt })
     .from(santaMembers)
     .innerJoin(users, eq(users.id, santaMembers.userId))
     .where(eq(santaMembers.groupId, groupId))
@@ -46,6 +48,17 @@ function membersOf(db: Db, groupId: number) {
 }
 
 const memberOf = (groupId: number, userId: number) => and(eq(santaMembers.groupId, groupId), eq(santaMembers.userId, userId))
+
+type Member = ReturnType<typeof membersOf>[number]
+
+/**
+ * Is this member part of the draw: do they have a name, or does someone have theirs? Before the
+ * draw nobody is. After it, whoever joined later isn't, and neither is the one person a deleted
+ * account can leave with nobody. Someone outside the draw can come and go without anyone else's
+ * name changing.
+ */
+const inDraw = (members: Member[], userId: number) =>
+  members.some(member => (member.userId === userId && member.givesTo !== null) || member.givesTo === userId)
 
 /** Refuses when the person is in as many groups as one account may be. */
 function assertGroupRoom(db: Db, userId: number): void {
@@ -78,20 +91,21 @@ export function createGroup(db: Db, userId: number, title: string, listToken: st
 
 /**
  * Joins a group by its link, with the list the person puts in. Whoever runs the group is told.
- * Once the names are drawn nobody joins: the draw would have to be done again, and everyone
- * would learn something from what changed. Someone who is in it already is left as they are.
+ * Someone who joins after the draw has no name and is nobody's name: the draw stays as it is
+ * until the person who runs the group draws again (`drawNames`), and the notice says that is
+ * theirs to do. Someone who is in the group already is left as they are.
  */
 export function joinGroup(db: Db, userId: number, token: string, listToken: string | null): void {
   db.transaction((tx) => {
     const group = findGroup(tx, token)
     const members = membersOf(tx, group.id)
     if (members.some(member => member.userId === userId)) return
-    if (group.drawnAt !== null) throw new DomainError('santa_drawn')
     if (members.length >= SANTA_MAX_MEMBERS) throw new DomainError('santa_full')
     assertGroupRoom(tx, userId)
     tx.insert(santaMembers).values({ groupId: group.id, userId, listId: chosenListId(tx, userId, listToken) }).run()
     const organiser = members[0]
-    if (organiser) addNotice(tx, { userId: organiser.userId, kind: 'santa_joined', actorId: userId, title: group.title, santaGroupId: group.id })
+    const kind = group.drawnAt === null ? 'santa_joined' : 'santa_joined_late'
+    if (organiser) addNotice(tx, { userId: organiser.userId, kind, actorId: userId, title: group.title, santaGroupId: group.id })
   }, { behavior: 'immediate' })
 }
 
@@ -127,24 +141,24 @@ export function renameGroup(db: Db, userId: number, token: string, title: string
 }
 
 /**
- * Leaves a group whose names aren't drawn yet. After the draw nobody leaves: someone would be
- * left with nobody to give to. A group its last member leaves is gone.
+ * Leaves a group. After the draw only someone outside it can: if anyone with a name left,
+ * someone would have nobody to give to. A group its last member leaves is gone.
  */
 export function leaveGroup(db: Db, userId: number, token: string): void {
   db.transaction((tx) => {
     const { group, members } = asMember(tx, userId, token)
-    if (group.drawnAt !== null) throw new DomainError('santa_drawn')
+    if (inDraw(members, userId)) throw new DomainError('santa_drawn')
     if (members.length === 1) tx.delete(santaGroups).where(eq(santaGroups.id, group.id)).run()
     else tx.delete(santaMembers).where(memberOf(group.id, userId)).run()
   }, { behavior: 'immediate' })
 }
 
-/** Whoever runs the group takes someone out before the draw. That person is told. */
+/** Whoever runs the group takes someone out who isn't part of the draw: anyone before it, a latecomer after it. That person is told. */
 export function removeMember(db: Db, userId: number, token: string, memberId: number): void {
   db.transaction((tx) => {
     const { group, members } = asOrganiser(tx, userId, token)
-    if (group.drawnAt !== null) throw new DomainError('santa_drawn')
     if (!members.some(member => member.userId === memberId)) throw new DomainError('not_found')
+    if (inDraw(members, memberId)) throw new DomainError('santa_drawn')
     // Running a group is not a way out of it: the organiser leaves like anyone else.
     if (memberId === userId) throw new DomainError('forbidden')
     tx.delete(santaMembers).where(memberOf(group.id, memberId)).run()
@@ -180,13 +194,20 @@ export function drawOrder(ids: number[]): number[] {
 }
 
 /**
- * Draws the names, once: every member gets one other member, and every member is drawn by one.
- * The other members are told that it happened, never what came out.
+ * Draws the names: every member gets one other member, and every member is drawn by one. The
+ * other members are told that it happened, never what came out.
+ *
+ * A draw stands. The names are drawn again only while a member is outside the draw: someone who
+ * joined afterwards, or the one a deleted account left with nobody. It is then a new draw of
+ * everyone, not the old one with a place made in it: fitting the newcomer in would tell the
+ * member whose name changed who the newcomer has. Without such a member there is no drawing
+ * again, or whoever runs the group could draw until they liked their own name.
  */
 export function drawNames(db: Db, userId: number, token: string): void {
   db.transaction((tx) => {
     const { group, members } = asOrganiser(tx, userId, token)
-    if (group.drawnAt !== null) throw new DomainError('santa_drawn')
+    const again = group.drawnAt !== null
+    if (again && members.every(member => inDraw(members, member.userId))) throw new DomainError('santa_drawn')
     if (members.length < SANTA_MIN_MEMBERS) throw new DomainError('santa_too_few')
     const ids = members.map(member => member.userId)
     const drawn = drawOrder(ids)
@@ -195,7 +216,7 @@ export function drawNames(db: Db, userId: number, token: string): void {
     })
     tx.update(santaGroups).set({ drawnAt: new Date() }).where(eq(santaGroups.id, group.id)).run()
     for (const id of ids) {
-      if (id !== userId) addNotice(tx, { userId: id, kind: 'santa_drawn', actorId: userId, title: group.title, santaGroupId: group.id })
+      if (id !== userId) addNotice(tx, { userId: id, kind: again ? 'santa_redrawn' : 'santa_drawn', actorId: userId, title: group.title, santaGroupId: group.id })
     }
   }, { behavior: 'immediate' })
 }
@@ -224,12 +245,16 @@ export function getGroup(db: Db, viewerId: number, token: string): SantaView | u
   // A profile picture goes to friends only, here as everywhere.
   const pictureOf = (member: { userId: number, imageFile: string | null }) =>
     member.imageFile && areFriends(db, viewerId, member.userId) ? `/uploads/${member.imageFile}` : null
+  const drawn = group.drawnAt !== null
   const drew = me.givesTo === null ? undefined : members.find(member => member.userId === me.givesTo)
+  // Without a name after the draw: they joined after it, or it was drawn with them in it and
+  // the person they had is gone.
+  const waits = !drawn || inDraw(members, viewerId) ? null : me.joinedAt.getTime() >= group.drawnAt!.getTime() ? 'late' : 'gone'
   return {
     role: 'member',
     token: group.token,
     title: group.title,
-    drawn: group.drawnAt !== null,
+    drawn,
     organiser: members[0]!.userId === viewerId,
     members: members.map((member, index) => ({
       id: member.userId,
@@ -238,10 +263,12 @@ export function getGroup(db: Db, viewerId: number, token: string): SantaView | u
       you: member.userId === viewerId,
       organiser: index === 0,
       hasList: listOf(db, member.userId, member.listId) !== null,
+      waiting: drawn && !inDraw(members, member.userId),
     })),
     lists: mine.lists,
     list: listOf(db, viewerId, me.listId)?.token ?? null,
     pick: drew ? { id: drew.userId, name: drew.name, picture: pictureOf(drew), list: listOf(db, drew.userId, drew.listId) } : null,
+    waits,
   }
 }
 

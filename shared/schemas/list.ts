@@ -190,7 +190,7 @@ export interface InviteView {
   mine: MyLists
 }
 
-export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed' | 'santa_joined' | 'santa_drawn' | 'santa_removed'
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed' | 'santa_joined' | 'santa_joined_late' | 'santa_drawn' | 'santa_redrawn' | 'santa_removed'
 
 /** A notice as its recipient gets it. Notices are about owners, lists and Secret Santa groups, never about buyers. */
 export interface NoticeView {

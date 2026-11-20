@@ -6,6 +6,9 @@ import { SANTA_MIN_MEMBERS, type SantaMember, type SantaView } from '#shared/sch
 // gets the members, their own list, and after the draw the one name they drew, behind a button:
 // the page is often opened with the others in the room.
 //
+// Joining stays possible after the draw. Whoever joins then has no name until the person who
+// runs the group draws again, which gives everyone a new one and tells everyone.
+//
 // The server sends a member their own name of the draw and nobody else's, so nothing on this
 // page, or in what Nuxt writes into the HTML, can show who drew whom. It needs a login: a
 // group is between accounts.
@@ -25,17 +28,13 @@ const guest = computed(() => (data.value?.role === 'guest' ? data.value : null))
 
 const guestTitle = computed(() => {
   if (!guest.value) return t('santa.goneTitle')
-  return {
-    open: t('santa.joinTitle', { name: guest.value.organiser, title: guest.value.title }),
-    drawn: t('santa.drawnTitle'),
-    full: t('santa.fullTitle'),
-  }[guest.value.state]
+  return guest.value.state === 'full' ? t('santa.fullTitle') : t('santa.joinTitle', { name: guest.value.organiser, title: guest.value.title })
 })
 const guestLead = computed(() => {
   if (!guest.value) return t('santa.goneLead')
   return {
     open: t('santa.joinLead'),
-    drawn: t('santa.drawnLead', { title: guest.value.title }),
+    drawn: t('santa.joinLateLead', { name: guest.value.organiser }),
     full: t('santa.fullLead', { title: guest.value.title }),
   }[guest.value.state]
 })
@@ -61,7 +60,7 @@ async function join() {
   }
   catch (error) {
     joinError.value = parse(error).message
-    // The names were drawn, or the group filled up, since the page loaded: it then says so.
+    // The group filled up, or is gone, since the page loaded: it then says so.
     await refresh()
   }
   finally {
@@ -72,15 +71,28 @@ async function join() {
 // ── The group, for a member ───────────────────────────────────────────────
 const organiserName = computed(() => group.value?.members.find(member => member.organiser)?.name ?? '')
 const enough = computed(() => (group.value?.members.length ?? 0) >= SANTA_MIN_MEMBERS)
+const names = useNames()
+// After the draw: whoever has no name, because they joined later or the person they drew is
+// gone. While there is someone, the names can be drawn again.
+const waiting = computed(() => group.value?.members.filter(member => member.waiting) ?? [])
+const canDraw = computed(() => !!group.value?.organiser && enough.value && (!group.value.drawn || waiting.value.length > 0))
 const lead = computed(() => {
   if (!group.value) return ''
-  if (group.value.drawn) return t('santa.secret')
-  if (!group.value.organiser) return t('santa.drawWaits', { name: organiserName.value })
-  return enough.value ? t('santa.organiserLead') : t('santa.drawNeeds', { n: SANTA_MIN_MEMBERS })
+  const { drawn, organiser, waits } = group.value
+  if (drawn && !waiting.value.length) return t('santa.secret')
+  if (!drawn && !organiser) return t('santa.drawWaits', { name: organiserName.value })
+  if (!enough.value) return t('santa.drawNeeds', { n: SANTA_MIN_MEMBERS })
+  if (!drawn) return t('santa.organiserLead')
+  if (waits) return organiser ? t('santa.leadYouWaitOrganiser') : t('santa.leadYouWait', { organiser: organiserName.value })
+  const who = { names: names(waiting.value.map(member => member.name)), organiser: organiserName.value }
+  return t(organiser ? 'santa.leadWaiting' : 'santa.leadWaitingMember', who, waiting.value.length)
 })
+// Someone who has a name stays: taking them out, or their leaving, would leave someone with nobody.
+const mayRemove = (member: SantaMember) => !!group.value?.organiser && !member.you && (!group.value.drawn || member.waiting)
+const mayLeave = computed(() => !!group.value && !group.value.organiser && (!group.value.drawn || group.value.waits !== null))
 
 const memberMeta = (member: SantaMember) =>
-  [member.organiser ? t('santa.organiser') : '', t(member.hasList ? 'santa.hasList' : 'santa.noListYet')].filter(Boolean).join(' · ')
+  [member.organiser ? t('santa.organiser') : '', member.waiting ? t('santa.waiting') : '', t(member.hasList ? 'santa.hasList' : 'santa.noListYet')].filter(Boolean).join(' · ')
 
 // What a button did is said in a line that is always there: the button itself often goes.
 const busy = ref(false)
@@ -149,13 +161,17 @@ async function onRenameDone(how: 'enter' | 'escape' | 'blur') {
   renameButton.value?.focus()
 }
 
-// Drawing the names. It asks first: it happens once, and closes the group.
+// Drawing the names, and drawing them again for someone who joined later. It asks first: a
+// draw stands, and drawing again takes everyone's name away for a new one.
 const drawDialog = useTemplateRef<HTMLDialogElement>('drawDialog')
 const pickTitle = useTemplateRef<HTMLElement>('pickTitle')
 
 async function onDrawClose() {
   if (answer(drawDialog.value) !== 'draw') return
-  if (!await act(() => $fetch<unknown>(`${api}/draw`, { method: 'POST' }), t('santa.drawDone'))) return
+  const again = !!group.value?.drawn
+  if (!await act(() => $fetch<unknown>(`${api}/draw`, { method: 'POST' }), t(again ? 'santa.redrawDone' : 'santa.drawDone'))) return
+  // A name that was on view is no longer the person's name.
+  shown.value = false
   await nextTick()
   pickTitle.value?.focus()
 }
@@ -199,7 +215,8 @@ async function saveList(list: string | null) {
   }
 }
 
-// Taking someone out, before the draw. The dialog names the person, so it shows once that name is in it.
+// Taking someone out who has no name: anyone before the draw, a latecomer after it. The dialog
+// names the person, so it shows once that name is in it.
 const removeDialog = useTemplateRef<HTMLDialogElement>('removeDialog')
 const leaving = ref<SantaMember | null>(null)
 
@@ -264,11 +281,11 @@ async function onEndClose() {
         </template>
         <span id="santa-rename-hint" class="visually-hidden">{{ t('santa.rename') }}</span>
       </template>
-      <!-- Before the draw: the link to send on, and for whoever runs the group the draw itself.
-           Afterwards there is nothing left to do up here. -->
-      <template v-if="!group.drawn" #actions>
-        <art-button v-if="group.organiser">
-          <button type="button" :aria-disabled="!enough || busy || undefined" @click="enough && !busy && drawDialog?.showModal()">{{ t('santa.draw') }}</button>
+      <!-- The link to send on, also after the draw, and for whoever runs the group the draw
+           itself: once, and again while someone in the group has no name. -->
+      <template #actions>
+        <art-button v-if="group.organiser && (!group.drawn || waiting.length)">
+          <button type="button" :aria-disabled="!canDraw || busy || undefined" @click="canDraw && !busy && drawDialog?.showModal()">{{ t(group.drawn ? 'santa.redraw' : 'santa.draw') }}</button>
         </art-button>
         <art-button variant="secondary">
           <button type="button" @click="inviteSheet?.open($event.currentTarget as HTMLElement)"><AppIcon name="share" />{{ t('santa.invite') }}</button>
@@ -283,7 +300,7 @@ async function onEndClose() {
         </div>
         <div class="section-body">
           <div class="santa-pick">
-            <p v-if="!group.pick">{{ t('santa.pickGone') }}</p>
+            <p v-if="!group.pick">{{ t(group.waits === 'late' ? 'santa.pickLate' : 'santa.pickGone') }}</p>
             <template v-else-if="!shown">
               <p class="santa-pick-note">{{ t('santa.pickHidden') }}</p>
               <art-button>
@@ -326,7 +343,7 @@ async function onEndClose() {
                 <span class="row-title">{{ member.name }}<template v-if="member.you"> ({{ t('santa.you') }})</template></span>
                 <span class="row-meta">{{ memberMeta(member) }}</span>
               </div>
-              <art-button v-if="group.organiser && !group.drawn && !member.you" variant="quiet" size="s">
+              <art-button v-if="mayRemove(member)" variant="quiet" size="s">
                 <button type="button" :aria-describedby="`santa-member-${member.id}`" :aria-disabled="busy || undefined" @click="askToRemove(member)">{{ t('santa.remove') }}</button>
               </art-button>
             </li>
@@ -344,8 +361,8 @@ async function onEndClose() {
           <SantaListChoice :model-value="chosen" :lists="group.lists" :legend="t('santa.listLegend')" :hint="t('santa.listHint')" @update:model-value="saveList" />
           <p class="form-message" role="status">{{ listStatus }}</p>
           <p v-if="listError" class="form-message" role="alert">{{ listError }}</p>
-          <!-- Leaving is for before the draw; ending the group is for whoever runs it, at any time. -->
-          <div v-if="group.organiser || !group.drawn" class="list-actions">
+          <!-- Leaving is for someone without a name; ending the group is for whoever runs it, at any time. -->
+          <div v-if="group.organiser || mayLeave" class="list-actions">
             <art-button variant="quiet" size="s">
               <button type="button" :aria-disabled="busy || undefined" @click="!busy && endDialog?.showModal()">{{ t(group.organiser ? 'santa.delete' : 'santa.leave') }}</button>
             </art-button>
@@ -354,12 +371,12 @@ async function onEndClose() {
       </div>
     </section>
 
-    <ShareSheet v-if="!group.drawn" ref="inviteSheet" :title="t('santa.invite')" :note="t('santa.inviteNote')" :path="route.path" :text="t('santa.inviteShareText', { title: group.title })" />
+    <ShareSheet ref="inviteSheet" :title="t('santa.invite')" :note="t(group.drawn ? 'santa.inviteNoteDrawn' : 'santa.inviteNote')" :path="route.path" :text="t('santa.inviteShareText', { title: group.title })" />
 
-    <dialog v-if="group.organiser && !group.drawn" ref="drawDialog" class="dialog" aria-labelledby="santa-draw-title" aria-describedby="santa-draw-text" @close="onDrawClose">
-      <h2 id="santa-draw-title">{{ t('santa.drawTitle', { title: group.title }) }}</h2>
+    <dialog v-if="group.organiser && (!group.drawn || waiting.length)" ref="drawDialog" class="dialog" aria-labelledby="santa-draw-title" aria-describedby="santa-draw-text" @close="onDrawClose">
+      <h2 id="santa-draw-title">{{ t(group.drawn ? 'santa.redrawTitle' : 'santa.drawTitle', { title: group.title }) }}</h2>
       <p id="santa-draw-text">
-        {{ t('santa.drawBody', { n: group.members.length }) }}
+        {{ t(group.drawn ? 'santa.redrawBody' : 'santa.drawBody', { n: group.members.length }) }}
         <template v-if="group.members.length === SANTA_MIN_MEMBERS">{{ ' ' + t('santa.drawBodyThree') }}</template>
       </p>
       <form method="dialog" class="actions">
@@ -367,12 +384,12 @@ async function onEndClose() {
           <button value="cancel" autofocus>{{ t('santa.cancel') }}</button>
         </art-button>
         <art-button>
-          <button value="draw">{{ t('santa.drawConfirm') }}</button>
+          <button value="draw">{{ t(group.drawn ? 'santa.redraw' : 'santa.drawConfirm') }}</button>
         </art-button>
       </form>
     </dialog>
 
-    <dialog v-if="group.organiser && !group.drawn" ref="removeDialog" class="dialog" aria-labelledby="santa-remove-title" aria-describedby="santa-remove-text" @close="onRemoveClose">
+    <dialog v-if="group.organiser" ref="removeDialog" class="dialog" aria-labelledby="santa-remove-title" aria-describedby="santa-remove-text" @close="onRemoveClose">
       <h2 id="santa-remove-title">{{ t('santa.removeTitle', { name: leaving?.name ?? '' }) }}</h2>
       <p id="santa-remove-text">{{ t('santa.removeBody', { name: leaving?.name ?? '' }) }}</p>
       <form method="dialog" class="actions">
@@ -385,7 +402,7 @@ async function onEndClose() {
       </form>
     </dialog>
 
-    <dialog v-if="group.organiser || !group.drawn" ref="endDialog" class="dialog" aria-labelledby="santa-end-title" aria-describedby="santa-end-text" @close="onEndClose">
+    <dialog v-if="group.organiser || mayLeave" ref="endDialog" class="dialog" aria-labelledby="santa-end-title" aria-describedby="santa-end-text" @close="onEndClose">
       <h2 id="santa-end-title">{{ t(group.organiser ? 'santa.deleteTitle' : 'santa.leaveTitle', { title: group.title }) }}</h2>
       <p id="santa-end-text">
         <template v-if="group.organiser">
@@ -409,13 +426,13 @@ async function onEndClose() {
   <div v-else>
     <PageHead :title="guestTitle" :lead="guestLead">
       <template #actions>
-        <art-button v-if="guest?.state !== 'open'" variant="secondary">
+        <art-button v-if="!guest || guest.state === 'full'" variant="secondary">
           <NuxtLink :to="localePath('/santa')">{{ t('santa.all') }}</NuxtLink>
         </art-button>
       </template>
     </PageHead>
 
-    <section v-if="guest?.state === 'open'" class="band section" data-paint="1" aria-labelledby="santa-join-title">
+    <section v-if="guest && guest.state !== 'full'" class="band section" data-paint="1" aria-labelledby="santa-join-title">
       <div class="inner">
         <div class="section-head">
           <h2 id="santa-join-title" class="section-title">{{ t('santa.join') }}</h2>
@@ -438,7 +455,7 @@ async function onEndClose() {
       </div>
     </section>
 
-    <section v-if="guest?.state === 'open'" class="band section" data-paint="2" aria-labelledby="santa-how-title">
+    <section v-if="guest && guest.state !== 'full'" class="band section" data-paint="2" aria-labelledby="santa-how-title">
       <div class="inner">
         <div class="section-head">
           <h2 id="santa-how-title" class="section-title">{{ t('santa.howTitle') }}</h2>

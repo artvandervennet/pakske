@@ -1,7 +1,8 @@
 import { drawNames } from '../../../domain/santa'
 
-// Draws the names, once. The answer says nothing about what came out: each member reads their
-// own name from the group, and nobody reads anyone else's.
+// Draws the names, and draws them again while someone in the group has none. The answer says
+// nothing about what came out: each member reads their own name from the group, and nobody
+// reads anyone else's.
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const token = tokenParam(event)
