@@ -18,7 +18,7 @@ const token = computed(() => String(route.params.token))
 const address = computed(() => `/api/invites/${encodeURIComponent(token.value)}`)
 const { data, error } = await useFetch<InviteView>(address)
 if (error.value || !data.value) {
-  throw createError({ statusCode: error.value?.statusCode ?? 404, fatal: true })
+  throw pageError(error.value?.statusCode ?? 404)
 }
 // Someone who owns the list already has nothing to accept: the link takes them to their list.
 if (data.value.joined) await navigateTo(localePath(`/l/${data.value.joined}`), { replace: true })
