@@ -1,0 +1,11 @@
+# One round of fetching the sites and reporting. Started by pakske-watch.timer.
+#   ~/.config/systemd/user/pakske-watch.service
+[Unit]
+Description=Check that Pakske answers and report it
+
+[Service]
+Type=oneshot
+ExecStart=%h/pakske/deploy/watch.sh
+# when a site went down and when it came back, newest at the bottom
+StandardOutput=append:%h/.local/share/pakske/watch.log
+StandardError=append:%h/.local/share/pakske/watch.log

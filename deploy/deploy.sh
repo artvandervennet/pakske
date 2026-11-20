@@ -41,10 +41,16 @@ if [ "$FORCE" != "--force" ]; then
   [ "$(cat "$STATE_DIR/failed" 2>/dev/null)" = "$target" ] && exit 0
 fi
 
-echo "$(date '+%F %T') Deploying ${target:0:7}: $(git log -1 --format=%s "$target")"
+# healthchecks.io hears how each deploy went, when ~/.config/pakske-watch.env has its key.
+# shellcheck source=deploy/report.sh
+. deploy/report.sh
+
+subject="$(git log -1 --format=%s "$target")"
+echo "$(date '+%F %T') Deploying ${target:0:7}: $subject"
 fail() {
   echo "$(date '+%F %T') FAILED ${target:0:7}: $1. The live site stays on ${live:0:7}."
   echo "$target" > "$STATE_DIR/failed"
+  report pakske-deploy fail "${target:0:7} ($subject): $1. The live site stays on ${live:0:7}."
   exit 1
 }
 
@@ -109,6 +115,7 @@ for _ in $(seq 30); do
       rm -rf "${STATE_DIR:?}/releases/$old"
     done
     echo "$(date '+%F %T') Deployed ${target:0:7}"
+    report pakske-deploy ok "Deployed ${target:0:7}: $subject"
     exit 0
   fi
   sleep 2
