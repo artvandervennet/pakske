@@ -1,5 +1,7 @@
 // A small in-memory limiter. One server process, a handful of people: no store needed.
-// Counters reset when the server restarts.
+// Counters reset when the server restarts. A key can hold an IP address or a typed email address,
+// so a counter whose window is over is dropped within minutes (server/plugins/03.cleanup.ts)
+// and not only when its key is next used.
 
 interface Bucket { count: number, resetAt: number }
 const buckets = new Map<string, Bucket>()
@@ -24,9 +26,13 @@ export function countHit(key: string, windowMs: number): void {
   const bucket = current(key, now)
   if (bucket) bucket.count++
   else buckets.set(key, { count: 1, resetAt: now + windowMs })
-  if (buckets.size > 5000) {
-    for (const [k, b] of buckets) if (b.resetAt <= now) buckets.delete(k)
-  }
+  if (buckets.size > 5000) sweepHits(now)
+}
+
+/** Drops every counter whose window is over. Returns how many are left. */
+export function sweepHits(now = Date.now()): number {
+  for (const [key, bucket] of buckets) if (bucket.resetAt <= now) buckets.delete(key)
+  return buckets.size
 }
 
 export function clearHits(key: string): void {

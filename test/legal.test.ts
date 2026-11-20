@@ -16,13 +16,14 @@ function flatten(messages: Messages, prefix = ''): [string, string][] {
 
 const languages = { nl: new Map(flatten(load('nl'))), en: new Map(flatten(load('en'))) }
 
-const nobody: Operator = { name: '', email: '', network: '' }
-const art: Operator = { name: 'Art', email: 'art@example.test', network: 'Cloudflare' }
-/** Every way the three settings can be filled in or left empty. */
-const operators: Operator[] = [0, 1, 2, 3, 4, 5, 6, 7].map(bits => ({
+const nobody: Operator = { name: '', email: '', network: '', backups: '' }
+const art: Operator = { name: 'Art', email: 'art@example.test', network: 'Cloudflare', backups: 'Cloudflare' }
+/** Every way the four settings can be filled in or left empty. */
+const operators: Operator[] = Array.from({ length: 16 }, (_, bits) => ({
   name: bits & 1 ? art.name : '',
   email: bits & 2 ? art.email : '',
   network: bits & 4 ? art.network : '',
+  backups: bits & 8 ? art.backups : '',
 }))
 
 /** The keys of the sentences an outline shows: its headings, paragraphs, list items and link texts. */
@@ -41,6 +42,7 @@ function sentences(sections: LegalSection[]): string[] {
 const given = (operator: Operator) => [
   ...(operator.name ? ['operator'] : []),
   ...(operator.network ? ['network'] : []),
+  ...(operator.backups ? ['backups'] : []),
 ]
 
 const pages = { privacy: privacyOutline, terms: termsOutline }
@@ -118,6 +120,20 @@ describe('what stands between the visitor and the server', () => {
 
   it('is left out when there is nothing', () => {
     expect(keysOf(privacyOutline(nobody), 'where')).not.toContain('privacy.where.network')
+  })
+})
+
+describe('where the backups go', () => {
+  it('is named on the privacy page when a company stores them, with how long one is kept', () => {
+    expect(keysOf(privacyOutline(art), 'where')).toContain('privacy.where.backups')
+    expect(keysOf(privacyOutline(art), 'keep')).toContain('privacy.keep.nightly')
+    expect(keysOf(privacyOutline(art), 'keep')).not.toContain('privacy.keep.backups')
+  })
+
+  it('is left to whoever runs the site when nothing is set', () => {
+    expect(keysOf(privacyOutline(nobody), 'where')).not.toContain('privacy.where.backups')
+    expect(keysOf(privacyOutline(nobody), 'keep')).toContain('privacy.keep.backups')
+    expect(keysOf(privacyOutline(nobody), 'keep')).not.toContain('privacy.keep.nightly')
   })
 })
 

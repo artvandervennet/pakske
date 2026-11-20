@@ -1,7 +1,7 @@
 // What the privacy and terms pages say, as an outline of sentences from the locale files. The
 // pages are the same for every site that runs Pakske except for who runs it, so that part comes
 // from the site's settings: a sentence that names them is only in the outline when the site
-// knows the name.
+// knows the name. The same goes for the companies that carry its traffic and store its backups.
 
 import { SOURCE_URL } from './source'
 
@@ -13,6 +13,8 @@ export interface Operator {
   email: string
   /** A company that carries the traffic to the server: a tunnel or a proxy. */
   network: string
+  /** A company that stores the backups made each night, encrypted before they leave the server. */
+  backups: string
 }
 
 export type LegalBlock
@@ -52,12 +54,12 @@ function contact(operator: Operator): (string | LegalBlock)[] {
 export function privacyOutline(operator: Operator): LegalSection[] {
   return [
     section('privacy', 'who', [operator.name ? 'named' : 'unnamed', ...contact(operator)]),
-    section('privacy', 'what', ['intro', ['account', 'lists', 'giving', 'messages', 'visited', 'sharing', 'friends', 'santa'], 'address', 'nothing']),
-    section('privacy', 'see', ['link', 'buyers', 'owners', 'messages', 'picture', 'hidden', 'friends', 'santa']),
-    section('privacy', 'where', ['server', 'firebase', 'passwords', 'google', ...(operator.network ? ['network'] : []), 'shops', 'nobody']),
+    section('privacy', 'what', ['intro', ['account', 'lists', 'giving', 'messages', 'visited', 'sharing', 'friends', 'santa'], 'address', 'errors', 'nothing']),
+    section('privacy', 'see', ['link', 'preview', 'buyers', 'owners', 'messages', 'picture', 'hidden', 'friends', 'santa']),
+    section('privacy', 'where', ['server', 'firebase', 'transfer', 'passwords', 'google', ...(operator.network ? ['network'] : []), ...(operator.backups ? ['backups'] : []), 'shops', 'nobody']),
     section('privacy', 'cookies', ['intro', ['login', 'opened', 'google', 'scheme']]),
-    section('privacy', 'why', ['service', 'safety']),
-    section('privacy', 'keep', ['until', 'account', 'stays', 'deleted', 'erase', 'backups']),
+    section('privacy', 'why', ['service', 'needed', 'safety']),
+    section('privacy', 'keep', ['until', 'account', 'stays', 'deleted', 'links', 'erase', operator.backups ? 'nightly' : 'backups']),
     section('privacy', 'rights', ['self', 'ask', 'authority']),
   ]
 }

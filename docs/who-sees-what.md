@@ -14,7 +14,7 @@ The server decides this per wish, not per list. A wish's owners are in `wish_own
 - An owner gets the same wishes and their own purchase. The purchases table is read for the viewer's own rows only.
 - Anyone who owns neither the wish nor the list gets every purchase with name and number ("someone else" instead of the name when that buyer chose to give anonymously; the name never leaves the server), the notes, and the wishes that left the list after someone bought them. A note whose writer deleted their account stays, also as "someone else": the note no longer points at an account.
 
-A list whose only owner deleted their account has no owners. Everyone who is logged in is a buyer on it, and nobody gets an owner's row, unless they share one of its wishes through a list of their own.
+A list whose only owner deletes their account is deleted with it, as if they had deleted it themselves (see below). A list from before that was so can still be live with no owners, until the daily purge deletes it: everyone who is logged in is a buyer on it, and nobody gets an owner's row, unless they share one of its wishes through a list of their own.
 
 Every viewer sees who else a wish belongs to: a row on Art's list that he shares with Lotte says "with Lotte". An owner also sees the other owners in the opened wish, under "Shared with".
 
@@ -47,9 +47,9 @@ An owner can tick their own wish. Before every tick or higher number the site as
 
 Rules that keep an owner from finding out by a detour:
 
-- Taking a wish off your list ("Delete" in the list's edit mode or in the wish's own card) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted; its row and image stay. Buyers who bought it still see it for thirty days, marked as taken off.
+- Taking a wish off your list ("Delete" in the list's edit mode or in the wish's own card) always answers 204, whatever buyers did. A wish no list shows any more is marked deleted. Buyers who bought it still see it for thirty days, marked as taken off; after that the daily purge erases its row, its image and what was ticked and written on it (`server/domain/purge.ts`).
 - Lowering an amount below what is bought is always accepted. Buyers then see that none are left.
-- Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it, for thirty days. A list with more than one owner can't be deleted, whatever is on it.
+- Deleting a list takes every wish off it the same way. After that its owners and logged-out visitors get "not found", whatever was bought; buyers still see what they bought on it, for thirty days, and then the purge erases the list. A list with more than one owner can't be deleted, whatever is on it.
 - Linking, copying, unlinking, undo, share links and leaving a list never read purchases or notes, so they answer the same whatever was bought. An already bought wish can be linked or copied like any other.
 - Notices are about who owns what: a wish linked or unlinked, wishes made joint through a link, a new co-owner. Buying, ticking and writing notes never make one. A message to the owners does, without a name (see Writing to the owners below). Neither does a copy, by button or by link: it changes nothing for the owners of the original.
 - Buying and writing notes never change a wish's `updatedAt` or its place in the list.
@@ -78,7 +78,7 @@ Someone who opened a list can write to its owners, to ask or tell them something
 - The owners get a notice that someone wrote. It names nobody: its row has the owner themselves as its actor, and `listNotices` sends it without a name, an id or a picture. Whoever wrote gets a notice with the name of the owner who answered. A person has one notice per list for each of the two; a newer message replaces it.
 - The notice about an answer leads to the list only while the person still has it: a friend shows it to them, or it is among the lists they opened. After a new link it is neither, so the notice never hands out an address they weren't given.
 - Everyone can delete a message they wrote; deleting someone else's answers "not found", like a message that doesn't exist. An owner can delete a whole conversation on their list. A conversation whose last message is deleted is gone, and what its writer sends next starts a new one with a new id, which the owners can't tell from a first message by someone else.
-- When the person who wrote deletes their account, the conversation stays as it was (`list_threads.user_id` becomes null), so an owner can't match a conversation that went to an account that went. An answer in it then reaches nobody. An owner's answer stays too when that owner's account goes, without a name.
+- When the person who wrote deletes their account, the conversation stays as it was (`list_threads.user_id` becomes null), so an owner can't match a conversation that went to an account that went. An answer in it then reaches nobody. An owner's answer stays too when that owner's account goes, without a name. Both go when the list itself is erased.
 - Writing is for someone logged in, on a list that isn't deleted and has an owner to read it. An owner can't start a conversation: they have nobody to write to but someone who wrote first.
 - `server/domain/messages.ts` reads neither purchases nor notes, and a test reads its source to keep it that way. A test checks that a message leaves an owner's view of their wishes as it was.
 

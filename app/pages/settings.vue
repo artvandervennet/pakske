@@ -294,6 +294,19 @@ function openDelete() {
             <SchemeChoice labelledby="appearance-title" describedby="appearance-intro" />
           </section>
 
+          <section class="settings-section" aria-labelledby="export-title">
+            <div class="settings-head">
+              <h2 id="export-title" class="settings-heading">{{ t('settings.exportTitle') }}</h2>
+              <p id="export-intro" class="settings-intro">{{ t('settings.exportIntro') }}</p>
+            </div>
+            <div class="actions">
+              <art-button variant="secondary">
+                <!-- A plain link to the file: the server names it and the browser saves it. -->
+                <a href="/api/me/export" download="pakske.json" aria-describedby="export-intro">{{ t('settings.exportOpen') }}</a>
+              </art-button>
+            </div>
+          </section>
+
           <section class="settings-section" aria-labelledby="delete-title">
             <div class="settings-head">
               <h2 id="delete-title" class="settings-heading">{{ t('settings.deleteTitle') }}</h2>
@@ -316,13 +329,14 @@ function openDelete() {
       <p>{{ t('settings.deleteGone') }}</p>
       <ul class="settings-gone">
         <li>{{ t('settings.deleteLogin') }}</li>
+        <li>{{ t('settings.deleteLists', { days: KEPT_FOR_BUYERS_DAYS }) }}</li>
         <li>{{ t('settings.deleteGiving') }}</li>
         <li>{{ t('settings.deleteFriends') }}</li>
         <li>{{ t('settings.deleteSanta') }}</li>
       </ul>
       <p>{{ t('settings.deleteStays') }}</p>
       <ul class="settings-gone">
-        <li>{{ t('settings.deleteLists') }}</li>
+        <li>{{ t('settings.deleteShared') }}</li>
         <li>{{ t('settings.deleteNotes') }}</li>
       </ul>
       <p>{{ t('settings.deleteAgain') }}</p>

@@ -111,8 +111,18 @@ export async function startSession(event: H3Event, user: SessionAccount, login: 
   clearOpened(event)
 }
 
+/**
+ * Whether the request brings a login cookie at all. Reading the session of a request without
+ * one makes an empty one and sets its cookie, and a visitor who never logged in must not get a
+ * cookie for that: the privacy page says the login cookie starts at the login.
+ */
+function hasSessionCookie(event: H3Event): boolean {
+  return getCookie(event, useRuntimeConfig(event).session.name ?? 'nuxt-auth-session') !== undefined
+}
+
 /** Firebase's token of this login, when it has one (cookies from before Firebase don't). */
 export async function firebaseRefreshToken(event: H3Event): Promise<string | undefined> {
+  if (!hasSessionCookie(event)) return undefined
   return (await getUserSession(event)).secure?.firebaseRefreshToken
 }
 
@@ -130,8 +140,14 @@ export function sessionUserOf(user: SessionAccount) {
  * (server/plugins/02.session-check.ts).
  */
 async function sessionUser(event: H3Event) {
+  if (!hasSessionCookie(event)) return undefined
   const session = await getUserSession(event)
-  if (!session.user) return undefined
+  if (!session.user) {
+    // A cookie that logs nobody in: what is left after logging out, or what a visitor was given
+    // before the site stopped setting one. It goes.
+    await clearUserSession(event)
+    return undefined
+  }
   const user = findUserById(useDb(), session.user.id)
   if (!sessionBelongsTo(session.user, user)) {
     await clearUserSession(event)

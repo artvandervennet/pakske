@@ -280,6 +280,7 @@ head -c 4000000 /dev/zero > "$TMP/big.png"
 upload art "/api/lists/$TOKEN/wishes/$PLUGS/image" "$TMP/big.png"; check "a 4 MB upload is refused" 413
 curl -s -D "$TMP/headers" -o /dev/null "$BASE$IMAGE"
 if grep -qi 'immutable' "$TMP/headers" && grep -qi 'content-type: image/png' "$TMP/headers"; then ok "the image is served as image/png, cacheable forever"; else bad "image headers: $(cat "$TMP/headers")"; fi
+if grep -qi '^cache-control: private' "$TMP/headers"; then ok "… by a browser only, not by a cache in between"; else bad "image cache headers: $(grep -i cache-control "$TMP/headers")"; fi
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' --path-as-is "$BASE/uploads/..%2f..%2fpakske.db"); check "a path outside the uploads folder is not found" 404
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "mom cannot remove the image of art's wish" 404
 req art DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "art removes the image" 204
@@ -887,6 +888,12 @@ req mom PUT "/api/lists/$TOKEN/wishes/$PLUGS/purchase" '{"quantity":2}'; check "
 req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/purchase"; check "mom can still take back her purchase" 204
 req art GET /api/lists; lacks "art's lists no longer have it, own or visited" "$TOKEN"
 
+echo "── a copy of your data"
+req anon GET /api/me/export; check "the copy of an account's data needs a login" 401
+req mom GET /api/me/export; check "mom downloads hers" 200; has "… with her address" '"email":"mom@example.test"'; has "… and her own list" '"title":"Verlanglijst"'
+lacks "… and nobody else's address" "art@example.test"
+if curl -s -D - -o /dev/null -b "$TMP/mom.jar" "$BASE/api/me/export" | grep -qi '^content-disposition: attachment; filename="pakske.json"'; then ok "… as a file the browser saves"; else bad "the copy is not sent as a file"; fi
+
 echo "── deleting an account"
 register weg Wendy; check "wendy registers" 201
 req weg GET /api/me/lists; WEGLIST=$(json ".lists[0].token")
@@ -906,14 +913,14 @@ req weg GET /api/me; check "wendy is still there" 200
 req weg DELETE /api/me '{"currentPassword":"correct horse battery"}'; check "with her password, wendy deletes her account" 204
 req weg GET /api/me; check "her login went with it" 401
 login weg2 weg; check "… and nobody logs into it again" 401
-# Her list stays where it is, as nobody's.
-req anon GET "/api/lists/$WEGLIST"; check "a visitor still gets her list" 200; has "… with nobody's name on it" '"owners":[]'; has "… and its wish" '"title":"Fiets"'
-req mom GET "/api/lists/$WEGLIST"; check "mom, who bought from it, gets it as before" 200; has "… not marked as deleted" '"deleted":false'
+# Her list goes with her, as if she had deleted it herself.
+req anon GET "/api/lists/$WEGLIST"; check "a visitor no longer gets her list" 404
+req sis GET "/api/lists/$WEGLIST"; check "sis, who bought nothing from it, is told it was deleted" 200; has "… and that is all" '"deleted":true'; same "… with none of its wishes" ".wishes.length" 0
+req mom GET "/api/lists/$WEGLIST"; check "mom, who bought from it, still gets it" 200; has "… marked as deleted" '"deleted":true'; has "… with nobody's name on it" '"owners":[]'
 same "… with what she bought" ".wishes.find(w=>w.id===$BIKE).mine" 1
 req mom PATCH "/api/lists/$WEGLIST" '{"title":"Van mij"}'; check "nobody can rename it" 404
 req mom PATCH "/api/lists/$WEGLIST/wishes/$BIKE" '{"title":"Step"}'; check "… or change a wish on it" 404
-req sis POST "/api/lists/$WEGLIST/wishes/$BIKE/link" "{\"list\":\"$SISLIST\"}"; check "… or make a wish on it theirs, with nobody there to undo that" 403
-req sis POST "/api/lists/$WEGLIST/wishes/$BIKE/copy" "{\"list\":\"$SISLIST\"}"; check "sis can take a copy of the wish" 201
+req mom DELETE "/api/lists/$WEGLIST/wishes/$BIKE/purchase"; check "mom can take back what she bought" 204
 # What she ticked goes, and what she wrote stays without her name.
 req sis GET "/api/lists/$MOMLIST"; same "what wendy was getting from mom's list is free again" ".wishes.find(w=>w.id===$TEA).bought" 0
 same "… and her note is still there" ".wishes.find(w=>w.id===$TEA).notes[0].body" "Ik haal de thee."
@@ -922,7 +929,7 @@ req mom GET "/api/lists/$MOMLIST"; same "… and mom's own page says what it sai
 # An account made again with the same address has nothing to do with the old one.
 register weg Wendy; check "wendy registers again with the same address" 201
 req weg GET /api/me/lists; lacks "her old list is not among her lists" "$WEGLIST"; same "… she starts with one list" ".lists.length" 1
-req weg GET "/api/lists/$WEGLIST"; check "she opens the old one like anyone else" 200; has "… as someone who doesn't own it" '"viewerOwnsList":false'
+req weg GET "/api/lists/$WEGLIST"; check "she opens the old one like anyone else" 200; has "… as a deleted list that isn't hers" '"viewerOwnsList":false'; same "… with none of its wishes" ".wishes.length" 0
 req weg GET "/api/lists/$MOMLIST"; same "her old note is not hers" ".wishes.find(w=>w.id===$TEA).notes[0].mine" false
 same "… and what she ticked is not back" ".wishes.find(w=>w.id===$TEA).mine" 0
 
@@ -943,6 +950,9 @@ STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -X POST -b "$TMP/mom.jar" -H 'Cont
 for i in 1 2 3 4 5; do req anon POST /api/auth/login '{"email":"sis@example.test","password":"wrong wrong wrong"}'; done
 login anon sis; check "after five wrong passwords the account is locked for a while" 429
 login anon2 mom; check "another account can still log in" 200
+
+# The privacy page says the login cookie starts at the login.
+if jar_has anon nuxt-auth-session; then bad "a visitor who never logged in got a login cookie"; else ok "a visitor who never logged in has no login cookie"; fi
 
 rm -rf "$TMP"
 if [ "$FAILED" = 0 ]; then echo; echo "All checks passed."; else echo; echo "Some checks FAILED."; fi

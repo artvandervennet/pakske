@@ -2,7 +2,7 @@ import { and, count, eq } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { linkChanges, notices, users, wishLinks } from '../db/schema'
 import { DomainError } from './errors'
-import { insertList } from './lists'
+import { insertList, listsOwnedAlone, removeList } from './lists'
 import { leaveEveryGroup } from './santa'
 import { dismissNotice, unusedImages } from './undo'
 
@@ -93,13 +93,14 @@ export function setPicture(db: Db, userId: number, imageFile: string | null): { 
 }
 
 /**
- * Removes an account and leaves what it made, without a name. Its lists stay as they are, with
- * their wishes: a list it shares is the other owners' from then on, and a list it owns alone
- * stays open at its link, owned by nobody, so nobody can change it any more. What it wrote on
- * other people's wishes stays too, written by nobody. Then the account's row goes, and the
- * database does the rest for whatever hangs on that row. Nothing keeps the address or the name,
- * so an account made later with the same address starts with nothing of this one. Returns the
- * pictures nothing points at any more, for the caller to remove.
+ * Removes an account and what it made. A list it owns alone is deleted as if it deleted that
+ * list itself: whoever was getting something from it keeps seeing that for a while, and then the
+ * list is erased with its wishes (server/domain/purge.ts). A list it shares is the other owners'
+ * from then on, with its wishes. What it wrote on other people's wishes, and to the owners of
+ * other people's lists, stays there written by nobody, until that wish or list goes. Then the
+ * account's row goes, and the database does the rest for whatever hangs on that row. Nothing
+ * keeps the address or the name, so an account made later with the same address starts with
+ * nothing of this one. Returns the pictures nothing points at any more, for the caller to remove.
  */
 export function deleteUser(db: Db, userId: number): { unused: string[] } {
   return db.transaction((tx) => {
@@ -121,8 +122,11 @@ export function deleteUser(db: Db, userId: number): { unused: string[] } {
       .map(row => JSON.parse(row.before) as string | null)
     // A Secret Santa they were in goes on without them, and nobody is left giving to no one.
     leaveEveryGroup(tx, userId)
-    // With the row go the account's places among the owners of its lists and wishes. Every list
-    // stays live, so every wish stays where it is, with the owners of the lists that show it.
+    // The lists that are theirs alone go with them. Their wishes keep their pictures until the
+    // purge erases them: a buyer may still be looking at one.
+    for (const listId of listsOwnedAlone(tx, userId)) removeList(tx, listId)
+    // With the row go the account's places among the owners of the lists it shared, and of the
+    // wishes on them, which stay with the other owners.
     tx.delete(users).where(eq(users.id, userId)).run()
     return { unused: [...unused, ...unusedImages(tx, kept)] }
   }, { behavior: 'immediate' })

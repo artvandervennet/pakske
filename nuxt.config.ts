@@ -64,6 +64,8 @@ export default defineNuxtConfig({
         email: '',
         // NUXT_PUBLIC_OPERATOR_NETWORK: a company whose tunnel or proxy carries the traffic, e.g. Cloudflare.
         network: '',
+        // NUXT_PUBLIC_OPERATOR_BACKUPS: a company that stores the nightly, encrypted backups (deploy/backup.sh).
+        backups: '',
       },
     },
     session: {

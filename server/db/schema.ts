@@ -69,7 +69,8 @@ export const wishes = sqliteTable('wishes', {
   quantity: integer('quantity').default(1),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-  // Wishes are never hard-deleted: buyers keep seeing a removed wish they bought.
+  // Deleting a wish marks it: buyers keep seeing a removed wish they bought for a while. After
+  // that the row is erased (server/domain/purge.ts).
   deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
 }, t => [
   check('wishes_quantity_check', sql`${t.quantity} IS NULL OR ${t.quantity} >= 1`),

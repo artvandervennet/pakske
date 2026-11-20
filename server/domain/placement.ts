@@ -5,12 +5,12 @@ import { DomainError } from './errors'
 
 // Which lists show a wish, and who owns it because of that. A wish belongs to the owners of the
 // live lists that show it, and to nobody else; every way of taking a wish off a list goes through
-// here, so that stays true. A list whose only owner deleted their account stays, owned by nobody,
-// and so do its wishes. Nothing here reads what buyers did, so the answers can't depend on it.
+// here, so that stays true. Nothing here reads what buyers did, so the answers can't depend on it.
 // These helpers run inside the caller's transaction and open none of their own.
 
 export const MAX_LIVE_WISHES = 200
-// Deleted wishes are kept, so a second ceiling stops someone filling the disk by adding and deleting.
+// A deleted wish is kept for a while (server/domain/purge.ts), so a second ceiling stops someone
+// filling the disk by adding and deleting.
 export const MAX_WISHES_EVER = 500
 
 /** A placement that counts: on the list now, of a wish and on a list that both still exist. */
@@ -121,8 +121,9 @@ export function takeOffList(db: Db, listId: number, wishId: number, clearForBuye
 
 /**
  * Makes the owners of each wish the owners of the live lists that show it, and deletes a wish no
- * live list shows any more. A list nobody owns (its owner's account is gone) still shows its
- * wishes, so a wish can stay without an owner. Returns who stopped owning which wish.
+ * live list shows any more. A list from before an account took its own lists along can be live
+ * with nobody owning it, until the purge deletes it; its wishes have no owner meanwhile. Returns
+ * who stopped owning which wish.
  */
 export function settleOwners(db: Db, wishIds: number[]): { wishId: number, userId: number }[] {
   const stopped: { wishId: number, userId: number }[] = []

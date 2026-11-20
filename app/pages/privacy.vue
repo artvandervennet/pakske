@@ -4,5 +4,5 @@ const { operator } = useRuntimeConfig().public
 </script>
 
 <template>
-  <LegalPage name="privacy" :sections="privacyOutline(operator)" :params="{ operator: operator.name, network: operator.network }" />
+  <LegalPage name="privacy" :sections="privacyOutline(operator)" :params="{ operator: operator.name, network: operator.network, backups: operator.backups }" />
 </template>

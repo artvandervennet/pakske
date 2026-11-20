@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export const UPLOAD_MAX_BYTES = 3 * 1024 * 1024
@@ -38,4 +38,24 @@ export async function removeUpload(name: string | null): Promise<void> {
  */
 export async function removeUploads(names: string[]): Promise<void> {
   await Promise.all(names.map(name => removeUpload(name).catch(() => {})))
+}
+
+/** How old a file must be before the sweep may take it: one just uploaded has no row yet. */
+const SWEEP_AFTER_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Removes the pictures in the uploads folder that nothing points at: `inUse` holds every name a
+ * row still has. Removing a file can fail and leave it behind (`removeUploads`); this is what
+ * picks those up. Only files this site named itself are looked at. Returns how many went.
+ */
+export async function sweepUploads(inUse: Set<string>, dir = uploadsDir(), now = Date.now()): Promise<number> {
+  let removed = 0
+  for (const name of await readdir(dir).catch(() => [])) {
+    if (!UPLOAD_NAME.test(name) || inUse.has(name)) continue
+    const info = await stat(join(dir, name)).catch(() => null)
+    if (!info?.isFile() || now - info.mtimeMs < SWEEP_AFTER_MS) continue
+    await rm(join(dir, name), { force: true })
+    removed++
+  }
+  return removed
 }

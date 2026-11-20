@@ -9,7 +9,8 @@ import { onListNow, settleOwners, takeOffList } from './placement'
 import { newListToken } from './tokens'
 
 const MAX_LISTS_PER_USER = 50
-// Deleted lists are kept, so a second ceiling stops someone filling the disk by making and deleting.
+// A deleted list is kept for a while (server/domain/purge.ts), so a second ceiling stops someone
+// filling the disk by making and deleting.
 const MAX_LISTS_EVER = 200
 
 /** Refuses when the person may not have one more list. */
@@ -92,20 +93,39 @@ export function ownersOfList(db: Db, listId: number): { userId: number, name: st
  *
  * Whoever bought something on it keeps seeing that on the deleted list for a while. With
  * `clearForBuyers` nothing of it is left for them, including what had left the list before.
+ * After that while the list and what hung on it are erased (server/domain/purge.ts).
  */
 export function deleteList(db: Db, userId: number, token: string, options: { clearForBuyers?: boolean } = {}): void {
   db.transaction((tx) => {
     const listId = ownedListId(tx, userId, token)
     if (ownersOfList(tx, listId).length > 1) throw new DomainError('list_shared')
-    for (const wishId of wishesMarkedOn(tx, listId)) takeOffList(tx, listId, wishId, options.clearForBuyers)
-    if (options.clearForBuyers) {
-      tx.update(listWishes).set({ clearedAt: new Date() }).where(and(eq(listWishes.listId, listId), isNull(listWishes.clearedAt))).run()
-    }
-    tx.update(lists).set({ deletedAt: new Date() }).where(eq(lists.id, listId)).run()
-    // Nobody is shown a list that is gone, and what friends were told about it would lead nowhere.
-    tx.delete(listFriends).where(eq(listFriends.listId, listId)).run()
-    tx.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId))).run()
+    removeList(tx, listId, options.clearForBuyers)
   }, { behavior: 'immediate' })
+}
+
+/**
+ * What deleting a list does, whoever asks: its owner, their account going, or the purge finding
+ * a list nobody owns. Runs in the caller's transaction, which has checked that it may.
+ */
+export function removeList(db: Db, listId: number, clearForBuyers = false): void {
+  for (const wishId of wishesMarkedOn(db, listId)) takeOffList(db, listId, wishId, clearForBuyers)
+  if (clearForBuyers) {
+    db.update(listWishes).set({ clearedAt: new Date() }).where(and(eq(listWishes.listId, listId), isNull(listWishes.clearedAt))).run()
+  }
+  db.update(lists).set({ deletedAt: new Date() }).where(eq(lists.id, listId)).run()
+  // Nobody is shown a list that is gone, and what friends were told about it would lead nowhere.
+  db.delete(listFriends).where(eq(listFriends.listId, listId)).run()
+  db.delete(notices).where(and(eq(notices.kind, 'list_shown'), eq(notices.listId, listId))).run()
+}
+
+/** The live lists this person owns with nobody else. */
+export function listsOwnedAlone(db: Db, userId: number): number[] {
+  return db.select({ id: lists.id }).from(lists)
+    .innerJoin(listOwners, eq(listOwners.listId, lists.id))
+    .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
+    .all()
+    .map(list => list.id)
+    .filter(id => ownersOfList(db, id).length === 1)
 }
 
 /**

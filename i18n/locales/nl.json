@@ -601,8 +601,11 @@
     "schemeLight": "Licht",
     "schemeDark": "Donker",
     "schemeNext": "Weergave: {now}. Wissel naar {next}.",
+    "exportTitle": "Je gegevens",
+    "exportIntro": "Een bestand met alles wat deze site over je bewaart: je account, je lijsten en wensen, wat je aanvinkte en schreef, je vrienden en je Secret Santa-groepen.",
+    "exportOpen": "Gegevens downloaden",
     "deleteTitle": "Account verwijderen",
-    "deleteIntro": "Je account verdwijnt voorgoed. Je lijsten en je notities blijven staan, zonder je naam.",
+    "deleteIntro": "Je account verdwijnt voorgoed, samen met de lijsten die alleen van jou zijn. Je notities op de lijsten van anderen blijven staan, zonder je naam.",
     "deleteOpen": "Account verwijderen",
     "deleteDialogTitle": "Je account verwijderen?",
     "deleteGone": "Dit verdwijnt voorgoed:",
@@ -611,8 +614,9 @@
     "deleteFriends": "Je vrienden, en wat jullie elkaar lieten zien.",
     "deleteSanta": "Je plaats in Secret Santa-groepen. Waren de namen al getrokken, dan krijgt wie jouw naam trok de naam die jij had.",
     "deleteStays": "Dit blijft staan, zonder je naam:",
-    "deleteLists": "Je lijsten en de wensen erop. Wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Wil je een lijst weg, verwijder hem dan eerst. Een lijst die je met iemand deelt, blijft van die persoon.",
-    "deleteNotes": "Je notities op de lijsten van anderen. Daar staat dan “Iemand anders” bij.",
+    "deleteShared": "Een lijst die je met iemand deelt. Die blijft van die persoon, met de wensen erop.",
+    "deleteLists": "De lijsten die alleen van jou zijn, met elke wens erop. Wie er iets van kocht, ziet dat nog {days} dagen. Daarna wordt de lijst gewist.",
+    "deleteNotes": "Je notities op de lijsten van anderen, waar dan “Iemand anders” bij staat, en wat je aan de eigenaars van een lijst schreef. Beide verdwijnen wanneer die wens of lijst verdwijnt.",
     "deleteAgain": "Maak je later opnieuw een account, ook met hetzelfde e-mailadres, dan begin je leeg: hiervan krijg je niets terug.",
     "deleteConfirm": "Account verwijderen",
     "deleteCancel": "Annuleren"
@@ -647,11 +651,13 @@
       "friends": "Wie je vrienden zijn, de verzoeken en vriendenlinks die je verstuurde of kreeg, welke van je lijsten je aan welke vriend laat zien, en wat je een vriend stuurde: wensen tot die erop antwoordt, een uitnodiging voor een lijst hoogstens 30 dagen.",
       "santa": "De Secret Santa-groepen waar je aan meedoet, welke lijst je erin zette, en wiens naam je trok.",
       "address": "Om foute wachtwoorden en nieuwe accounts te tellen, houdt de server je IP-adres en het e-mailadres dat je intypte hoogstens een uur in zijn geheugen. Geen van beide komt in de database.",
+      "errors": "Loopt er iets mis op de server, dan schrijft die de fout op en het adres van de pagina waar het misging. In dat adres kan de link van een lijst staan.",
       "nothing": "Pakske heeft geen statistieken, geen reclame en geen trackers, en houdt niet bij welke pagina’s je opent."
     },
     "see": {
       "title": "Wie wat ziet",
       "link": "Iedereen die de link van een lijst heeft, ziet de lijst, de wensen erop en de namen van de eigenaars, ook zonder account. Wie de link heeft, kan hem doorgeven.",
+      "preview": "Stuurt iemand de link van een lijst in een chatapp, dan haalt die app de pagina op om die bij het bericht te tonen: de naam van de lijst, de namen van de eigenaars en hoeveel wensen erop staan. Dat blijft in de chat staan, ook nadat de lijst gewijzigd of verwijderd is.",
       "buyers": "Wie ingelogd is, ziet bij andermans wensen wie wat geeft, met naam en notities. Geef je anoniem, dan staat er “Iemand anders” waar je naam zou staan.",
       "owners": "De eigenaars van een wens zien nooit wie hem geeft, hoeveel er al genomen zijn of wat erover geschreven is.",
       "messages": "Schrijf je naar de eigenaars van een lijst, dan lezen zij dat zonder je naam: de site zegt hun nooit wie het schreef. Wie het schreef, staat wel in de database, en je eigen woorden kunnen je verraden. Hun antwoord komt met hun naam.",
@@ -664,9 +670,11 @@
       "title": "Waar het staat, en wie er nog bij betrokken is",
       "server": "Alles uit de lijst hierboven staat in één database en één map met foto’s, op de server waar deze site op draait.",
       "firebase": "Inloggen loopt via Firebase Authentication, een dienst van Google. Google krijgt je e-mailadres, je naam en je wachtwoord. Het bewaart het wachtwoord en stuurt de mails voor een vergeten wachtwoord of een nieuw e-mailadres. Google kan die gegevens in de Verenigde Staten verwerken.",
+      "transfer": "Google neemt deel aan het Data Privacy Framework tussen de EU en de VS, en zijn voorwaarden voor Firebase bevatten de modelcontractbepalingen van de Europese Commissie. Die dekken je gegevens wanneer ze de Europese Unie verlaten.",
       "passwords": "Deze site bewaart geen wachtwoorden, behalve voor een account dat ouder is dan de overstap naar Firebase. Het wachtwoord van zo’n account staat hier als hash, waaruit het wachtwoord niet terug te lezen is, tot het account opnieuw inlogt.",
       "google": "Kies je “Doorgaan met Google”, dan geeft Google deze site je naam, je e-mailadres en het nummer van je Google-account door.",
       "network": "De verbinding met deze site loopt via {network}. Dat ziet je IP-adres en geeft door wat je verstuurt en ontvangt.",
+      "backups": "Elke nacht gaat een versleutelde kopie van de database en de foto’s naar {backups}, dat die niet kan lezen.",
       "shops": "Bij een wens met een link haalt de server de foto op die de winkel erbij toont. De winkel ziet dan de server, niet jou. Pas als je zelf op een link klikt, ben je bij de winkel.",
       "nobody": "Je gegevens worden niet verkocht, en niet doorgegeven aan iemand die er zelf iets mee wil doen."
     },
@@ -681,21 +689,24 @@
     "why": {
       "title": "Waarom de site het mag gebruiken",
       "service": "Bijna alles is nodig om te doen wat je van de site vraagt: een account bijhouden, je lijsten tonen en kopers laten zien wat al genomen is. Volgens de AVG, de Europese privacywet, is dat het uitvoeren van een overeenkomst met jou.",
-      "safety": "Foute wachtwoorden en nieuwe accounts tellen per IP-adres beschermt de accounts en de server. De AVG noemt dat een gerechtvaardigd belang."
+      "needed": "Voor een account zijn een naam en een e-mailadres nodig. Al het andere zet je er zelf op, als je dat wilt.",
+      "safety": "Foute wachtwoorden en nieuwe accounts tellen per IP-adres beschermt de accounts en de server, net als de back-ups en het foutenlogboek van de server. De AVG noemt dat een gerechtvaardigd belang."
     },
     "keep": {
       "title": "Hoe lang het bewaard blijft",
       "until": "Tot je het weghaalt. Je lijsten, wensen, vinkjes, notities en berichten wijzig en verwijder je zelf, en je account verwijder je bij Instellingen.",
-      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, met je naam, je e-mailadres en je profielfoto, wat je aanvinkte op de lijsten van anderen, je bezochte lijsten, je vrienden en verzoeken, je links, je meldingen en je plaats in elke Secret Santa-groep. Waren de namen daar al getrokken, dan krijgt wie jouw naam trok de naam die jij had.",
-      "stays": "Je lijsten en de wensen erop blijven staan, zonder je naam: wie de link heeft, kan ze blijven openen, en niemand kan ze nog wijzigen. Verwijder ze eerst als je dat niet wilt. Een lijst die je met iemand deelt, blijft van die persoon. Ook je notities op de lijsten van anderen blijven staan, met “Iemand anders” waar je naam stond. Dat geldt ook voor wat je aan de eigenaars van een lijst schreef, waar je naam nooit bij stond. Een account dat je later maakt, ook met hetzelfde e-mailadres, krijgt hier niets van.",
-      "deleted": "Een verwijderde lijst of wens wordt niet gewist. Hij blijft in de database staan, gemarkeerd als verwijderd. Wie een wens van jou had aangevinkt, ziet die wens nog 30 dagen, met je naam zolang je account bestaat. Niemand anders ziet hem, en daarna niemand meer. Bij het verwijderen kun je kiezen dat hij ook voor hen meteen weg is.",
-      "erase": "Vraag aan wie de site beheert om verwijderde lijsten en wensen ook uit de database te wissen. Dat geldt ook voor wat van een verwijderd account bleef staan.",
-      "backups": "Wie de site beheert, kan back-ups maken. Wat je verwijderde, blijft in een back-up staan tot die vervangen is."
+      "account": "Verwijder je je account, dan verdwijnt het hier en bij Firebase, met je naam, je e-mailadres en je profielfoto, de lijsten die alleen van jou zijn, wat je aanvinkte op de lijsten van anderen, je bezochte lijsten, je vrienden en verzoeken, je links, je meldingen en je plaats in elke Secret Santa-groep. Waren de namen daar al getrokken, dan krijgt wie jouw naam trok de naam die jij had.",
+      "stays": "Een lijst die je met iemand deelt, blijft van die persoon, met de wensen erop. Ook je notities op de lijsten van anderen blijven staan, met “Iemand anders” waar je naam stond. Dat geldt ook voor wat je aan de eigenaars van een lijst schreef, waar je naam nooit bij stond. Beide verdwijnen wanneer die wens of lijst gewist wordt; verwijder ze eerst als je ze eerder weg wilt. Een account dat je later maakt, ook met hetzelfde e-mailadres, krijgt hier niets van.",
+      "deleted": "Een verwijderde lijst of wens wordt eerst alleen als verwijderd gemarkeerd. Wie een wens van jou had aangevinkt, ziet die wens nog 30 dagen, met je naam zolang je account bestaat. Niemand anders ziet hem. Na die 30 dagen wist de server hem uit de database, met zijn foto en met wat erbij aangevinkt en geschreven is. Bij het verwijderen kun je kiezen dat hij voor de kopers meteen weg is; de server wist hem ook dan na de 30 dagen. Met de lijsten van een verwijderd account gaat het net zo.",
+      "links": "Een link om wensen of een lijst te delen, of om vrienden te worden, wordt gewist 30 dagen nadat hij opgebruikt of verlopen is.",
+      "erase": "Bleef er iets van een verwijderd account staan en wil je het weg, vraag dan aan wie de site beheert om het te wissen.",
+      "backups": "Wie de site beheert, kan back-ups maken. Wat je verwijderde, blijft in een back-up staan tot die vervangen is.",
+      "nightly": "Wat je verwijderde, blijft hoogstens 30 dagen in de nachtelijke back-ups staan."
     },
     "rights": {
       "title": "Je rechten",
-      "self": "Het meeste kun je op de site zelf bekijken en verbeteren.",
-      "ask": "Je kunt ook een kopie vragen van alles wat de site over je bewaart, het laten verbeteren of wissen, of je verzetten tegen het gebruik ervan. Vraag het aan wie de site beheert. Je krijgt binnen een maand antwoord.",
+      "self": "Het meeste kun je op de site zelf bekijken en verbeteren. Bij Instellingen download je een kopie van alles wat de site over je bewaart, als een bestand dat je elders kunt gebruiken.",
+      "ask": "Je kunt die kopie ook vragen aan wie de site beheert, je gegevens laten verbeteren of wissen, het gebruik ervan laten stilleggen zolang er een vraag over loopt, of je verzetten tegen het gebruik ervan. Je krijgt binnen een maand antwoord.",
       "authority": "Lost het antwoord het niet op, dan kun je een klacht indienen bij de privacytoezichthouder van je land. In België is dat de Gegevensbeschermingsautoriteit, op gegevensbeschermingsautoriteit.be."
     }
   },

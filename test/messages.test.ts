@@ -135,9 +135,16 @@ describe('writing to the owners of a list', () => {
     expect(threadsFor(db, art.id, token)).toEqual([])
   })
 
-  it('refuses a message on a list whose owners are gone: nobody would read it', () => {
+  it('has no list to write on once its only owner deleted their account', () => {
     const { db, art, mom, token } = setup()
     deleteUser(db, art.id)
+    expect(codeOf(() => sendMessage(db, mom.id, token, 'Hallo?'))).toBe('not_found')
+  })
+
+  // A list from before an account took its own lists along: live, with nobody owning it.
+  it('refuses a message on a list whose owners are gone: nobody would read it', () => {
+    const { db, art, mom, token } = setup()
+    db.delete(users).where(eq(users.id, art.id)).run()
     expect(codeOf(() => sendMessage(db, mom.id, token, 'Hallo?'))).toBe('forbidden')
   })
 

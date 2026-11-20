@@ -90,8 +90,10 @@ export default defineEventHandler(async (event) => {
     return await google(event)(event as never)
   }
   catch (error) {
-    // Google or the network failed between the code and the profile.
-    console.error(error)
+    // Google or the network failed between the code and the profile. What kind of error and
+    // its status only: the error itself can carry the answer it came with, and so an address.
+    const status = (error as { statusCode?: unknown })?.statusCode
+    console.error('[pakske] Google login failed:', error instanceof Error ? error.name : 'unknown error', typeof status === 'number' ? status : '')
     return back(event, takeFlow(event), 'google_failed')
   }
 })

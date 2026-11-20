@@ -601,8 +601,11 @@
     "schemeLight": "Light",
     "schemeDark": "Dark",
     "schemeNext": "Appearance: {now}. Switch to {next}.",
+    "exportTitle": "Your data",
+    "exportIntro": "A file with everything this site keeps about you: your account, your lists and wishes, what you ticked and wrote, your friends and your Secret Santa groups.",
+    "exportOpen": "Download your data",
     "deleteTitle": "Delete account",
-    "deleteIntro": "Your account is gone for good. Your lists and your notes stay, without your name.",
+    "deleteIntro": "Your account is gone for good, with the lists that are yours alone. Your notes on other people’s lists stay, without your name.",
     "deleteOpen": "Delete account",
     "deleteDialogTitle": "Delete your account?",
     "deleteGone": "This is gone for good:",
@@ -611,8 +614,9 @@
     "deleteFriends": "Your friends, and what you showed each other.",
     "deleteSanta": "Your place in Secret Santa groups. Where the names were already drawn, whoever drew your name gets the name you had.",
     "deleteStays": "This stays, without your name:",
-    "deleteLists": "Your lists and the wishes on them. Anyone who has the link can keep opening them, and nobody can change them any more. If you want a list gone, delete it first. A list you share with someone stays theirs.",
-    "deleteNotes": "Your notes on other people’s lists. They read “Someone else” from then on.",
+    "deleteShared": "A list you share with someone. It stays theirs, with the wishes on it.",
+    "deleteLists": "The lists that are yours alone, with every wish on them. Whoever was getting something from one keeps seeing that for {days} days. After that the list is erased.",
+    "deleteNotes": "Your notes on other people’s lists, which read “Someone else” from then on, and what you wrote to the owners of a list. Both go when that wish or list does.",
     "deleteAgain": "If you make an account again later, even with the same email address, you start empty: you get none of this back.",
     "deleteConfirm": "Delete account",
     "deleteCancel": "Cancel"
@@ -647,11 +651,13 @@
       "friends": "Who your friends are, the requests and friend links you sent or got, which of your lists you show to which friend, and what you sent a friend: wishes until they answer, an invitation to a list for 30 days at most.",
       "santa": "The Secret Santa groups you are in, which list you put in, and whose name you drew.",
       "address": "To count wrong passwords and new accounts, the server holds your IP address and the email address you typed in its memory for an hour at most. Neither goes into the database.",
+      "errors": "When something goes wrong on the server, it writes down the error and the address of the page that failed. That address can hold the link of a list.",
       "nothing": "Pakske has no statistics, no advertising and no trackers, and keeps no log of the pages you open."
     },
     "see": {
       "title": "Who sees what",
       "link": "Everyone who has the link to a list sees the list, its wishes and the names of its owners, also without an account. Anyone who has the link can pass it on.",
+      "preview": "If someone sends a list’s link in a chat app, that app fetches the page to show it with the message: the list’s name, the names of its owners and how many wishes are on it. That stays in the chat, also after the list changes or is deleted.",
       "buyers": "Someone who is logged in sees, on other people’s wishes, who is giving what, with names and notes. If you give anonymously, they read “Someone else” where your name would be.",
       "owners": "The owners of a wish never see who gives it, how many are taken, or what was written about it.",
       "messages": "If you write to the owners of a list, they read it without your name: the site never tells them who wrote. Who wrote is in the database, though, and your own words can give you away. Their answer comes with their name.",
@@ -664,9 +670,11 @@
       "title": "Where it is kept, and who else is involved",
       "server": "Everything in the list above is in one database and one folder of pictures, on the server this site runs on.",
       "firebase": "Logging in goes through Firebase Authentication, a service of Google. Google gets your email address, your name and your password. It keeps the password, and it sends the mails for a forgotten password or a new email address. Google may process this in the United States.",
+      "transfer": "Google takes part in the EU–US Data Privacy Framework, and its terms for Firebase include the European Commission’s standard contractual clauses. Those cover your data when it leaves the European Union.",
       "passwords": "This site keeps no passwords, except for an account from before it used Firebase. That account’s password stays here as a hash, from which the password can’t be read back, until the account next logs in.",
       "google": "If you choose “Continue with Google”, Google tells this site your name, your email address and the number of your Google account.",
       "network": "The connection to this site runs through {network}, which sees your IP address and passes on what you send and receive.",
+      "backups": "Every night an encrypted copy of the database and the pictures goes to {backups}, which can’t read it.",
       "shops": "For a wish with a link, the server fetches the picture that shop shows for it. The shop sees the server, not you. Only when you follow a link yourself are you at the shop.",
       "nobody": "Your data is not sold, and not passed on to anyone who wants it for purposes of their own."
     },
@@ -681,21 +689,24 @@
     "why": {
       "title": "Why the site may use it",
       "service": "Almost all of it is needed to do what you ask of the site: keep an account, show your lists, and tell buyers what is already taken. Under the GDPR, the European privacy law, that counts as carrying out an agreement with you.",
-      "safety": "Counting wrong passwords and new accounts per IP address protects the accounts and the server. The GDPR calls that a legitimate interest."
+      "needed": "A name and an email address are needed to have an account. Everything else you choose to put here.",
+      "safety": "Counting wrong passwords and new accounts per IP address protects the accounts and the server, and so do the backups and the server’s error log. The GDPR calls that a legitimate interest."
     },
     "keep": {
       "title": "How long it is kept",
       "until": "Until you take it away. You change and delete your lists, wishes, ticks, notes and messages yourself, and you delete your account under Settings.",
-      "account": "Deleting your account removes it here and at Firebase, with your name, your email address and your profile picture, what you ticked on other people’s lists, your visited lists, your friends and requests, your links, your notices and your place in every Secret Santa group. Where the names were already drawn, whoever drew your name gets the name you had.",
-      "stays": "Your lists and the wishes on them stay, without your name: anyone who has the link can keep opening them, and nobody can change them any more. Delete them first if you don’t want that. A list you share with someone stays theirs. Your notes on other people’s lists stay too, with “Someone else” where your name was. So does what you wrote to the owners of a list, which never had your name on it. An account you make later, even with the same email address, gets none of this.",
-      "deleted": "A deleted list or wish is not erased. It stays in the database, marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish for 30 days, with your name for as long as your account exists. Nobody else sees it, and after that nobody does. When you delete it you can choose to have it gone for them right away as well.",
-      "erase": "Ask whoever runs the site to have deleted lists and wishes erased from the database as well. The same goes for what stayed behind of a deleted account.",
-      "backups": "Whoever runs the site can make backups. Something you deleted stays in a backup until that backup is replaced."
+      "account": "Deleting your account removes it here and at Firebase, with your name, your email address and your profile picture, the lists that are yours alone, what you ticked on other people’s lists, your visited lists, your friends and requests, your links, your notices and your place in every Secret Santa group. Where the names were already drawn, whoever drew your name gets the name you had.",
+      "stays": "A list you share with someone stays theirs, with its wishes. Your notes on other people’s lists stay too, with “Someone else” where your name was. So does what you wrote to the owners of a list, which never had your name on it. Both go when that wish or list is erased; delete them first if you want them gone sooner. An account you make later, even with the same email address, gets none of this.",
+      "deleted": "A deleted list or wish is first only marked as deleted. Whoever had ticked a wish of yours keeps seeing that wish for 30 days, with your name for as long as your account exists. Nobody else sees it. After those 30 days the server erases it from the database, with its picture and with what was ticked and written on it. When you delete it you can choose to have it gone for the buyers right away; the server still erases it after the 30 days. The lists of a deleted account go the same way.",
+      "links": "A link to share wishes or a list, or to become friends, is erased 30 days after it was used up or ran out.",
+      "erase": "If something of a deleted account stayed behind and you want it gone, ask whoever runs the site to erase it.",
+      "backups": "Whoever runs the site can make backups. Something you deleted stays in a backup until that backup is replaced.",
+      "nightly": "Something you deleted stays in the nightly backups for 30 days at most."
     },
     "rights": {
       "title": "Your rights",
-      "self": "Most of it you can see and correct on the site itself.",
-      "ask": "You can also ask for a copy of everything the site keeps about you, have it corrected or erased, or object to how it is used. Ask whoever runs the site. You get an answer within a month.",
+      "self": "Most of it you can see and correct on the site itself. Under Settings you download a copy of everything the site keeps about you, as a file you can take elsewhere.",
+      "ask": "You can also ask whoever runs the site for that copy, have your data corrected or erased, have its use put on hold while a question about it is open, or object to how it is used. You get an answer within a month.",
       "authority": "If the answer doesn’t settle it, you can complain to the data protection authority of your country. In Belgium that is the Data Protection Authority, at dataprotectionauthority.be."
     }
   },
