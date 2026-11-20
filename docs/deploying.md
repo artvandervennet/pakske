@@ -150,7 +150,51 @@ pm2 must already start at boot (`pm2 startup`), and the user needs lingering (`l
 
 `tail ~/.local/share/pakske/deploy.log` shows what each deploy did. To go back to an older build by hand: `ln -sfn ~/.local/share/pakske/releases/<commit> ~/.local/share/pakske/current && pm2 reload pakske`.
 
-Backing up and restoring work as below, with `NUXT_DATA_DIR` from `~/.config/pakske.env` in place of the volume, and `pm2 stop pakske` and `pm2 start pakske` in place of `docker compose down` and `up`.
+### Backing up from the Pi
+
+`deploy/backup.sh` sends a backup to a [restic](https://restic.net) repository, and `pakske-backup.timer` runs it every night at 03:30. A backup holds the database, the uploaded pictures and `~/.config/pakske.env`. restic encrypts it on the Pi with a password only you have, so whoever stores the repository can't read it. Backups older than 30 days are removed: the privacy page says that something a person deleted stays in a backup until that backup is replaced.
+
+The script installs its own restic, at the version and checksum in `deploy/restic-version`, under `~/.local/share/pakske/restic/`.
+
+The example settings are for a Cloudflare R2 bucket, which is free up to 10 GB. restic also takes a folder on a USB disk, SFTP, Backblaze B2 and others; only `RESTIC_REPOSITORY` and the keys differ.
+
+1. At Cloudflare, under R2 object storage, make a bucket. Under Location, choose the EU jurisdiction. That keeps the backups inside the EU, and it can't be changed once the bucket exists.
+2. On R2's Overview page, press Manage beside API Tokens and make a token with "Object Read & Write", for that bucket only. Cloudflare shows its Access Key ID and Secret Access Key once.
+3. On the Pi:
+
+```sh
+cp ~/pakske/deploy/backup-env.example ~/.config/pakske-backup.env && chmod 600 ~/.config/pakske-backup.env
+# fill it in; openssl rand -base64 32 makes RESTIC_PASSWORD
+cp ~/pakske/deploy/pakske-backup.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now pakske-backup.timer
+~/pakske/deploy/backup.sh
+```
+
+The last line makes the first backup, and the repository with it.
+
+Keep a copy of `RESTIC_PASSWORD` somewhere that is not the Pi, such as a password manager. Without it nobody can open the backups, and after a dead SD card the Pi's copy is gone.
+
+The passwords are not in a backup: Firebase holds them. A restored database works with the Firebase project its accounts were made in, and with no other (see [A second project for development](#a-second-project-for-development)).
+
+`tail ~/.local/share/pakske/backup.log` shows what each backup did. A backup that failed starts its line with `BACKUP FAILED` and says why; it is tried again ten minutes later, three times at most, unless the settings are what's wrong. `deploy/backup.sh restic snapshots` lists the backups in the repository; any other restic command works the same way.
+
+To put a backup back, fetch it first. The files come out under `~/pakske-restore` with the paths they had on the Pi:
+
+```sh
+~/pakske/deploy/backup.sh restic restore latest --target ~/pakske-restore
+pm2 stop pakske
+rm -f ~/pakske-data/pakske.db-wal ~/pakske-data/pakske.db-shm
+cp ~/pakske-restore/home/$USER/.local/share/pakske/backup/pakske.db ~/pakske-data/pakske.db
+mkdir -p ~/pakske-data/uploads && cp -r ~/pakske-restore/home/$USER/pakske-data/uploads/. ~/pakske-data/uploads/
+pm2 start pakske
+rm -rf ~/pakske-restore
+```
+
+`~/pakske-data` stands for `NUXT_DATA_DIR` from `~/.config/pakske.env`. An older backup than the latest: its ID from `restic snapshots` in place of `latest`.
+
+On a new Pi, clone the repository and write `~/.config/pakske-backup.env` again: the repository's address, the password you kept, and the bucket's keys (a new token does as well). Fetch the backup with the first line above and copy `~/pakske-restore/home/$USER/.config/pakske.env` to `~/.config/pakske.env`, in place of filling one in. Set the site up as in the section before this one, and then run the remaining lines above. With the old `NUXT_APP_SECRET` back, everyone is still logged in.
+
+Without restic, backing up and restoring work as below, with `NUXT_DATA_DIR` from `~/.config/pakske.env` in place of the volume, and `pm2 stop pakske` and `pm2 start pakske` in place of `docker compose down` and `up`.
 
 ## Back up
 

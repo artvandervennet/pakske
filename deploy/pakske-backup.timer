@@ -1,0 +1,12 @@
+# Backs Pakske up every night.
+#   ~/.config/systemd/user/pakske-backup.timer
+[Unit]
+Description=Back up Pakske every night
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# a night the Pi was off is made up for when it starts
+Persistent=true
+
+[Install]
+WantedBy=timers.target
