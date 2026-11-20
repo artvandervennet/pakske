@@ -1,0 +1,18 @@
+# Settings for Pakske's backup on the Pi. Copy to ~/.config/pakske-backup.env and fill in.
+# Keep it readable by you only: chmod 600. deploy/backup.sh reads it.
+# What each setting means: docs/deploying.md, "Backing up from the Pi".
+
+# Where the backups go. For a Cloudflare R2 bucket made with the EU jurisdiction:
+#   s3:https://<account id>.eu.r2.cloudflarestorage.com/<bucket>
+# restic also takes a folder (/mnt/usb/pakske), sftp:, b2: and others.
+RESTIC_REPOSITORY=
+
+# Encrypts every backup before it leaves the Pi. Make one with: openssl rand -base64 32.
+# Keep a copy somewhere that is not this Pi. Without it no backup can be opened, by anyone.
+RESTIC_PASSWORD=
+
+# The keys of an API token that may read and write that one bucket.
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+# R2 picks the place itself.
+AWS_DEFAULT_REGION=auto

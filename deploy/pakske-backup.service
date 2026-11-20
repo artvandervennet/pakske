@@ -1,0 +1,19 @@
+# One run of the backup script. Started by pakske-backup.timer.
+#   ~/.config/systemd/user/pakske-backup.service
+[Unit]
+Description=Back up Pakske's database, pictures and settings
+# at most four tries a night: see Restart below
+StartLimitIntervalSec=6h
+StartLimitBurst=4
+
+[Service]
+Type=oneshot
+ExecStart=%h/pakske/deploy/backup.sh
+# A backup that failed is tried again ten minutes later: right after a boot the Wi-Fi may not
+# be up yet. Wrong or missing settings (exit 2) stay wrong, so those are not tried again.
+Restart=on-failure
+RestartSec=10min
+RestartPreventExitStatus=2
+# what each backup did, newest at the bottom
+StandardOutput=append:%h/.local/share/pakske/backup.log
+StandardError=append:%h/.local/share/pakske/backup.log
