@@ -15,6 +15,9 @@ const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
 const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
 const openedTotal = computed(() => home.value?.openedTotal ?? 0)
+// What the button under a section says. It is there whenever the section has a list, so the way
+// to the lists page doesn't come and go; it names how many only when the page leaves some out.
+const allLists = (shown: number, total: number) => (total > shown ? t('home.allListsOf', { n: total }) : t('home.allLists'))
 // Everything the person ticked on other people's lists, per person it is for. On the page only
 // for someone who gives something.
 const given = computed(() => home.value?.given ?? [])
@@ -77,11 +80,11 @@ const paints = computed(() => {
               <QuickAdd :label="t('lists.newList')" :field-label="t('lists.newListName')" :pending="creating" :error="createError" @add="createList" />
             </li>
           </ul>
-          <!-- Both sections end in a link with these words; each one's heading is its
+          <!-- Both sections end in a button with these words; each one's heading is its
                description, so a screen reader says which lists it leads to. -->
-          <p v-if="ownedTotal > owned.length" class="lists-all">
-            <NuxtLink :to="localePath('/lists')" aria-describedby="yours-title">{{ t('home.allLists', { n: ownedTotal }) }}</NuxtLink>
-          </p>
+          <art-button v-if="owned.length" class="lists-all" variant="secondary">
+            <NuxtLink :to="localePath('/lists')" aria-describedby="yours-title">{{ allLists(owned.length, ownedTotal) }}</NuxtLink>
+          </art-button>
         </div>
       </div>
     </section>
@@ -97,9 +100,9 @@ const paints = computed(() => {
             <ul class="rows">
               <VisitedListRow v-for="list in opened" :key="list.token" :list="list" @forget="forget" />
             </ul>
-            <p v-if="openedTotal > opened.length" class="lists-all">
-              <NuxtLink :to="{ path: localePath('/lists'), query: { tab: 'visited' } }" aria-describedby="opened-title">{{ t('home.allLists', { n: openedTotal }) }}</NuxtLink>
-            </p>
+            <art-button class="lists-all" variant="secondary">
+              <NuxtLink :to="{ path: localePath('/lists'), query: { tab: 'visited' } }" aria-describedby="opened-title">{{ allLists(opened.length, openedTotal) }}</NuxtLink>
+            </art-button>
           </template>
           <p v-else-if="loadError" class="form-message">{{ loadError }}</p>
           <div v-else class="empty">
@@ -145,9 +148,9 @@ const paints = computed(() => {
           <ul class="rows">
             <SantaGroupRow v-for="group in santa" :key="group.token" :group="group" />
           </ul>
-          <p class="lists-all">
+          <art-button class="lists-all" variant="secondary">
             <NuxtLink :to="localePath('/santa')">{{ t('santa.all') }}</NuxtLink>
-          </p>
+          </art-button>
         </div>
       </div>
     </section>

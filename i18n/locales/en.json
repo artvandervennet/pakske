@@ -20,7 +20,8 @@
     "lead": "Make a list and share the link. Buyers sort it out here, and you don’t get to see it.",
     "yourLists": "Your lists",
     "visited": "From others",
-    "allLists": "All lists ({n})",
+    "allLists": "See all lists",
+    "allListsOf": "See all {n} lists",
     "given": "What you’re giving",
     "givenFor": "For {names}",
     "givenForNobody": "For someone whose account is gone"

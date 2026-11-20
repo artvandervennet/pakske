@@ -20,7 +20,8 @@
     "lead": "Maak een lijst en deel de link. Wie iets koopt, spreekt het hier af zonder dat jij het ziet.",
     "yourLists": "Jouw lijsten",
     "visited": "Van anderen",
-    "allLists": "Alle lijsten ({n})",
+    "allLists": "Alle lijsten bekijken",
+    "allListsOf": "Alle {n} lijsten bekijken",
     "given": "Wat je geeft",
     "givenFor": "Voor {names}",
     "givenForNobody": "Voor iemand die geen account meer heeft"
