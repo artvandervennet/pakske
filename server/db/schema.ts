@@ -262,6 +262,33 @@ export const listFriends = sqliteTable('list_friends', {
   index('list_friends_user_idx').on(t.userId),
 ])
 
+// A Secret Santa: a group of people who each draw one other member to give something to. The
+// token is its address and its invitation, made like a list's: whoever opens it while logged in
+// can join until the names are drawn. Whoever joined first runs it (`organiserOf` in
+// server/domain/santa.ts), so a group never depends on an account that is gone.
+export const santaGroups = sqliteTable('santa_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  token: text('token').notNull().unique(),
+  title: text('title').notNull(),
+  createdAt: createdAt(),
+  // Null until the names are drawn. After that nobody joins or leaves.
+  drawnAt: integer('drawn_at', { mode: 'timestamp_ms' }),
+})
+
+export const santaMembers = sqliteTable('santa_members', {
+  groupId: integer('group_id').notNull().references(() => santaGroups.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // The list of their own they put in, for whoever draws them. Null when they chose none.
+  listId: integer('list_id').references(() => lists.id, { onDelete: 'set null' }),
+  // Whose name they drew. Only ever read for the member themselves: nobody else is told, the
+  // organiser included. Null until the draw.
+  givesTo: integer('gives_to').references(() => users.id, { onDelete: 'set null' }),
+  joinedAt: integer('joined_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+}, t => [
+  primaryKey({ columns: [t.groupId, t.userId] }),
+  index('santa_members_user_idx').on(t.userId),
+])
+
 export const notices = sqliteTable('notices', {
   // Random, like note ids, so the numbers say nothing about notices for other people.
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -276,6 +303,8 @@ export const notices = sqliteTable('notices', {
   listId: integer('list_id').references(() => lists.id, { onDelete: 'cascade' }),
   // What a friend sent, for a notice that says so: the notice goes when that does.
   inviteId: integer('invite_id').references(() => invites.id, { onDelete: 'cascade' }),
+  // The Secret Santa group a notice is about: the notice goes when the group does.
+  santaGroupId: integer('santa_group_id').references(() => santaGroups.id, { onDelete: 'cascade' }),
   createdAt: createdAt(),
   seenAt: integer('seen_at', { mode: 'timestamp_ms' }),
 }, t => [

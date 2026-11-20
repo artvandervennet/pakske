@@ -3,6 +3,7 @@ import type { Db } from '../db/client'
 import { linkChanges, notices, users, wishLinks } from '../db/schema'
 import { DomainError } from './errors'
 import { insertList } from './lists'
+import { leaveEveryGroup } from './santa'
 import { dismissNotice, unusedImages } from './undo'
 
 export interface NewUser {
@@ -118,6 +119,8 @@ export function deleteUser(db: Db, userId: number): { unused: string[] } {
       .where(and(eq(wishLinks.userId, userId), eq(linkChanges.field, 'imageFile')))
       .all()
       .map(row => JSON.parse(row.before) as string | null)
+    // A Secret Santa they were in goes on without them, and nobody is left giving to no one.
+    leaveEveryGroup(tx, userId)
     // With the row go the account's places among the owners of its lists and wishes. Every list
     // stays live, so every wish stays where it is, with the owners of the lists that show it.
     tx.delete(users).where(eq(users.id, userId)).run()

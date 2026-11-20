@@ -20,8 +20,9 @@ const localePath = useLocalePath()
 const now = new Date()
 const when = (iso: string) => ago(new Date(iso), now, locale.value)
 
-/** Where a notice points: a list of the recipient's, at the wish it is about, or a friend's row. */
+/** Where a notice points: a list of the recipient's, at the wish it is about, a friend's row, or a Secret Santa group. */
 function destination(notice: NoticeView) {
+  if (notice.santa) return localePath(`/s/${notice.santa}`)
   if (notice.token) return localePath(`/l/${notice.token}${notice.wishId === null ? '' : `#wish-${notice.wishId}`}`)
   if (notice.kind === 'friend_accepted' || notice.kind === 'friend_link_used') return { path: localePath('/friends'), hash: `#friend-${notice.actorId}` }
   return null

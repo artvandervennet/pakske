@@ -46,6 +46,7 @@ async function logout() {
     <NuxtLink slot="wordmark" :to="localePath('/')">{{ t('site.name') }}</NuxtLink>
     <NuxtLink :to="localePath('/lists')">{{ t('nav.lists') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/friends')">{{ t('nav.friends') }}</NuxtLink>
+    <NuxtLink v-if="user" :to="localePath('/santa')">{{ t('nav.santa') }}</NuxtLink>
     <NuxtLink v-if="user" :to="localePath('/settings')">{{ t('nav.settings') }}</NuxtLink>
     <!-- The bell is an action, and actions stay in the bar at every width: never under "Menu". -->
     <button

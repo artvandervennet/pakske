@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Checks the HTTP API as four people (art owns a list; mom and sis buy from it; lot shares wishes
-# and a list with art) and as visitors who aren't logged in. Needs a server with an empty database:
+# and a list with art; the four draw names in a Secret Santa) and as visitors who aren't logged
+# in. Needs a server with an empty database:
 #
 #   NUXT_DATA_DIR=$(mktemp -d) pnpm dev --port 3112   # in one terminal (stop any other `pnpm dev` first)
 #   test/api-check.sh http://localhost:3112           # in another
@@ -683,6 +684,79 @@ req mom GET /api/lists; same "the list is off her page" ".opened.filter(l=>l.tok
 req mom GET /api/friends; same "… and art off her friends" ".friends.length" 0
 req mom GET /api/notices; lacks "… and what he sent her and she hadn't answered" sent_copy
 req art DELETE "/api/friends/$FMOM"; check "removing her again finds no friend" 404; has "… with the code not_friends" not_friends
+
+echo "── Secret Santa"
+req anon GET /api/santa; check "the Secret Santa page needs a login" 401
+req anon POST /api/santa '{"title":"Kerst","list":null}'; check "… and so does making a group" 401
+for who in art mom sis lot; do
+  req $who POST /api/lists '{"title":"Voor Secret Santa"}'; SLIST=$(json .token)
+  req $who POST "/api/lists/$SLIST/wishes" '{"title":"Iets kleins","quantity":null}'
+  eval "SL_$who=$SLIST"
+done
+req art POST /api/santa "{\"title\":\"\",\"list\":\"$SL_art\"}"; check "a group needs a name" 422; has "… naming the field" '"title":"required"'
+req art POST /api/santa "{\"title\":\"Kerst\",\"list\":\"$SL_mom\"}"; check "a group takes no list of someone else's" 404
+req art POST /api/santa "{\"title\":\"Kerst\",\"list\":\"$SL_art\"}"; check "art makes a group, with his list in it" 201; SANTA=$(json .token)
+req anon GET "/api/santa/$SANTA"; check "a group needs a login to open" 401
+req art GET "/api/santa/$SANTA"; check "art opens it" 200; has "… as a member" '"role":"member"'; has "… who runs it" '"organiser":true'; same "… and is alone in it" ".members.length" 1; same "… with nobody drawn" ".pick" null
+req art GET /api/santa; same "it is on his page" ".length" 1; has "… by name" '"title":"Kerst"'
+req art GET /api/home; same "… and on his home page" ".santa.length" 1
+req mom GET /api/home; same "… and not on mom's" ".santa.length" 0
+req mom GET "/api/santa/$SANTA"; check "mom opens the link" 200; has "… as someone who can join" '"role":"guest"'; has "… told who runs it" '"organiser":"Art"'; same "… and how many are in" ".members" 1; lacks "… and no address of his" "art@example.test"
+req mom GET "/api/santa/$UNKNOWN"; check "an address no group has is not found" 404
+req mom POST "/api/santa/$SANTA/join" '{}'; check "joining says which list, or none" 422
+req mom POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_art\"}"; check "… and never someone else's list" 404
+req mom POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_mom\"}"; check "mom joins with her list" 204
+req art GET /api/notices; has "art is told that mom joined" '"kind":"santa_joined"'; has "… with where the group is" "\"santa\":\"$SANTA\""
+req art POST "/api/santa/$SANTA/draw"; check "two people are too few to draw" 409; has "… with the code santa_too_few" santa_too_few
+req sis POST "/api/santa/$SANTA/join" '{"list":null}'; check "sis joins without a list" 204
+req sis PUT "/api/santa/$SANTA/list" "{\"list\":\"$SL_sis\"}"; check "… and puts one in afterwards" 204
+req lot POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_lot\"}"; check "lot joins" 204
+req eng POST "/api/santa/$SANTA/join" '{"list":null}'; check "someone who shouldn't be in it joins too" 204
+req eng PUT "/api/santa/$SANTA/list" "{\"list\":\"$SL_art\"}"; check "nobody puts in a list that isn't theirs" 404
+req art GET "/api/santa/$SANTA"; same "art sees five members" ".members.length" 5; ENGID=$(json ".members.find(m=>m.name==='Eng').id"); MEMBERS=$(json ".members.filter(m=>m.name!=='Eng').map(m=>m.id).sort().join()")
+req mom POST "/api/santa/$SANTA/draw"; check "a member who doesn't run the group can't draw" 403
+req mom DELETE "/api/santa/$SANTA/members/$ENGID"; check "… or take anyone out" 403
+req mom PATCH "/api/santa/$SANTA" '{"title":"Van mom"}'; check "… or rename it" 403
+req mom DELETE "/api/santa/$SANTA"; check "… or end it" 403
+req art PATCH "/api/santa/$SANTA" '{"title":"Kerst bij oma"}'; check "art renames it" 204
+req art DELETE "/api/santa/$SANTA/members/$ENGID"; check "art takes the fifth one out" 204
+req eng GET /api/notices; has "who is told so" '"kind":"santa_removed"'; has "… with nowhere to go" '"santa":null'
+req eng GET "/api/santa/$SANTA"; has "… and is outside again" '"role":"guest"'
+req lot POST "/api/santa/$SANTA/leave"; check "lot leaves" 204
+req lot POST "/api/santa/$SANTA/join" "{\"list\":\"$SL_lot\"}"; check "… and joins again with the link" 204
+req art POST "/api/santa/$SANTA/draw"; check "art draws the names" 204
+req art POST "/api/santa/$SANTA/draw"; check "… once" 409; has "… with the code santa_drawn" santa_drawn
+PICKS=""
+for who in art mom sis lot; do
+  req $who GET "/api/santa/$SANTA"; check "$who reads the group after the draw" 200
+  lacks "… with nothing about anyone else's name" givesTo
+  ME=$(json ".members.find(m=>m.you).id"); PICK=$(json .pick.id)
+  if [ "$PICK" != "$ME" ] && [ -n "$PICK" ]; then ok "… and drew someone else"; else bad "$who drew $PICK, and is $ME"; fi
+  PICKS="$PICKS $PICK"
+done
+DRAWN=$(echo $PICKS | tr ' ' '\n' | sort -n | paste -sd, -)
+if [ "$DRAWN" = "$(echo "$MEMBERS" | tr ',' '\n' | sort -n | paste -sd, -)" ]; then ok "every member was drawn by exactly one"; else bad "the names drawn are $DRAWN, the members $MEMBERS"; fi
+req mom GET /api/notices; has "the members are told the names were drawn" '"kind":"santa_drawn"'
+req eng GET "/api/santa/$SANTA"; has "someone outside reads that the names are drawn" '"state":"drawn"'; lacks "… and nothing about the members" '"pick"'
+req eng POST "/api/santa/$SANTA/join" '{"list":null}'; check "nobody joins after the draw" 409; has "… with the code santa_drawn" santa_drawn
+req lot POST "/api/santa/$SANTA/leave"; check "… or leaves" 409
+req art GET "/api/santa/$SANTA"; MOMID=$(json ".members.find(m=>m.name==='Moeke').id"); PICKLIST=$(json .pick.list.token); PICKNAME=$(json .pick.name)
+req art DELETE "/api/santa/$SANTA/members/$MOMID"; check "… or is taken out" 409
+# What art ticks for the person he drew is without his name, though his account gives with it.
+req art GET "/api/lists/$PICKLIST"; check "art opens the list of the person he drew" 200; same "… which says whose name he drew" ".drewOwners.join()" "$PICKNAME"; GIFT=$(json ".wishes[0].id")
+req art PUT "/api/lists/$PICKLIST/wishes/$GIFT/purchase" '{"quantity":1}'; check "art ticks a wish there" 204
+req eng GET "/api/lists/$PICKLIST"; same "someone else reads no name on it" ".wishes[0].purchases[0].name" null; same "… and nobody's name was drawn by them" ".drewOwners.length" 0
+req art PUT "/api/lists/$PICKLIST/wishes/$GIFT/purchase" '{"quantity":1,"anonymous":false}'; check "art can still give it with his name" 204
+req eng GET "/api/lists/$PICKLIST"; same "… and then it is there" ".wishes[0].purchases[0].name" Art
+req art DELETE "/api/lists/$PICKLIST/wishes/$GIFT/purchase"; check "art takes the tick back" 204
+req art DELETE "/api/home/opened/$PICKLIST"; req eng DELETE "/api/home/opened/$PICKLIST"; check "… and the list goes off their pages again" 204
+status_of "/s/$SANTA"; check "the group's page sends a visitor to log in" 302
+STATUS=$(curl -s -o "$BODY" -w '%{http_code}' -b "$TMP/art.jar" "$BASE/s/$SANTA"); check "the page opens for a member" 200
+if grep -q "gives_to\|givesTo" "$BODY"; then bad "the page as sent names a column of the draw"; else ok "… and holds nothing of the draw but his own name"; fi
+req art DELETE "/api/santa/$SANTA"; check "art ends the group" 204
+req mom GET "/api/santa/$SANTA"; check "it is gone for mom" 404
+req mom GET /api/notices; lacks "… with what she was told about it" santa_drawn
+for who in art mom sis lot; do eval "SLIST=\$SL_$who"; req $who DELETE "/api/lists/$SLIST" '{}'; done; check "the lists made for it are deleted again" 204
 
 echo "── a new link"
 # On a list of its own, so art's other lists stay as the checks around this expect.

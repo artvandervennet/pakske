@@ -11,9 +11,14 @@ import type { WishView } from '#shared/schemas/list'
  *
  * The switch shows the choice, else what the purchase has, else the setting as this session
  * knows it (`anonymousShown`).
+ *
+ * On a list of someone whose name the person drew in a Secret Santa, the server gives a new
+ * purchase without their name whatever the setting says. The list's page says so with
+ * `secretList`, and the switch then starts on.
  */
 export function useBuyAnonymously() {
   const chosen = useState<Record<number, boolean>>('buy-anonymously', () => ({}))
+  const secretList = useState('buy-anonymously-secret', () => false)
   const { user } = useUserSession()
 
   /** What the person chose for this wish with its switch; undefined when they never used it. */
@@ -21,7 +26,7 @@ export function useBuyAnonymously() {
 
   /** What the switch shows for this wish. */
   const isAnonymous = (wish: WishView): boolean =>
-    anonymousShown(wish, choiceFor(wish.id), user.value?.anonymousDefault ?? false)
+    anonymousShown(wish, choiceFor(wish.id), secretList.value || (user.value?.anonymousDefault ?? false))
 
   /** Keeps the choice the person made with the switch; undefined forgets it again. */
   function choose(wishId: number, anonymous: boolean | undefined) {
@@ -31,5 +36,5 @@ export function useBuyAnonymously() {
     chosen.value = next
   }
 
-  return { isAnonymous, choiceFor, choose }
+  return { isAnonymous, choiceFor, choose, secretList }
 }

@@ -32,6 +32,10 @@ const STATUS: Record<DomainErrorCode, number> = {
   friend_limit: 409,
   request_limit: 409,
   not_friends: 404,
+  santa_drawn: 409,
+  santa_too_few: 409,
+  santa_full: 409,
+  santa_limit: 409,
 }
 
 /** Ends the request with a status and an error code the client can translate. */

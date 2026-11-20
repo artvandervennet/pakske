@@ -60,3 +60,17 @@ Only `purchases.ts`, `notes.ts` and `list-view.ts` in `server/domain/` read purc
 `test/visibility.test.ts` builds two databases that differ only in what buyers, and the other owners of a joint wish, did. It checks that each owner and a visitor get identical results from both. An owner's own purchase is the one difference, and only that owner sees it.
 
 One limit: an owner can register a second account and open their own list as a buyer. Nothing in the code can stop that.
+
+## Secret Santa
+
+A Secret Santa group has one secret of its own: who drew whom. It is kept the way a wish's buyers are kept from its owners, by never sending it.
+
+- `getGroup` in `server/domain/santa.ts` builds a group for one viewer. A member gets the members (name, whether they put a list in, who runs the group) and, of the draw, the one name they drew themselves, with the list that person put in. `gives_to` is read from the viewer's own row and from no other, so the answer is the same whatever the others drew. The person who runs the group gets exactly what any member gets.
+- Someone who isn't in the group gets its name, who runs it, how many are in, and whether it can still be joined. No member is named to them but the one who runs it.
+- The rows on the home page and the Secret Santa page say how many are in a group and whether the names are drawn. The notices say that someone joined, that someone was taken out, and that the names were drawn, never what came out.
+- A test builds two databases that differ only in what the other members drew and checks that a member, the organiser and an outsider each get the same answer from both.
+- A list that a member puts in is handed to the one who drew them as its link, which opens for them as it does for anyone: they are a buyer there. Putting a list in shows it to nobody else.
+- What a member ticks on a list of the person they drew is given without their name unless they say otherwise on the wish (`drewAnOwnerOf`, read by `setPurchase`). Without that, another member who opens the same list would read the draw from who ticked what. The list's page tells them before they tick (`drewOwners`, added by the list's route for the viewer alone).
+- `server/domain/santa.ts` reads neither purchases nor notes, and a test reads its source to keep it that way.
+
+Three limits. With three members there are only two possible draws, so each member can work out who drew them; the question before the draw says so, and from four on it can't be done. The draw is in the database, where whoever runs the server can read it. And when an account is deleted after the draw, whoever drew that person is given the name that person had drawn, and so learns that one pair.

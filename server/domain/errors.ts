@@ -24,6 +24,10 @@ export type DomainErrorCode
     | 'friend_limit'
     | 'request_limit'
     | 'not_friends'
+    | 'santa_drawn'
+    | 'santa_too_few'
+    | 'santa_full'
+    | 'santa_limit'
 
 /** A rule of Pakske said no. The API turns the code into a status and the client into a sentence. */
 export class DomainError extends Error {

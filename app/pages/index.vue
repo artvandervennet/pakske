@@ -15,6 +15,8 @@ const owned = computed(() => home.value?.owned ?? [])
 const opened = computed(() => home.value?.opened ?? [])
 const ownedTotal = computed(() => home.value?.ownedTotal ?? 0)
 const openedTotal = computed(() => home.value?.openedTotal ?? 0)
+// Secret Santa is something extra: it is on this page only for someone who is in a group.
+const santa = computed(() => home.value?.santa ?? [])
 // Without it a failed load would look like having no lists at all.
 const loadError = computed(() => (homeError.value ? parse(homeError.value).message : ''))
 
@@ -32,7 +34,7 @@ const showOpened = computed(() => loggedIn.value || opened.value.length > 0 || !
 // Gesso paints a page's sections 1, 2, 3 in order, whichever of them are there.
 const paints = computed(() => {
   let paint = 0
-  return { yours: loggedIn.value ? ++paint : 0, opened: ++paint }
+  return { yours: loggedIn.value ? ++paint : 0, opened: ++paint, santa: ++paint }
 })
 </script>
 
@@ -112,6 +114,22 @@ const paints = computed(() => {
         </div>
       </div>
     </div>
+
+    <section v-if="santa.length" class="band section" :data-paint="paints.santa" aria-labelledby="santa-title">
+      <div class="inner">
+        <div class="section-head">
+          <h2 id="santa-title" class="section-title">{{ t('santa.title') }}</h2>
+        </div>
+        <div class="section-body">
+          <ul class="rows">
+            <SantaGroupRow v-for="group in santa" :key="group.token" :group="group" />
+          </ul>
+          <p class="lists-all">
+            <NuxtLink :to="localePath('/santa')">{{ t('santa.all') }}</NuxtLink>
+          </p>
+        </div>
+      </div>
+    </section>
 
   </div>
 </template>

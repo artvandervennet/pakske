@@ -24,6 +24,11 @@ const names = useNames()
 const owners = computed(() => names(list.value.owners))
 const wishes = computed(() => removedLast(list.value.wishes))
 const canManage = computed(() => list.value.viewerOwnsList && !list.value.deleted)
+// Whose name the viewer drew in a Secret Santa, when that is an owner of this list: what they
+// tick here is given without their name, and the page says so before they do.
+const drew = computed(() => names(list.value.drewOwners ?? []))
+const { secretList } = useBuyAnonymously()
+watchEffect(() => (secretList.value = drew.value !== ''))
 // The words that go along with the link in the share sheet: "my" list from its owner, "our"
 // from one of several, and from someone passing it on the list with whose it is, so whoever
 // gets the message knows that too. A list nobody owns any more is just "the" list.
@@ -712,6 +717,7 @@ async function addWish(title: string) {
           <template v-else>
             <!-- Its only owner deleted their account: the list stays, and nobody manages it. -->
             <p v-if="!list.owners.length" class="form-message">{{ t('list.ownerless') }}</p>
+            <p v-if="drew" class="form-message">{{ t('santa.onList', { names: drew }) }}</p>
             <p v-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           </template>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>

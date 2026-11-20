@@ -1,0 +1,32 @@
+/* Secret Santa: the group's page. Written against Gesso's role tokens, like app.css. */
+
+/* A member: their picture, their name with a line of detail, and for whoever runs the group
+   the button that takes them out. */
+.santa-members > .row { flex-wrap: nowrap; gap: var(--space-4); }
+.santa-members > .row > art-button { flex: none; }
+
+/* The name the person drew. It starts as a button and a sentence; shown, it is a card with the
+   name in the display face, so it reads at arm's length and nothing else on the page looks
+   like it. */
+.santa-pick { display: grid; gap: var(--space-4); justify-items: start; max-inline-size: var(--measure); }
+.santa-pick > p { margin: 0; }
+.santa-pick-note { font-size: var(--step--1); color: var(--ink-muted); }
+.santa-pick-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-inline-size: 100%;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-dab);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  --picture-size: 3.5rem;
+}
+.santa-pick-card:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.santa-pick-who { display: grid; margin: 0; min-inline-size: 0; }
+.santa-pick-for { font-size: var(--step--1); color: var(--ink-muted); }
+.santa-pick-name { font: var(--weight-regular) var(--step-3)/var(--leading-tight) var(--font-display); overflow-wrap: anywhere; }
+
+@media (forced-colors: active) {
+  .santa-pick-card { outline: 1px solid CanvasText; outline-offset: -1px; }
+}

@@ -3,6 +3,7 @@ import type { Db } from '../db/client'
 import { purchases, users } from '../db/schema'
 import { DomainError } from './errors'
 import { wishOnList } from './placement'
+import { drewAnOwnerOf } from './santa'
 
 /**
  * Sets how many of a wish this person is buying. An owner of the wish is treated like any buyer.
@@ -17,7 +18,9 @@ import { wishOnList } from './placement'
  *
  * `anonymous` says whether the other buyers see "someone" instead of this person's name. Left
  * out, a purchase keeps what it had, and a new one goes by what the buyer chose in Settings
- * ("Standaard anoniem geven"): with the name, unless they turned that on.
+ * ("Standaard anoniem geven"): with the name, unless they turned that on. One thing overrules
+ * that: a new purchase for someone whose name the buyer drew in a Secret Santa is without the
+ * buyer's name, or the other members who open that list could read the draw from it.
  */
 export function setPurchase(db: Db, token: string, wishId: number, userId: number, quantity: number, anonymous?: boolean): void {
   if (!Number.isInteger(quantity) || quantity < 1) throw new DomainError('validation')
@@ -48,7 +51,8 @@ export function setPurchase(db: Db, token: string, wishId: number, userId: numbe
       return
     }
     const buyer = tx.select({ anonymousDefault: users.anonymousDefault }).from(users).where(eq(users.id, userId)).get()
-    tx.insert(purchases).values({ wishId, userId, quantity, anonymous: anonymous ?? buyer?.anonymousDefault ?? false }).run()
+    const unnamed = anonymous ?? ((buyer?.anonymousDefault ?? false) || drewAnOwnerOf(tx, userId, wishId))
+    tx.insert(purchases).values({ wishId, userId, quantity, anonymous: unnamed }).run()
   }, { behavior: 'immediate' })
 }
 

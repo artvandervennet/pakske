@@ -67,6 +67,15 @@ export const accountDeleteInput = z.object({ currentPassword: currentPassword.op
 
 export const listInput = z.object({ title: requiredText(80) })
 
+// A list's address, as the page holds it. Whether it is the person's own list is the rule's to say.
+const listToken = z.string('required').min(1, 'required').max(64, 'too_long')
+
+/** Which of the person's own lists goes into a Secret Santa group: one, or none (null). */
+export const santaListInput = z.strictObject({ list: listToken.nullable() })
+
+/** A new Secret Santa group: its name, and the list its maker puts in. */
+export const santaInput = z.strictObject({ title: listInput.shape.title, list: listToken.nullable() })
+
 const accountId = z.number('invalid').int('invalid').positive('invalid')
 
 /** Asking an owner of the list to be friends: which one. */

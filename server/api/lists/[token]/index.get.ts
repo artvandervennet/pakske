@@ -1,6 +1,7 @@
 import { ownersToBefriend } from '../../../domain/friends'
 import { getListView, oldLinkView } from '../../../domain/list-view'
 import { coOwnersOf } from '../../../domain/lists'
+import { drawnOwnersOf } from '../../../domain/santa'
 import { rememberList } from '../../../domain/visits'
 
 // The one endpoint that returns a list. `getListView` decides per wish what this viewer may see,
@@ -31,5 +32,7 @@ export default defineEventHandler(async (event) => {
     ownersToBefriend: viewerId === null ? [] : ownersToBefriend(db, viewerId, token),
     // Ids of people are for owners only: a visitor gets the owners' names in the view and no more.
     coOwners: viewerId !== null && view.viewerOwnsList && !view.deleted ? coOwnersOf(db, viewerId, token) : undefined,
+    // Whose name they drew among the owners: the page says so, and that a tick here is anonymous.
+    drewOwners: viewerId === null ? [] : drawnOwnersOf(db, viewerId, token),
   }
 })

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { SantaGroupRow } from './santa'
 
 /** A list the person owns, as a row on the home page and the lists page. */
 export interface OwnedList {
@@ -118,6 +119,12 @@ export interface ListView {
   ownersToBefriend?: { id: number, name: string, state: 'none' | 'asked' | 'friends' }[]
   /** For an owner: the other owners, in the order they joined, and whether this viewer may remove each. */
   coOwners?: { id: number, name: string, canRemove: boolean }[]
+  /**
+   * The list's owners whose name this viewer drew in a Secret Santa, by display name. Added by
+   * the route for someone logged in; what they tick here is without their name unless they say
+   * otherwise.
+   */
+  drewOwners?: string[]
 }
 
 /** A list someone else owns that is on this person's page: a friend shows it to them, or they opened its link. */
@@ -183,9 +190,9 @@ export interface InviteView {
   mine: MyLists
 }
 
-export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed'
+export type NoticeKind = 'wish_linked' | 'wish_unlinked' | 'joint_link_used' | 'list_joined' | 'list_relinked' | 'friend_accepted' | 'friend_link_used' | 'list_shown' | 'sent_copy' | 'sent_linked' | 'sent_list' | 'share_accepted' | 'list_removed' | 'santa_joined' | 'santa_drawn' | 'santa_removed'
 
-/** A notice as its recipient gets it. Notices are about owners and lists, never about buyers. */
+/** A notice as its recipient gets it. Notices are about owners, lists and Secret Santa groups, never about buyers. */
 export interface NoticeView {
   id: string
   kind: NoticeKind
@@ -203,6 +210,8 @@ export interface NoticeView {
   wishId: number | null
   /** For something a friend sent: the token of the page where the recipient says yes. */
   invite: string | null
+  /** For a notice about a Secret Santa group: the group's token, while the recipient is in it. */
+  santa: string | null
   canUndo: boolean
   /** Not seen yet. */
   fresh: boolean
@@ -214,7 +223,7 @@ export const HOME_LISTS = 5
 
 /**
  * What the home page shows: the few lists of each kind the person had to do with last, how many
- * there are in all.
+ * there are in all, and the Secret Santa groups the person is in.
  */
 export interface HomeView {
   /** The most recently opened or joined first. */
@@ -223,6 +232,8 @@ export interface HomeView {
   /** Other people's lists: what friends show the person first, then what they opened, most recent first. */
   opened: OpenedList[]
   openedTotal: number
+  /** The one joined last first; empty for someone who isn't logged in. */
+  santa: SantaGroupRow[]
 }
 
 /**

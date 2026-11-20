@@ -1,13 +1,14 @@
 import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import type { Db } from '../db/client'
-import { friendships, listFriends, listOwners, lists, listWishes, notices, users, wishes, wishLinks } from '../db/schema'
+import { friendships, listFriends, listOwners, lists, listWishes, notices, santaGroups, santaMembers, users, wishes, wishLinks } from '../db/schema'
 import type { NoticeKind, NoticeView } from '../../shared/schemas/list'
 import { waitingSend } from './invites'
 import { onListNow } from './placement'
 
-// Messages for one person inside the site: what other owners did with their wishes and lists.
-// They are made only by owner actions (linking, unlinking, links used, lists joined, something
-// sent to a friend), so nothing a buyer does can ever show up here.
+// Messages for one person inside the site: what other owners did with their wishes and lists,
+// and what happened in a Secret Santa group they are in. They are made only by owner actions
+// (linking, unlinking, links used, lists joined, something sent to a friend) and by joining,
+// leaving and drawing in a group, so nothing a buyer does can ever show up here.
 // (`./invites` uses `addNotice` and this file its `waitingSend`: each only calls the other's
 // functions, never at load.)
 
@@ -21,6 +22,7 @@ export function addNotice(db: Db, notice: {
   wishId?: number
   listId?: number
   inviteId?: number
+  santaGroupId?: number
 }): void {
   db.insert(notices).values(notice).run()
 }
@@ -59,6 +61,7 @@ export function listNotices(db: Db, userId: number): NoticeView[] {
       token,
       wishId: notice.wishId,
       invite,
+      santa: notice.santaGroupId === null ? null : santaToken(db, userId, notice.santaGroupId),
       canUndo: undoable,
       fresh: notice.seenAt === null,
       createdAt: notice.createdAt.toISOString(),
@@ -103,6 +106,15 @@ function shownToken(db: Db, userId: number, listId: number | null): string | nul
     .where(and(eq(listFriends.listId, listId), eq(listFriends.userId, userId), isNull(listFriends.hiddenAt), isNull(lists.deletedAt)))
     .get()
   return shown?.token ?? null
+}
+
+/** Where a notice about a Secret Santa group leads: the group, while the recipient is in it. */
+function santaToken(db: Db, userId: number, groupId: number): string | null {
+  const group = db.select({ token: santaGroups.token }).from(santaGroups)
+    .innerJoin(santaMembers, eq(santaMembers.groupId, santaGroups.id))
+    .where(and(eq(santaGroups.id, groupId), eq(santaMembers.userId, userId)))
+    .get()
+  return group?.token ?? null
 }
 
 /** How many of the notices `listNotices` gives haven't been seen. */
