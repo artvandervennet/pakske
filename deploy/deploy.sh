@@ -41,6 +41,15 @@ if [ "$FORCE" != "--force" ]; then
   [ "$(cat "$STATE_DIR/failed" 2>/dev/null)" = "$target" ] && exit 0
 fi
 
+# pakske-deploy.service writes every build's output to deploy.log. Past a megabyte the oldest
+# half goes, cut at the start of a line. The file is emptied and refilled, not replaced, so the
+# service goes on writing to the same file.
+log="$STATE_DIR/deploy.log"
+if [ "$(stat -c %s "$log" 2>/dev/null || echo 0)" -gt 1048576 ]; then
+  tail -c 524288 "$log" | tail -n +2 > "$log.keep" && cat "$log.keep" > "$log"
+  rm -f "$log.keep"
+fi
+
 # healthchecks.io hears how each deploy went, when ~/.config/pakske-watch.env has its key.
 # shellcheck source=deploy/report.sh
 . deploy/report.sh
