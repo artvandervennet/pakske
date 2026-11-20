@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SheetPerson } from './ShareSheet.vue'
+import type { SheetPerson } from './SheetPeople.vue'
 
 // The share sheet of a list, in the two ways it is opened. "Delen" in the title band shares
 // the list: its link, and for an owner the friends who don't find it yet, each one press away.

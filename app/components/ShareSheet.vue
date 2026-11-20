@@ -4,12 +4,11 @@
 // bottom edge on a narrow one. It says as little as it can: a title, at most one line of
 // `note`, and names under pictures.
 //
-// The people are a row that scrolls sideways and snaps, each a picture and a name to press.
-// Pressing one is the whole act: there is nothing to undo here, so only people it hasn't gone
-// to yet are in the row, and one that was pressed shows a tick and then leaves it.
+// The people are a row of pictures to press (SheetPeople.vue). Pressing one is the whole act:
+// there is nothing to undo here, so only people it hasn't gone to yet are in the row.
 // What a press does, and what the link is, is the page's business: it hands in `path` (null
 // while the link is still being made, and the buttons wait for it) and listens for `pick`.
-export interface SheetPerson { id: number, name: string, picture: string | null }
+import type { SheetPerson } from './SheetPeople.vue'
 
 const props = defineProps<{
   title: string
@@ -78,23 +77,7 @@ defineExpose({ open, close: () => dialog.value?.close() })
       </div>
       <p v-if="note" :id="`${id}-note`" class="switch-hint">{{ note }}</p>
 
-      <ul v-if="people?.length" class="sheet-people" :aria-label="peopleLabel">
-        <li v-for="person in people" :key="person.id">
-          <button
-            type="button"
-            class="sheet-person"
-            :class="{ done: done?.has(person.id) }"
-            :aria-disabled="busy?.has(person.id) || done?.has(person.id) || undefined"
-            @click="$emit('pick', person)"
-          >
-            <span class="sheet-person-picture">
-              <PersonPicture :person="person" />
-              <AppIcon v-if="done?.has(person.id)" name="check" />
-            </span>
-            <span class="sheet-person-name">{{ person.name }}</span>
-          </button>
-        </li>
-      </ul>
+      <SheetPeople v-if="people?.length" :people="people" :busy="busy" :done="done" :aria-label="peopleLabel" @pick="$emit('pick', $event)" />
 
       <art-share class="sheet-action" nosheet :url="path ?? ''" :copied-label="t('share.copied')" :manual-label="t('share.manual')">
         <art-button variant="secondary">

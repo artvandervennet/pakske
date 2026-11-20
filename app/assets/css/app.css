@@ -422,10 +422,6 @@ art-button.danger { --accent: var(--danger); --accent-wash: color-mix(in oklch, 
   @keyframes sheet-up { from { translate: 0 100%; } }
 }
 
-/* The same switches where something is sent to a friend, under the choice of how: with air
-   above them, and their sentence right under the last one. */
-.send-to { margin-block-start: var(--space-6); }
-.send-to > .switch-hint { margin-block: var(--space-2) 0; }
 
 /* ── Wishes ───────────────────────────────────────────────────────────────*/
 

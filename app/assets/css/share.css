@@ -36,8 +36,9 @@
 .share-mode:has(input:checked) { background: var(--accent-wash); box-shadow: inset 0 0 0 2px var(--accent); }
 .share-mode:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
 .share-mode input:focus-visible { outline: none; }
-/* The heading takes the focus when the dialog opens; it is text, so no ring around it. */
-.share-dialog h2:focus { outline: none; }
+/* The friends it can go to, under the choice of how, named like that choice. */
+.share-people { display: grid; }
+.share-people > .share-modes-legend { margin-block-start: 0; }
 
 /* ── The page a share link opens ──────────────────────────────────────────
    What will happen, the wishes with a box each, the list they go on, and one button. */
