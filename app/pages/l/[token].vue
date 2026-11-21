@@ -643,6 +643,23 @@ async function onEditDeleteClose() {
   editCount.value?.focus()
 }
 
+// "Importeren uit een winkel": the sheet reads the links someone pastes and puts the chosen
+// wishes on the list (ImportDialog.vue). Their pictures are fetched after that, some of them
+// after the answer, so the list is asked for once more a little later.
+const importDialog = useTemplateRef<{ open: () => Promise<void> }>('importDialog')
+const importStatus = ref('')
+let coversTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => clearTimeout(coversTimer))
+
+async function onImported(count: number) {
+  importStatus.value = t('import.added', { n: count }, count)
+  await refresh()
+  clearTimeout(coversTimer)
+  coversTimer = setTimeout(() => {
+    if (list.value.wishes.some(wish => wish.urls.length && !wish.image)) refresh()
+  }, 8000)
+}
+
 const adding = ref(false)
 const addError = ref('')
 
@@ -830,6 +847,13 @@ async function addWish(title: string) {
               <QuickAdd :label="t('list.add')" :field-label="t('list.newWish')" :pending="adding" :error="addError" @add="addWish" />
             </li>
           </ul>
+          <div v-if="canManage && !editing" class="wish-import">
+            <art-button variant="quiet" size="s">
+              <button type="button" @click="importDialog?.open()"><AppIcon name="import" />{{ t('import.open') }}</button>
+            </art-button>
+            <!-- Always there, so the words are announced when the sheet has closed. -->
+            <p class="visually-hidden" role="status">{{ importStatus }}</p>
+          </div>
           <!-- About the whole list, not the chosen wishes: under the list, away from the bar's
                buttons, and it asks first. -->
           <div v-if="editing" ref="listActions" class="list-actions">
@@ -907,6 +931,8 @@ async function addWish(title: string) {
     </div>
 
     <ListShare v-if="!list.deleted && !list.old" ref="shareSheet" :token="list.token" :title="list.title" :text="shareText" :owner="canManage" />
+
+    <ImportDialog v-if="canManage" ref="importDialog" :token="list.token" :wishes="list.wishes" @added="onImported" />
 
     <ShareWishesDialog v-if="canManage" ref="shareDialog" :token="list.token" :wish-ids="shareIds" @close="onShareClose" @failed="refreshList" />
 

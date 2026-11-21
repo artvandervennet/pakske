@@ -4,7 +4,7 @@ The GDPR asks whoever runs a site to keep three things on paper: what the site d
 
 It describes Pakske as [Deploying](deploying.md) sets it up: Firebase for logging in, a Cloudflare Tunnel in front, nightly backups with restic. Where your site differs, change this page and the privacy page together. It is not legal advice.
 
-Last checked on 20 November 2026.
+Last checked on 21 November 2026.
 
 ## Who answers for it
 
@@ -35,7 +35,7 @@ The site asks for nothing sensitive, but a title, a note or a message is free te
 | Cloudflare, for the R2 bucket | The backups, which restic encrypts on the Pi. Cloudflare can't read them | Same. Choose the EU jurisdiction when you make the bucket; it can't be changed later |
 | healthchecks.io | A check's name, a status and a duration, and how many accounts and pictures a backup held | Nothing about a person goes there |
 
-A shop behind a wish's link gets a request from the server, never from a visitor, until that visitor follows the link.
+A shop behind a wish's link gets a request from the server, never from a visitor, until that visitor follows the link. An import works the same way: the server asks the shop for the pages behind the links someone pastes, which can be a wishlist they share there, and keeps only what that person then puts on their list.
 
 Two things to check once at these companies: that Google Analytics is off for the Firebase project (Pakske doesn't use it), and that the R2 bucket's jurisdiction is the EU.
 

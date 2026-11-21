@@ -6,7 +6,7 @@ import { ownedListId } from '../server/domain/lists'
 import { putOnList } from '../server/domain/placement'
 import { copyWish, linkWish, unlinkOwner } from '../server/domain/sharing'
 import { livePublicWishes } from '../server/domain/public-wishes'
-import { addWish, deleteWish, deleteWishes, ownedWishOnList, setWishCover, setWishImage, updateWish } from '../server/domain/wishes'
+import { addWish, addWishes, deleteWish, deleteWishes, ownedWishOnList, setWishCover, setWishImage, updateWish } from '../server/domain/wishes'
 import { wishInput, wishPatchInput } from '../shared/schemas/input'
 import { publicWishSchema } from '../shared/schemas/list'
 import { addList, addUser, addWishTo, codeOf, expectOwnersSettled, makeDb, ownerIds } from './helpers'
@@ -290,6 +290,45 @@ describe('wishes', () => {
       const { db, art, mom, token, id } = withCover()
       expect(codeOf(() => setWishCover(db, mom.id, token, id, shop, 'x.jpg'))).toBe('not_found')
       expect(codeOf(() => setWishCover(db, art.id, addList(db, art.id, 'Verjaardag'), id, shop, 'x.jpg'))).toBe('not_found')
+    })
+  })
+
+  describe('several wishes at once, from an import', () => {
+    const found = (n: number, from = 0) => Array.from({ length: n }, (_, at) => ({ title: `Wens ${from + at}`, url: `https://shop.example/p/${from + at}` }))
+
+    it('puts them under what the list has, in their order, each with its one link', () => {
+      const { db, art, token } = setup()
+      addWishTo(db, art.id, token, 'Was er al')
+      const added = addWishes(db, art.id, token, found(3))
+      expect(added.map(wish => wish.title)).toEqual(['Wens 0', 'Wens 1', 'Wens 2'])
+      expect(added[1]).toMatchObject({ urls: ['https://shop.example/p/1'], quantity: 1, description: null, image: null })
+      expect(livePublicWishes(db, ownedListId(db, art.id, token)).map(wish => wish.title)).toEqual(['Was er al', 'Wens 0', 'Wens 1', 'Wens 2'])
+      for (const wish of added) expect(ownerIds(db, wish.id)).toEqual([art.id])
+      expectOwnersSettled(db)
+    })
+
+    it('adds all of them or none', () => {
+      const { db, art, token, listId } = setup()
+      addWishes(db, art.id, token, found(100))
+      expect(codeOf(() => addWishes(db, art.id, token, found(101, 100)))).toBe('wish_limit')
+      expect(livePublicWishes(db, listId)).toHaveLength(100)
+      expect(db.select().from(wishes).all()).toHaveLength(100)
+      expect(codeOf(() => addWishes(db, art.id, token, found(100, 100)))).toBeUndefined()
+      expect(livePublicWishes(db, listId)).toHaveLength(200)
+    })
+
+    it('counts toward the 500 a list can ever have had', () => {
+      const { db, art, token } = setup()
+      for (let round = 0; round < 4; round++) deleteWishes(db, art.id, token, addWishes(db, art.id, token, found(100)).map(wish => wish.id), {})
+      expect(codeOf(() => addWishes(db, art.id, token, found(101)))).toBe('wish_limit_ever')
+      expect(codeOf(() => addWishes(db, art.id, token, found(100)))).toBeUndefined()
+    })
+
+    it('is for the list\'s owners only', () => {
+      const { db, art, mom, token } = setup()
+      expect(codeOf(() => addWishes(db, mom.id, token, found(2)))).toBe('not_found')
+      expect(codeOf(() => addWishes(db, art.id, 'no-such-list', found(2)))).toBe('not_found')
+      expect(db.select().from(wishes).all()).toEqual([])
     })
   })
 

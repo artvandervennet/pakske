@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { MAX_LINKS, WISH_TITLE_MAX } from '../utils/wish-edit'
+import { IMPORT_MAX } from '../utils/wish-import'
 
 // What people submit. Every message is a code; the client translates `fields.<code>`.
 
@@ -219,6 +220,21 @@ export const wishPatchInput = z.object({
   quantity: wishFields.quantity.optional(),
 }).refine(change => Object.values(change).some(value => value !== undefined), 'required')
 
+const link = z.string('invalid').trim().max(2000, 'too_long').refine(isHttpUrl, 'invalid_url')
+
+/** What is pasted to import from: a shop's wishlist link, or links of products. */
+export const importReadInput = z.strictObject({ text: z.string('required').trim().min(1, 'required').max(16000, 'too_long') })
+
+/**
+ * The wishes chosen from what an import found, in the order they go on the list. Each becomes a
+ * wish with that one link; `image` is the picture the shop's list showed, for the server to fetch.
+ */
+export const importInput = z.strictObject({
+  items: z.array(z.strictObject({ title: wishFields.title, url: link, image: link.optional() }), 'required')
+    .min(1, 'required')
+    .max(IMPORT_MAX, 'too_long'),
+})
+
 /** How many this person is getting, and, when given, whether the other buyers see their name. */
 export const purchaseInput = z.object({ quantity: amount, anonymous: z.boolean('invalid').optional() })
 
@@ -240,6 +256,7 @@ export const noticeIdsInput = z.strictObject({
 
 export type WishInput = z.infer<typeof wishInput>
 export type WishPatchInput = z.infer<typeof wishPatchInput>
+export type ImportInput = z.infer<typeof importInput>
 export type ListTarget = z.infer<typeof targetInput>
 export type InviteInput = z.infer<typeof inviteInput>
 

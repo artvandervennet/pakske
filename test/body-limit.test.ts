@@ -15,6 +15,15 @@ describe('refusing a body before it is read', () => {
     expect(bodyRefusal('PUT', '/api/lists/t/wishes/1/image', String(UPLOAD_MAX_BYTES + 64 * 1024 + 1), undefined)).toBe(413)
   })
 
+  it('gives the wishes of an import room for a hundred of them', () => {
+    expect(bodyRefusal('POST', '/api/lists/t/wishes/import', String(256 * 1024), undefined)).toBeNull()
+    expect(bodyRefusal('POST', '/api/lists/t/wishes/import', String(256 * 1024 + 1), undefined)).toBe(413)
+    expect(bodyRefusal('POST', '/api/lists/t/wishes/import', undefined, undefined)).toBe(411)
+    // Reading a paste, and adding one wish, stay small.
+    expect(bodyRefusal('POST', '/api/import/read', String(16 * 1024 + 1), undefined)).toBe(413)
+    expect(bodyRefusal('POST', '/api/lists/t/wishes', String(16 * 1024 + 1), undefined)).toBe(413)
+  })
+
   it('refuses a body that does not say how long it is', () => {
     expect(bodyRefusal('POST', '/api/lists', undefined, undefined)).toBe(411)
     expect(bodyRefusal('PUT', '/api/me/password', undefined, 'chunked')).toBe(411)

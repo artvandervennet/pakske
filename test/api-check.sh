@@ -286,6 +286,23 @@ req mom DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "mom cannot remove
 req art DELETE "/api/lists/$TOKEN/wishes/$PLUGS/image"; check "art removes the image" 204
 STATUS=$(curl -s -o "$BODY" -w '%{http_code}' "$BASE$IMAGE"); check "the removed image is gone" 404
 
+echo "── an import from a shop"
+# On a list of its own, deleted afterwards, so art's lists stay as the checks below expect.
+req art POST /api/lists '{"title":"Import"}'; IMPORT=$(json .token)
+req art POST /api/import/read '{"text":"een fiets, zonder link"}'; check "a paste without a link is read, and gives nothing" 200; has "… no wishes" '"items":[]'; has "… and no unread links" '"unread":[]'
+req art POST /api/import/read '{"text":"kijk: https://example.test/lamp."}'; check "a link to a shop that doesn't exist is read" 200; has "… and comes back as unread" '"unread":["https://example.test/lamp"]'
+req art POST /api/import/read '{"text":"  "}'; check "an empty paste is refused" 422
+req anon POST /api/import/read '{"text":"https://example.test/lamp"}'; check "reading a paste needs a login" 401
+req art POST "/api/lists/$IMPORT/wishes/import" '{"items":[{"title":"Lamp","url":"https://example.test/lamp"},{"title":"Boek","url":"https://example.test/boek","image":"https://example.test/boek.jpg"}]}'; check "art imports two wishes" 201; has "… and hears how many went on" '"added":2'
+req art GET "/api/lists/$IMPORT"; has "… the first with its link" '"title":"Lamp","description":null,"urls":["https://example.test/lamp"]'; has "… and the second under it" '"title":"Boek","description":null,"urls":["https://example.test/boek"]'
+req art POST "/api/lists/$IMPORT/wishes/import" '{"items":[]}'; check "an import of nothing is refused" 422
+req art POST "/api/lists/$IMPORT/wishes/import" '{"items":[{"title":"Kwaad","url":"javascript:alert(1)"}]}'; check "an imported javascript: link is refused" 422
+req art POST "/api/lists/$IMPORT/wishes/import" '{"items":[{"title":"Lamp","url":"https://example.test/lamp","quantity":5}]}'; check "an imported wish takes nothing but a title, a link and a picture" 422
+req mom POST "/api/lists/$IMPORT/wishes/import" '{"items":[{"title":"Ondergeschoven","url":"https://example.test/x"}]}'; check "mom cannot import into art's list" 404
+req anon POST "/api/lists/$IMPORT/wishes/import" '{"items":[{"title":"x","url":"https://example.test/x"}]}'; check "importing needs a login" 401
+req art GET "/api/lists/$IMPORT"; lacks "… and none of those went on" 'Ondergeschoven'; lacks "… nor the refused one" 'Kwaad'
+req art DELETE "/api/lists/$IMPORT"; check "art deletes the import list" 204
+
 echo "── several links, and the first link's cover"
 # On a list of its own, deleted afterwards, so art's lists stay as the checks below expect.
 req art POST /api/lists '{"title":"Links"}'; LINKS=$(json .token)

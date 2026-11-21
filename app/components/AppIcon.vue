@@ -6,6 +6,8 @@
 // fetched for them.
 const PATHS = {
   'share': 'M12 15V4m0 0L8 8m4-4 4 4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6',
+  // The share arrow turned round: into the tray instead of out of it.
+  'import': 'M12 4v11m0 0-4-4m4 4 4-4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6',
   'close': 'M6 6l12 12M18 6 6 18',
   'link': 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   'plus': 'M12 5v14M5 12h14',

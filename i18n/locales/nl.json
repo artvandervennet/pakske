@@ -267,6 +267,26 @@
     "own": "Dit is je eigen link. Stuur hem naar de persoon met wie je wilt delen.",
     "alreadyOwner": "Je bent al mede-eigenaar van deze lijst."
   },
+  "import": {
+    "open": "Importeren uit een winkel",
+    "title": "Wensen importeren",
+    "label": "De link van je verlanglijstje, of links van producten",
+    "hint": "Plak de link waarmee je je verlanglijstje bij bol.com of Amazon deelt. Of plak links van producten uit elke winkel, één per regel.",
+    "read": "Wensen ophalen",
+    "reading": "De winkel wordt gelezen. Dat kan een halve minuut duren.",
+    "noLinks": "Hier staat geen link in. Een link begint met https://.",
+    "nothing": "Uit deze link kon niets gelezen worden. Een verlanglijstje moet in de winkel gedeeld zijn, en sommige winkels laten zich niet lezen. | Uit deze links kon niets gelezen worden. Een verlanglijstje moet in de winkel gedeeld zijn, en sommige winkels laten zich niet lezen.",
+    "found": "{n} wens gevonden | {n} wensen gevonden",
+    "pick": "Vink aan wat op je lijst moet",
+    "listed": "{shop} · staat al op deze lijst",
+    "short": "{read} van de {total} wensen op het lijstje zijn gelezen. Plak de links van de andere om die ook toe te voegen.",
+    "shortUnknown": "Alleen de eerste wens van het lijstje is gelezen. Plak de links van de andere om die ook toe te voegen. | Alleen de eerste {read} wensen van het lijstje zijn gelezen. Plak de links van de andere om die ook toe te voegen.",
+    "unread": "Deze link kon niet gelezen worden: | Deze links konden niet gelezen worden:",
+    "add": "{n} wens toevoegen | {n} wensen toevoegen",
+    "adding": "De wensen worden toegevoegd.",
+    "back": "Andere links plakken",
+    "added": "{n} wens toegevoegd. | {n} wensen toegevoegd."
+  },
   "purchase": {
     "title": "Wie geeft dit?",
     "nobody": "Nog niemand.",
@@ -631,7 +651,7 @@
   "privacy": {
     "title": "Privacy",
     "lead": "Wat deze site over je bewaart, wie het te zien krijgt en hoe je het weer weghaalt.",
-    "updated": "Laatst gewijzigd op 20 november 2026.",
+    "updated": "Laatst gewijzigd op 21 november 2026.",
     "who": {
       "title": "Wie je gegevens bewaart",
       "named": "{operator} beheert deze site, beslist wat er gebeurt met wat je erop zet, en is daar verantwoordelijk voor.",
@@ -675,7 +695,7 @@
       "google": "Kies je “Doorgaan met Google”, dan geeft Google deze site je naam, je e-mailadres en het nummer van je Google-account door.",
       "network": "De verbinding met deze site loopt via {network}. Dat ziet je IP-adres en geeft door wat je verstuurt en ontvangt.",
       "backups": "Elke nacht gaat een versleutelde kopie van de database en de foto’s naar {backups}, dat die niet kan lezen.",
-      "shops": "Bij een wens met een link haalt de server de foto op die de winkel erbij toont. De winkel ziet dan de server, niet jou. Pas als je zelf op een link klikt, ben je bij de winkel.",
+      "shops": "Bij een wens met een link haalt de server de foto op die de winkel erbij toont. Importeer je wensen uit een winkel, dan leest de server daar ook de links die je plakt: de namen van de producten, of je verlanglijstje. De winkel ziet dan de server, niet jou. Pas als je zelf op een link klikt, ben je bij de winkel.",
       "nobody": "Je gegevens worden niet verkocht, en niet doorgegeven aan iemand die er zelf iets mee wil doen."
     },
     "cookies": {

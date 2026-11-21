@@ -267,6 +267,26 @@
     "own": "This is your own link. Send it to the person you want to share with.",
     "alreadyOwner": "You are already a co-owner of this list."
   },
+  "import": {
+    "open": "Import from a shop",
+    "title": "Import wishes",
+    "label": "The link to your wishlist, or links to products",
+    "hint": "Paste the link you share your wishlist with at bol.com or Amazon. Or paste links to products from any shop, one per line.",
+    "read": "Find wishes",
+    "reading": "Reading the shop. This can take half a minute.",
+    "noLinks": "There is no link in this. A link starts with https://.",
+    "nothing": "Nothing could be read from this link. A wishlist has to be shared at the shop, and some shops can’t be read. | Nothing could be read from these links. A wishlist has to be shared at the shop, and some shops can’t be read.",
+    "found": "{n} wish found | {n} wishes found",
+    "pick": "Tick what should go on your list",
+    "listed": "{shop} · already on this list",
+    "short": "{read} of the {total} wishes on the list were read. Paste the links of the others to add those too.",
+    "shortUnknown": "Only the first wish on the list was read. Paste the links of the others to add those too. | Only the first {read} wishes on the list were read. Paste the links of the others to add those too.",
+    "unread": "This link could not be read: | These links could not be read:",
+    "add": "Add {n} wish | Add {n} wishes",
+    "adding": "Adding the wishes.",
+    "back": "Paste other links",
+    "added": "{n} wish added. | {n} wishes added."
+  },
   "purchase": {
     "title": "Who is giving this?",
     "nobody": "Nobody yet.",
@@ -631,7 +651,7 @@
   "privacy": {
     "title": "Privacy",
     "lead": "What this site keeps about you, who gets to see it, and how you take it away again.",
-    "updated": "Last changed on 20 November 2026.",
+    "updated": "Last changed on 21 November 2026.",
     "who": {
       "title": "Who keeps your data",
       "named": "{operator} runs this site, decides what happens with what you put on it, and is responsible for it.",
@@ -675,7 +695,7 @@
       "google": "If you choose “Continue with Google”, Google tells this site your name, your email address and the number of your Google account.",
       "network": "The connection to this site runs through {network}, which sees your IP address and passes on what you send and receive.",
       "backups": "Every night an encrypted copy of the database and the pictures goes to {backups}, which can’t read it.",
-      "shops": "For a wish with a link, the server fetches the picture that shop shows for it. The shop sees the server, not you. Only when you follow a link yourself are you at the shop.",
+      "shops": "For a wish with a link, the server fetches the picture that shop shows for it. When you import wishes from a shop, the server also reads the links you paste there: the names of the products, or your wishlist. The shop sees the server, not you. Only when you follow a link yourself are you at the shop.",
       "nobody": "Your data is not sold, and not passed on to anyone who wants it for purposes of their own."
     },
     "cookies": {

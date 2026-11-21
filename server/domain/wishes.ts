@@ -25,6 +25,22 @@ export function addWish(db: Db, userId: number, token: string, input: WishInput)
   }, { behavior: 'immediate' })
 }
 
+/**
+ * Puts several new wishes on a list at once, each with its one link, in the order given: an
+ * import from a shop. All of them or none, so a list that has room for some gets none and says so.
+ */
+export function addWishes(db: Db, userId: number, token: string, items: readonly { title: string, url: string }[]): PublicWish[] {
+  return db.transaction((tx) => {
+    const listId = ownedListId(tx, userId, token)
+    assertRoom(tx, listId, items.length)
+    return items.map((item) => {
+      const wish = tx.insert(wishes).values({ title: item.title, urls: [item.url] }).returning().get()
+      putOnList(tx, listId, wish.id)
+      return toPublicWish(wish)
+    })
+  }, { behavior: 'immediate' })
+}
+
 /** The wish's links. A wish from before it could have several may hold no list at all. */
 const linksOf = (wish: typeof wishes.$inferSelect): string[] => wish.urls ?? []
 

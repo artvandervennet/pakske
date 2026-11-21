@@ -51,3 +51,17 @@
 .invite-wish:has(input:disabled) { cursor: default; }
 /* Said under the button while nothing is ticked, so the dimmed button isn't a riddle. */
 .invite-hint { font-size: var(--step--1); color: var(--ink-muted); }
+
+/* ── Importing from a shop ────────────────────────────────────────────────
+   Under an owner's list, a quiet way in. Its sheet first takes links, then shows what the
+   shops gave with a box each, like the page a share link opens. */
+.wish-import { margin-block-start: var(--space-4); }
+/* Wider than the other sheets where there is room: its rows are titles of products. */
+@media (min-width: 40.01rem) { .import-sheet { inline-size: min(34rem, calc(100vw - 2 * var(--gutter))); } }
+.import-sheet textarea { inline-size: 100%; resize: vertical; overflow-wrap: anywhere; }
+.import-wait { font-size: var(--step--1); color: var(--ink-muted); }
+/* A hundred wishes scroll inside the sheet, so the button under them stays in view. */
+.import-found { max-block-size: min(22rem, 38dvh); overflow-y: auto; overscroll-behavior: contain; margin: 0; }
+.import-note { font-size: var(--step--1); color: var(--ink-muted); }
+.import-note > p { margin: 0; }
+.import-unread { margin: var(--space-1) 0 0; padding-inline-start: var(--space-4); overflow-wrap: anywhere; }
