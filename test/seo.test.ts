@@ -56,7 +56,7 @@ describe('robots.txt', () => {
   const everyone = groups.find(group => group.includes('User-agent: *'))!.split('\n')
 
   it('closes everything to search engines but the indexed pages and what they load', () => {
-    expect(everyone).toContain('Disallow: /')
+    expect(everyone).toContain('Disallow: /*')
     for (const path of ['/', '/about', '/privacy', '/terms', '/en', '/en/about', '/en/privacy', '/en/terms']) {
       expect(everyone).toContain(`Allow: ${path}$`)
     }
@@ -69,6 +69,28 @@ describe('robots.txt', () => {
     expect(previewers).toContain('User-agent: facebookexternalhit')
     expect(previewers).toContain('Allow: /')
     expect(previewers).toContain('Disallow: /api/')
+  })
+
+  // Cloudflare's managed robots.txt goes above the site's own, with a group for every crawler
+  // that allows everything. A crawler merges the two groups: the longest rule that matches wins,
+  // and of two as long the one that allows (RFC 9309, and Google's own matching).
+  it('keeps its rules when a proxy puts a group above it that allows everything', () => {
+    const merged = `User-agent: *\nAllow: /\n\n${robots}`
+    const rules = merged.split('\n\n')
+      .filter(group => group.split('\n').includes('User-agent: *'))
+      .flatMap(group => group.split('\n').filter(line => /^(Allow|Disallow): /.test(line)))
+      .map((line) => {
+        const [kind, pattern] = line.split(': ') as [string, string]
+        const source = pattern.replace(/[.+?^{}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+        return { allow: kind === 'Allow', length: pattern.length, test: new RegExp(`^${source}`) }
+      })
+    const allowed = (path: string) => {
+      const matches = rules.filter(rule => rule.test.test(path))
+      const longest = Math.max(...matches.map(rule => rule.length))
+      return matches.some(rule => rule.length === longest && rule.allow)
+    }
+    for (const path of ['/', '/en', '/about', '/en/terms', '/_nuxt/entry.js', '/preview.png']) expect(allowed(path), path).toBe(true)
+    for (const path of ['/l/JpCenY6Oea7uXrqEHNWwKQ', '/lists', '/settings', '/j/abc', '/aboutx', '/api/home', '/uploads/a.jpg']) expect(allowed(path), path).toBe(false)
   })
 
   it('points to the sitemap by its whole address', () => {

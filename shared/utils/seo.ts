@@ -64,7 +64,10 @@ export function robotsTxt(origin: string): string {
     'User-agent: *',
     ...[...INDEXED_PATHS].map(path => `Allow: ${path}$`),
     ...PAGE_ASSETS.map(path => `Allow: ${path}`),
-    'Disallow: /',
+    // "/*" and not "/": a proxy may put a group of its own above this file, for every crawler,
+    // that allows "/" (Cloudflare's managed robots.txt does). A crawler merges the groups, and
+    // between two rules of the same length it follows the one that allows. The longer rule wins.
+    'Disallow: /*',
     '',
     `Sitemap: ${origin}/sitemap.xml`,
     '',
