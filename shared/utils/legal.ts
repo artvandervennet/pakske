@@ -1,7 +1,8 @@
-// What the privacy and terms pages say, as an outline of sentences from the locale files. The
-// pages are the same for every site that runs Pakske except for who runs it, so that part comes
-// from the site's settings: a sentence that names them is only in the outline when the site
-// knows the name. The same goes for the companies that carry its traffic and store its backups.
+// What the privacy and terms pages say, as an outline of sentences from the locale files; the
+// about page's (about.ts) is made the same way. The pages are the same for every site that runs
+// Pakske except for who runs it, so that part comes from the site's settings: a sentence that
+// names them is only in the outline when the site knows the name. The same goes for the
+// companies that carry its traffic and store its backups.
 
 import { SOURCE_URL } from './source'
 
@@ -33,7 +34,7 @@ export interface LegalSection {
 }
 
 /** A section of `page`: plain names become paragraphs, an array of names a list. */
-function section(page: string, id: string, blocks: (string | string[] | LegalBlock)[]): LegalSection {
+export function section(page: string, id: string, blocks: (string | string[] | LegalBlock)[]): LegalSection {
   const key = (name: string) => `${page}.${id}.${name}`
   return {
     id,

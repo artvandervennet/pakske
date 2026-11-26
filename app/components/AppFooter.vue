@@ -19,6 +19,7 @@ const localePath = useLocalePath()
       </i18n-t>
       <LocaleSwitcher />
       <nav :aria-label="t('footer.label')">
+        <NuxtLink :to="localePath('/about')">{{ t('footer.about') }}</NuxtLink>
         <NuxtLink :to="localePath('/privacy')">{{ t('footer.privacy') }}</NuxtLink>
         <NuxtLink :to="localePath('/terms')">{{ t('footer.terms') }}</NuxtLink>
       </nav>

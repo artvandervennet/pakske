@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { aboutOutline } from '../shared/utils/about'
 import { privacyOutline, termsOutline, type LegalSection, type Operator } from '../shared/utils/legal'
 
-// The privacy and terms pages are built from an outline that names their sentences. Nothing else
-// reads those sentences, so this checks that each one exists, that none is left over, and that a
-// sentence which names the operator is only used when the site knows who that is.
+// The privacy and terms pages, and the about page, are built from an outline that names their
+// sentences. Nothing else reads those sentences, so this checks that each one exists, that none is
+// left over, and that a sentence which names the operator is only used when the site knows who
+// that is.
 
 type Messages = { [key: string]: string | Messages }
 const load = (lang: string): Messages => JSON.parse(readFileSync(`i18n/locales/${lang}.json`, 'utf8'))
@@ -45,7 +47,7 @@ const given = (operator: Operator) => [
   ...(operator.backups ? ['backups'] : []),
 ]
 
-const pages = { privacy: privacyOutline, terms: termsOutline }
+const pages = { privacy: privacyOutline, terms: termsOutline, about: () => aboutOutline }
 /** The sentences the page itself shows around the outline. */
 const HEAD = ['title', 'lead', 'updated']
 

@@ -645,10 +645,69 @@
   },
   "footer": {
     "label": "Over deze site",
+    "about": "Over Pakske",
     "privacy": "Privacy",
     "terms": "Voorwaarden",
     "issue": "Klopt er iets niet, of mis je iets? {link}.",
     "issueLink": "Maak een issue aan op GitHub"
+  },
+  "about": {
+    "title": "Over Pakske",
+    "lead": "Wat Pakske is, wat je ermee doet en wat de anderen te zien krijgen.",
+    "what": {
+      "title": "Wat Pakske is",
+      "site": "Pakske is een site voor verlanglijstjes, voor familie en vrienden. Je zet op een lijst wat je graag zou krijgen en stuurt de link naar wie je wilt. Zij vinken aan wat ze je geven.",
+      "surprise": "Op je eigen lijst zie je die vinkjes niet, dus een cadeau blijft een verrassing. De anderen zien ze wel, zodat niemand twee keer hetzelfde koopt.",
+      "free": "Je betaalt er niets voor, en de site werkt in het Nederlands en het Engels.",
+      "code": "De code van Pakske is open en staat op GitHub. Mis je iets of werkt er iets niet, dan meld je het daar.",
+      "source": "De code op GitHub"
+    },
+    "list": {
+      "title": "Je lijst",
+      "wish": "Een wens heeft een titel, en als je wilt een beschrijving, een foto en tot vijf links naar een winkel. Zet je er geen eigen foto bij, dan haalt Pakske de foto van de pagina waar de eerste link naar wijst.",
+      "amount": "Vraag je iets meer dan één keer, dan zet je erbij hoeveel, of dat er geen grens is. Wie geeft, kiest dan hoeveel.",
+      "import": "Heb je al een verlanglijst bij bol.com of Amazon, dan haal je die in één keer binnen met “Importeren uit een winkel”. Daar kun je ook links naar losse producten plakken: elke link die Pakske kan lezen, wordt een wens.",
+      "note": "Onder “Wensen” is plaats voor een notitie voor iedereen die de lijst opent: je maat, of wat je liever niet krijgt.",
+      "more": "Je kunt meer dan één lijst hebben, bijvoorbeeld een voor je verjaardag en een voor de feestdagen."
+    },
+    "share": {
+      "title": "Delen",
+      "link": "Elke lijst heeft een eigen link. Wie die heeft, kan de lijst openen, ook zonder account. Om iets te geven, en te zien wat de anderen al aanvinkten, log je in.",
+      "remembered": "De lijsten van anderen die je opende, vind je terug bij “Van anderen”.",
+      "relink": "Is de link verder geraakt dan je wilde, dan geef je de lijst een nieuwe link. De oude werkt dan niet meer."
+    },
+    "give": {
+      "title": "Geven",
+      "tick": "Je vinkt aan wat je geeft. Bij een wens die meer dan één keer gevraagd wordt, kies je hoeveel.",
+      "anonymous": "Met “Anoniem geven” zien de anderen niet dat jij het bent. In je instellingen maak je dat de standaard.",
+      "notes": "Bij een wens schrijf je een notitie voor de andere gevers, om bijvoorbeeld samen te leggen. De eigenaars van de lijst zien die niet.",
+      "message": "Een vraag voor de eigenaars schrijf je onderaan hun lijst. Zij zien niet van wie het bericht komt.",
+      "overview": "Op de beginpagina staat onder “Wat je geeft” alles wat je aanvinkte, per persoon."
+    },
+    "together": {
+      "title": "Samen",
+      "owners": "Een lijst kan meer dan één eigenaar hebben, zoals de lijst van een koppel, of van een kind met twee ouders. Met “Mede-eigenaar uitnodigen” stuur je de uitnodiging.",
+      "take": "Zie je op een andere lijst iets wat je zelf ook wilt, dan zet je het met “Op mijn lijst zetten” op een lijst van jou: als kopie, of samen, zodat jullie dezelfde wens delen.",
+      "wishes": "Een paar wensen tegelijk geef je door met een link, ook als kopie of samen."
+    },
+    "friends": {
+      "title": "Vrienden",
+      "lists": "Een vriend vindt de lijsten die je aanzet bij “Van anderen”, zonder dat je een link stuurt. Je kiest per lijst wie ze ziet.",
+      "become": "Je kunt niet naar mensen zoeken. Je vraagt iemand vanuit een lijst van die persoon, of je stuurt een vriendenlink die één keer werkt."
+    },
+    "santa": {
+      "title": "Secret Santa",
+      "draw": "Trek namen met een groep. Iedereen krijgt één naam om voor te kopen, en alleen jij ziet wie je trok.",
+      "group": "Je maakt een groep en deelt de link. Elk lid zet er een eigen lijst bij, die de anderen meteen kunnen openen. Om namen te trekken zijn minstens drie mensen nodig.",
+      "anonymous": "Geef je iets van de lijst van wie je trok, dan staat “Anoniem geven” al aan."
+    },
+    "data": {
+      "title": "Je gegevens",
+      "settings": "In je instellingen download je je gegevens, of verwijder je je account.",
+      "pages": "Wat de site bewaart en wie wat te zien krijgt, staat op de privacypagina. Wat je van de site mag verwachten, staat in de voorwaarden.",
+      "privacy": "Lees de privacypagina",
+      "terms": "Lees de voorwaarden"
+    }
   },
   "privacy": {
     "title": "Privacy",

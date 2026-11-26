@@ -645,10 +645,69 @@
   },
   "footer": {
     "label": "About this site",
+    "about": "About",
     "privacy": "Privacy",
     "terms": "Terms",
     "issue": "Something not quite right, or something missing? {link}.",
     "issueLink": "Open an issue on GitHub"
+  },
+  "about": {
+    "title": "About Pakske",
+    "lead": "What Pakske is, what you can do with it, and what the others get to see.",
+    "what": {
+      "title": "What Pakske is",
+      "site": "Pakske is a site for wishlists, for family and friends. You put what you’d like on a list and send the link to whoever you want. They tick what they’re giving you.",
+      "surprise": "You don’t see those ticks on your own list, so a present stays a surprise. The others do see them, so nobody buys the same thing twice.",
+      "free": "It costs nothing, and the site works in Dutch and in English.",
+      "code": "Pakske’s code is open and lives on GitHub. If something’s missing or doesn’t work, you can report it there.",
+      "source": "The code on GitHub"
+    },
+    "list": {
+      "title": "Your list",
+      "wish": "A wish has a title and, if you like, a description, a photo and up to five links to a shop. Without a photo of your own, Pakske takes the picture from the page the first link points to.",
+      "amount": "If you’re asking for something more than once, you say how many, or that there’s no limit. Whoever gives then chooses how many.",
+      "import": "If you already have a wishlist at bol.com or Amazon, “Import from a shop” brings it over in one go. You can paste links to single products there too: each link Pakske can read becomes a wish.",
+      "note": "Under “Wishes” there’s room for a note to everyone who opens the list: your size, say, or what you’d rather not get.",
+      "more": "You can have more than one list, say one for your birthday and one for the holidays."
+    },
+    "share": {
+      "title": "Sharing",
+      "link": "Every list has a link of its own. Anyone who has it can open the list, also without an account. To give something, and to see what the others have ticked, you log in.",
+      "remembered": "Other people’s lists you’ve opened are under “From others”.",
+      "relink": "If the link has gone further than you meant, you give the list a new link, and the old one stops working."
+    },
+    "give": {
+      "title": "Giving",
+      "tick": "You tick what you’re giving. On a wish asked for more than once, you choose how many.",
+      "anonymous": "With “Give anonymously” the others don’t see it’s you. In your settings you can make that the default.",
+      "notes": "On a wish you can write a note to the other givers, to club together, say. The list’s owners don’t see it.",
+      "message": "A question for the owners goes at the bottom of their list. They don’t see who it’s from.",
+      "overview": "On the home page, “What you’re giving” has everything you’ve ticked, by person."
+    },
+    "together": {
+      "title": "Together",
+      "owners": "A list can have more than one owner, like a couple’s list, or a child’s with two parents. “Invite a co-owner” sends the invitation.",
+      "take": "If you see something on another list that you’d like too, “Add to my list” puts it on one of yours: as a copy, or together, so you share the same wish.",
+      "wishes": "To pass on a few wishes at once, you send a link, again as a copy or together."
+    },
+    "friends": {
+      "title": "Friends",
+      "lists": "A friend finds the lists you switch on under “From others”, without you sending a link. You choose for each list who sees it.",
+      "become": "There’s no searching for people. You ask from one of the other person’s lists, or you send a friend link that works once."
+    },
+    "santa": {
+      "title": "Secret Santa",
+      "draw": "Draw names with a group. Everyone gets one name to buy for, and only you see whose name you drew.",
+      "group": "You make a group and share its link. Each member adds a list of their own, which the others can open straight away. Drawing names takes at least three people.",
+      "anonymous": "When you give something from the list of the person you drew, “Give anonymously” is already on."
+    },
+    "data": {
+      "title": "Your data",
+      "settings": "In your settings you can download your data or delete your account.",
+      "pages": "What the site keeps, and who gets to see what, is on the privacy page. What you can expect from the site is in the terms.",
+      "privacy": "Read the privacy page",
+      "terms": "Read the terms"
+    }
   },
   "privacy": {
     "title": "Privacy",

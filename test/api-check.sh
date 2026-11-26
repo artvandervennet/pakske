@@ -221,11 +221,13 @@ preview /en; has "the home page says what the site is, in the page's language" '
 page sis; check "sis opens the page" 200
 has "… and the HTML names mom, who bought" Moeke; has "… and holds mom's note" geheimpje
 
-echo "── the privacy page and the terms"
+echo "── the privacy page, the terms and the about page"
 status_of /privacy; check "a visitor opens the privacy page" 200; has "… in Dutch" "Wie je gegevens bewaart"
 status_of /en/privacy; check "… and the English one" 200; has "… in English" "Who keeps your data"
 status_of /terms; check "a visitor opens the terms" 200; has "… which link to the privacy page" 'href="/privacy"'
 status_of /en/terms; check "… and the English ones" 200; has "… which link to the English privacy page" 'href="/en/privacy"'
+status_of /about; check "a visitor opens the about page" 200; has "… in Dutch" "Wat Pakske is"; has "… which the footer links to" 'href="/about"'
+status_of /en/about; check "… and the English one" 200; has "… in English" "What Pakske is"; has "… which links to the English terms" 'href="/en/terms"'
 status_of /en/register; has "the form that makes an account links to the terms" 'href="/en/terms"'
 
 echo "── the owner ticks his own wishes"
