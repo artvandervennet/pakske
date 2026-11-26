@@ -753,6 +753,23 @@ async function addWish(title: string) {
       <div class="inner">
         <div class="section-head">
           <h2 id="wishes-title" ref="wishesTitle" class="section-title" tabindex="-1">{{ t('list.wishes') }}</h2>
+          <!-- The note on the list, under the title of its wishes, for everyone who opens it. An
+               owner has a field there, also while the note is empty, and edits it where it stands. -->
+          <div v-if="canManage && !list.old" class="list-note">
+            <EditableText
+              kind="text"
+              show-label
+              :value="list.note ?? ''"
+              :label="t('list.note')"
+              :placeholder="t('list.noteEmpty')"
+              :save="saveNote"
+              :maxlength="1000"
+            />
+          </div>
+          <div v-else-if="list.note && !list.old && !list.deleted" class="list-note">
+            <p class="wish-label">{{ t('list.note') }}</p>
+            <p class="list-note-text">{{ list.note }}</p>
+          </div>
         </div>
         <div class="section-body">
           <p v-if="gone && !list.old" class="form-message" role="alert">
@@ -769,23 +786,6 @@ async function addWish(title: string) {
             <!-- Its only owner deleted their account: the list stays, and nobody manages it. -->
             <p v-if="!list.owners.length" class="form-message">{{ t('list.ownerless') }}</p>
             <p v-if="drew" class="form-message">{{ t('santa.onList', { names: drew }) }}</p>
-            <!-- The note on the list, above its wishes, for everyone who opens it. An owner has a
-                 field there, also while the note is empty, and edits it where it stands. -->
-            <div v-if="canManage" class="list-note">
-              <EditableText
-                kind="text"
-                show-label
-                :value="list.note ?? ''"
-                :label="t('list.note')"
-                :placeholder="t('list.noteEmpty')"
-                :save="saveNote"
-                :maxlength="1000"
-              />
-            </div>
-            <div v-else-if="list.note" class="list-note">
-              <p class="wish-label">{{ t('list.note') }}</p>
-              <p class="list-note-text">{{ list.note }}</p>
-            </div>
             <p v-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           </template>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>

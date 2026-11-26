@@ -805,23 +805,14 @@ art-button:not(:defined) > :is(a, button) > .icon { margin-inline-end: var(--spa
   color: var(--ink-muted);
 }
 .wish-field { display: grid; gap: var(--space-2); }
-/* The note on a list: what its owners say about the whole list, above its wishes. A block in the
-   sunken paint with the card's small label, as wide as the list; the text in it keeps a reading
-   width. An owner's is a field where it stands (.inline-edit), whose well under the pointer is
-   a shade deeper than the block. */
-.list-note {
-  display: grid;
-  gap: var(--space-2);
-  max-inline-size: none;
-  margin-block-end: var(--space-6);
-  padding: var(--space-3) var(--space-4) var(--space-4);
-  border-radius: var(--radius-chip);
-  background: var(--surface-sunken);
-}
-.list-note > .inline-field { gap: var(--space-2); max-inline-size: var(--measure); }
-.list-note-text { white-space: pre-line; overflow-wrap: anywhere; }
-@media (hover: hover) {
-  .list-note .inline-edit:hover { background-color: color-mix(in oklch, var(--surface-sunken), var(--ink) 7%); }
+/* The note on a list: what its owners say about the whole list, under the title of its wishes,
+   in the column beside them from 60rem and above them on a narrow screen. The card's small
+   label over plain text; an owner's is a field where it stands (.inline-edit). */
+.list-note { display: grid; gap: var(--space-2); margin-block-end: var(--space-6); }
+.list-note > .inline-field { gap: var(--space-2); }
+.list-note-text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+@media (width >= 60rem) {
+  .list-note { margin-block-end: 0; }
 }
 .wish-text { white-space: pre-line; overflow-wrap: anywhere; }
 .wish-picture {
