@@ -28,7 +28,6 @@ export default defineNuxtConfig({
     head: {
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'robots', content: 'noindex, nofollow' },
       ],
       // A present in the hero's red and yellow. The .ico is for browsers without SVG icons.
       link: [
@@ -79,6 +78,7 @@ export default defineNuxtConfig({
     defaultLocale: 'nl',
     strategy: 'prefix_except_default',
     detectBrowserLanguage: false,
+    // SITE_LANGUAGES in shared/utils/seo.ts says the same, for robots.txt and the sitemap.
     locales: [
       { code: 'nl', language: 'nl-BE', name: 'Nederlands', file: 'nl.json' },
       { code: 'en', language: 'en-GB', name: 'English', file: 'en.json' },

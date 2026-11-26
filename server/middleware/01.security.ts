@@ -1,5 +1,7 @@
 // Runs before every request.
 
+import { indexedPage } from '../../shared/utils/seo'
+
 const STATIC = /^\/(_nuxt|_i18n|uploads|__nuxt)\//
 
 // Half a year: how long a browser that has seen the site over HTTPS keeps asking for it that way.
@@ -21,11 +23,12 @@ export default defineEventHandler((event) => {
     if (forwardedScheme(forwardedProto) === 'https') setResponseHeader(event, 'Strict-Transport-Security', HSTS)
   }
 
-  if (!STATIC.test(path) && path !== '/robots.txt') {
+  if (!STATIC.test(path) && path !== '/robots.txt' && path !== '/sitemap.xml') {
     // Pages and API answers depend on who is asking. Nothing in between may keep a copy.
     setResponseHeader(event, 'Cache-Control', 'private, no-store')
     appendResponseHeader(event, 'Vary', 'Cookie')
-    setResponseHeader(event, 'X-Robots-Tag', 'noindex, nofollow')
+    // Search engines may index the pages about the site itself and nothing else (shared/utils/seo.ts).
+    if (!indexedPage(path)) setResponseHeader(event, 'X-Robots-Tag', 'noindex, nofollow')
   }
   setResponseHeader(event, 'X-Content-Type-Options', 'nosniff')
   setResponseHeader(event, 'Referrer-Policy', 'same-origin')

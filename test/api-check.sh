@@ -228,6 +228,20 @@ status_of /terms; check "a visitor opens the terms" 200; has "… which link to 
 status_of /en/terms; check "… and the English ones" 200; has "… which link to the English privacy page" 'href="/en/privacy"'
 status_of /about; check "a visitor opens the about page" 200; has "… in Dutch" "Wat Pakske is"; has "… which the footer links to" 'href="/about"'
 status_of /en/about; check "… and the English one" 200; has "… in English" "What Pakske is"; has "… which links to the English terms" 'href="/en/terms"'
+
+echo "── search engines: the pages about the site, and nothing else"
+status_of /robots.txt; check "robots.txt is there" 200; has "… names the sitemap by its whole address" "Sitemap: $BASE/sitemap.xml"; has "… and closes the rest" "Disallow: /"
+status_of /sitemap.xml; check "the sitemap is there" 200; has "… with the English about page" "<loc>$BASE/en/about</loc>"; lacks "… and no list" "/l/"
+robots_tag() { curl -s -D - -o /dev/null -b "$TMP/${2:-anon}.jar" "$BASE$1" | grep -i '^x-robots-tag:' | tr -d '\r'; }
+for path in / /en /about /en/privacy /terms; do
+  tag=$(robots_tag "$path"); if [ -z "$tag" ]; then ok "$path may be indexed"; else bad "$path says $tag"; fi
+done
+for path in "/l/$TOKEN" "/en/l/$TOKEN" /lists /login /register /settings /api/home /j/nothing; do
+  if robots_tag "$path" art | grep -qi 'noindex'; then ok "$path says noindex"; else bad "$path has no noindex header"; fi
+done
+status_of /about; has "the about page has one address" "<link rel=\"canonical\" href=\"$BASE/about\">"; has "… and an English one beside it" "hreflang=\"en-GB\" href=\"$BASE/en/about\""; has "… and may be indexed" 'content="index, follow'
+page art; has "a list's page asks search engines to stay out" '<meta name="robots" content="noindex, nofollow">'; lacks "… and has no canonical address" 'rel="canonical"'
+status_of /; has "the home page says what the site is, for search engines" '"@type":"WebApplication"'
 status_of /en/register; has "the form that makes an account links to the terms" 'href="/en/terms"'
 
 echo "── the owner ticks his own wishes"

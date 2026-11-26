@@ -179,3 +179,13 @@ export function clientIp(event: H3Event): string {
   }
   return getRequestIP(event) ?? 'unknown'
 }
+
+/**
+ * The site's address as the visitor typed it, such as "https://pakske.example", for an address
+ * that leaves the site whole: in a mail, robots.txt or the sitemap. Behind a proxy of ours
+ * (NUXT_TRUST_PROXY=true) the name is the one the proxy was asked for. useSiteOrigin is the same
+ * for a page.
+ */
+export function siteOrigin(event: H3Event): string {
+  return getRequestURL(event, { xForwardedHost: useRuntimeConfig().trustProxy === true }).origin
+}

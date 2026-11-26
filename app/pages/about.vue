@@ -6,6 +6,8 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 
 useHead({ title: () => t('about.title') })
+// In a search result and a chat app: what Pakske is, in the page's own first sentence.
+usePreview(() => ({ title: t('about.title'), description: t('about.what.site') }))
 </script>
 
 <template>

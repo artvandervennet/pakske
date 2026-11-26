@@ -8,7 +8,7 @@ const localePath = useLocalePath()
 const notFound = computed(() => props.error.statusCode === 404)
 const title = computed(() => (notFound.value ? t('error.notFoundTitle') : t('error.otherTitle')))
 // This page takes app.vue's place, so it sets the language and the site's name itself.
-useSiteHead()
+useSiteHead({ error: true })
 useHead({ title })
 </script>
 

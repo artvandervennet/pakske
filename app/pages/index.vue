@@ -8,6 +8,30 @@ const { parse } = useApiError()
 
 useHead({ title: () => t('home.title') })
 
+// For search engines: what the site is, under its own name, and that it costs nothing (as the
+// terms say). Structured data in schema.org's words, which they read beside the page.
+const origin = useSiteOrigin()
+useHead(() => ({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        { '@type': 'WebSite', 'name': t('site.name'), 'url': `${origin}/`, 'inLanguage': SITE_LANGUAGES.map(language => language.language) },
+        {
+          '@type': 'WebApplication',
+          'name': t('site.name'),
+          'url': origin + localePath('/'),
+          'description': t('about.what.site'),
+          'applicationCategory': 'LifestyleApplication',
+          'operatingSystem': 'Web',
+          'offers': { '@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR' },
+        },
+      ],
+    }),
+  }],
+}))
+
 // The few lists of each kind the person had to do with last, and how many there are in all.
 // The lists page has every one of them.
 const { data: home, error: homeError, refresh } = await useFetch<HomeView>('/api/home')

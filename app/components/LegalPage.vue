@@ -9,6 +9,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 
 useHead({ title: () => t(`${props.name}.title`) })
+usePreview(() => ({ title: t(`${props.name}.title`), description: t(`${props.name}.lead`) }))
 </script>
 
 <template>
