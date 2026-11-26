@@ -182,7 +182,7 @@ async function rename(text: string, saved: string): Promise<string | null> {
   }
 }
 
-// The note on the list, under its title: an owner edits it where it stands, like a wish's
+// The note on the list, above its wishes: an owner edits it where it stands, like a wish's
 // description, and it saves by itself. Emptied, it is gone for everyone.
 async function saveNote(text: string, saved: string): Promise<string | null> {
   const note = cleanText(text, 'text')
@@ -700,10 +700,10 @@ async function addWish(title: string) {
 <template>
   <div>
     <PageHead :title="list.title">
-      <template v-if="(!list.viewerOwnsList && owners) || canManage || list.note" #lead>
-        <!-- Whose list it is, for everyone but its owners. A name that can be asked to be friends
-             is a button that opens a small card (see openOwnerCard). -->
-        <p v-if="!list.viewerOwnsList && owners" class="lead">
+      <!-- Whose list it is, for everyone but its owners. A name that can be asked to be friends
+           is a button that opens a small card (see openOwnerCard). -->
+      <template v-if="!list.viewerOwnsList && owners" #lead>
+        <p class="lead">
           {{ ownersFrame[0] }}<template v-for="(part, index) in ownerParts" :key="index"><button
             v-if="part.owner"
             type="button"
@@ -713,18 +713,6 @@ async function addWish(title: string) {
             @click="openOwnerCard(part.owner, $event)"
           >{{ part.text }}</button><template v-else>{{ part.text }}</template></template>{{ ownersFrame[1] }}
         </p>
-        <!-- The note on the list, for everyone who opens it; a field where it stands for an owner. -->
-        <EditableText
-          v-if="canManage"
-          class="list-note-edit"
-          kind="text"
-          :value="list.note ?? ''"
-          :label="t('list.note')"
-          :placeholder="t('list.noteEmpty')"
-          :save="saveNote"
-          :maxlength="1000"
-        />
-        <p v-else-if="list.note" class="list-note">{{ list.note }}</p>
       </template>
       <template v-if="canManage" #title>
         <h1 v-if="!renaming">
@@ -781,6 +769,23 @@ async function addWish(title: string) {
             <!-- Its only owner deleted their account: the list stays, and nobody manages it. -->
             <p v-if="!list.owners.length" class="form-message">{{ t('list.ownerless') }}</p>
             <p v-if="drew" class="form-message">{{ t('santa.onList', { names: drew }) }}</p>
+            <!-- The note on the list, above its wishes, for everyone who opens it. An owner has a
+                 field there, also while the note is empty, and edits it where it stands. -->
+            <div v-if="canManage" class="list-note">
+              <EditableText
+                kind="text"
+                show-label
+                :value="list.note ?? ''"
+                :label="t('list.note')"
+                :placeholder="t('list.noteEmpty')"
+                :save="saveNote"
+                :maxlength="1000"
+              />
+            </div>
+            <div v-else-if="list.note" class="list-note">
+              <p class="wish-label">{{ t('list.note') }}</p>
+              <p class="list-note-text">{{ list.note }}</p>
+            </div>
             <p v-if="!wishes.length && !canManage" class="muted">{{ t('list.empty') }}</p>
           </template>
           <p v-if="goneNotice" class="form-message" role="alert">{{ goneNotice }}</p>

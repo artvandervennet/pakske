@@ -140,7 +140,7 @@
     "gone": "This list no longer exists.",
     "rename": "Change name",
     "renameLabel": "Name of the list",
-    "note": "Note on the list",
+    "note": "Note",
     "noteEmpty": "Add a note for everyone who opens this list",
     "delete": "Delete list",
     "deleteTitle": "Delete “{title}”?",
