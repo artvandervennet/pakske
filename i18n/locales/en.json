@@ -140,6 +140,8 @@
     "gone": "This list no longer exists.",
     "rename": "Change name",
     "renameLabel": "Name of the list",
+    "note": "Note on the list",
+    "noteEmpty": "Add a note for everyone who opens this list",
     "delete": "Delete list",
     "deleteTitle": "Delete “{title}”?",
     "deleteBody": "The list disappears, with every wish on it. You can’t undo this.",
@@ -651,7 +653,7 @@
   "privacy": {
     "title": "Privacy",
     "lead": "What this site keeps about you, who gets to see it, and how you take it away again.",
-    "updated": "Last changed on 21 November 2026.",
+    "updated": "Last changed on 26 November 2026.",
     "who": {
       "title": "Who keeps your data",
       "named": "{operator} runs this site, decides what happens with what you put on it, and is responsible for it.",
@@ -663,7 +665,7 @@
       "title": "What the site keeps",
       "intro": "What you put on it yourself, and the little the site needs to work:",
       "account": "Your account: your name, your email address, your profile picture if you choose one, and when you made it. If you log in with Google, also the number Google knows your account by.",
-      "lists": "Your lists and wishes: their titles, descriptions, links and pictures.",
+      "lists": "Your lists and wishes: their titles, the note on a list, descriptions, links and pictures.",
       "giving": "What you tick on other people’s lists: which wish, how many, whether you give anonymously, and the notes you write there.",
       "messages": "What you write to the owners of someone else’s list, and what you answer on a list of your own.",
       "visited": "Which lists of other people you opened and when you last did, so you find them again under “From others”.",

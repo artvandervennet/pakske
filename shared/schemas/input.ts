@@ -68,6 +68,12 @@ export const accountDeleteInput = z.object({ currentPassword: currentPassword.op
 
 export const listInput = z.object({ title: requiredText(80) })
 
+/** A change to a list: only what is sent changes. An emptied note is cleared. */
+export const listPatchInput = z.object({
+  title: listInput.shape.title.optional(),
+  note: optionalText(1000).optional(),
+}).refine(change => Object.values(change).some(value => value !== undefined), 'required')
+
 // A list's address, as the page holds it. Whether it is the person's own list is the rule's to say.
 const listToken = z.string('required').min(1, 'required').max(64, 'too_long')
 

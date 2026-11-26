@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { wishes } from '../server/db/schema'
 import { getListView, oldLinkView } from '../server/domain/list-view'
-import { deleteList, listOwnedLists, ownedListId, relinkList } from '../server/domain/lists'
+import { changeList, deleteList, listOwnedLists, ownedListId, relinkList } from '../server/domain/lists'
 import { addNote } from '../server/domain/notes'
 import { listNotices } from '../server/domain/notices'
 import { putOnList } from '../server/domain/placement'
@@ -313,6 +313,16 @@ describe('a deleted list', () => {
     const quiet = world(false)
     deleteList(quiet.db, quiet.art.id, quiet.token)
     expect(getListView(quiet.db, quiet.token, quiet.mom.id)).toMatchObject({ deleted: true, wishes: [] })
+  })
+
+  it('no longer carries its note, and neither does an address the list had before', () => {
+    const { db, token, art, mom } = world(true)
+    changeList(db, art.id, token, { note: 'Maat 128' })
+    const fresh = relinkList(db, art.id, token).token
+    expect(oldLinkView(db, token, mom.id)).toMatchObject({ old: true, note: null })
+    expect(getListView(db, fresh, mom.id)?.note).toBe('Maat 128')
+    deleteList(db, art.id, fresh)
+    expect(getListView(db, fresh, mom.id)).toMatchObject({ deleted: true, note: null })
   })
 })
 

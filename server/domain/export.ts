@@ -27,7 +27,7 @@ export function exportAccount(db: Db, userId: number, at = new Date()) {
   // The title of a list that still exists; a deleted one is only a moment in a row of theirs.
   const liveTitle = (title: string, deletedAt: Date | null) => deletedAt === null ? title : null
 
-  const mine = db.select({ id: lists.id, title: lists.title, token: lists.token, createdAt: lists.createdAt }).from(lists)
+  const mine = db.select({ id: lists.id, title: lists.title, note: lists.note, token: lists.token, createdAt: lists.createdAt }).from(lists)
     .innerJoin(listOwners, eq(listOwners.listId, lists.id))
     .where(and(eq(listOwners.userId, userId), isNull(lists.deletedAt)))
     .orderBy(asc(lists.id))
@@ -46,6 +46,7 @@ export function exportAccount(db: Db, userId: number, at = new Date()) {
     },
     lists: mine.map(list => ({
       title: list.title,
+      note: list.note,
       link: `/l/${list.token}`,
       madeAt: iso(list.createdAt),
       sharedWith: db.select({ id: users.id, name: users.displayName }).from(listOwners)

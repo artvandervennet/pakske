@@ -34,7 +34,7 @@ export async function useListView(token: MaybeRefOrGetter<string>) {
   const movedTo = ref('movedTo' in first ? first.movedTo : null)
   // A refresh that fails (the connection dropped, the server is restarting) resets the data.
   // The page keeps the last list it got. While it is being sent on it has an empty one to draw.
-  const nothing: ListView = { token: toValue(token), title: '', owners: [], viewerOwnsList: false, deleted: false, old: false, wishes: [] }
+  const nothing: ListView = { token: toValue(token), title: '', note: null, owners: [], viewerOwnsList: false, deleted: false, old: false, wishes: [] }
   const list = shallowRef('movedTo' in first ? nothing : first) as Ref<ListView>
   // A refresh answered with "not found": the list was deleted, say in another tab. The page
   // keeps the last list and says the list is gone.

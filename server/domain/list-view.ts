@@ -177,7 +177,9 @@ export function getListView(db: Db, token: string, viewerId: number | null): Lis
   const deleted = list.deletedAt !== null
   if (deleted && (viewerId === null || viewerOwnsList)) return undefined
 
-  const view = { token: list.token, title: list.title, owners: owners.map(owner => owner.name), viewerOwnsList, deleted, old: false }
+  // A deleted list is only still open for what its buyers had ticked: the note was for choosing.
+  const note = deleted ? null : list.note
+  const view = { token: list.token, title: list.title, note, owners: owners.map(owner => owner.name), viewerOwnsList, deleted, old: false }
   const listOwnerIds = new Set(owners.map(owner => owner.userId))
   if (viewerId === null) return { ...view, wishes: anonWishes(db, list.id, listOwnerIds) }
 
@@ -258,6 +260,7 @@ export function oldLinkView(db: Db, token: string, viewerId: number | null): Lis
     // The address they came by: nothing here gives the new one away.
     token,
     title: list.title,
+    note: null,
     owners: [],
     viewerOwnsList: false,
     deleted: false,

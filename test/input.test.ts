@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { acceptInput, accountDeleteInput, emailChangeInput, fieldErrors, inviteInput, listInput, profileInput, registerInput, targetInput, noticeIdsInput, wishInput, wishPatchInput } from '../shared/schemas/input'
+import { acceptInput, accountDeleteInput, emailChangeInput, fieldErrors, inviteInput, listInput, listPatchInput, profileInput, registerInput, targetInput, noticeIdsInput, wishInput, wishPatchInput } from '../shared/schemas/input'
 
 const wish = (over: Record<string, unknown> = {}) => wishInput.safeParse({ title: 'Boek', description: '', urls: [], quantity: 1, ...over })
 
@@ -58,6 +58,21 @@ describe('a wish someone submits', () => {
   it('refuses zero and fractions as an amount', () => {
     expect(fieldErrors(wish({ quantity: 0 }).error!)).toEqual({ quantity: 'invalid_amount' })
     expect(fieldErrors(wish({ quantity: 1.5 }).error!)).toEqual({ quantity: 'invalid_amount' })
+  })
+})
+
+describe('a change to a list someone submits', () => {
+  it('holds only what was sent, an emptied note as null', () => {
+    expect(listPatchInput.parse({ title: ' Kerst ' })).toEqual({ title: 'Kerst' })
+    expect(listPatchInput.parse({ note: ' Maat 128 ' })).toEqual({ note: 'Maat 128' })
+    expect(listPatchInput.parse({ note: '  ' })).toEqual({ note: null })
+    expect(listPatchInput.parse({ note: null })).toEqual({ note: null })
+  })
+
+  it('refuses a change that names nothing, an empty title and a note that is too long', () => {
+    expect(listPatchInput.safeParse({}).success).toBe(false)
+    expect(fieldErrors(listPatchInput.safeParse({ title: ' ' }).error!)).toEqual({ title: 'required' })
+    expect(fieldErrors(listPatchInput.safeParse({ note: 'x'.repeat(1001) }).error!)).toEqual({ note: 'too_long' })
   })
 })
 

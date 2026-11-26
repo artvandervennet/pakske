@@ -5,7 +5,7 @@ import { listWishes, wishes } from '../server/db/schema'
 import { getListView } from '../server/domain/list-view'
 import { acceptFriendLink, listShownLists, makeFriendLink, setShownTo } from '../server/domain/friends'
 import { acceptInvite, getInviteView, listInviteLink, sendInvite } from '../server/domain/invites'
-import { coOwnersOf, createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList, removeOwner, renameList } from '../server/domain/lists'
+import { changeList, coOwnersOf, createList, deleteList, leaveList, listOwnedLists, ownedListId, relinkList, removeOwner } from '../server/domain/lists'
 import { listNotices } from '../server/domain/notices'
 import { putOnList } from '../server/domain/placement'
 import { LIST_TOKEN } from '../server/domain/tokens'
@@ -45,14 +45,36 @@ describe('lists', () => {
   it('renames a list and keeps its address', () => {
     const { db, art } = setup()
     const token = addList(db, art.id)
-    renameList(db, art.id, token, 'Sinterklaas')
+    expect(changeList(db, art.id, token, { title: 'Sinterklaas' })).toEqual({ title: 'Sinterklaas', note: null })
     expect(listOwnedLists(db, art.id)).toEqual([{ token, title: 'Sinterklaas', wishes: 0, owners: ['Art'], sharedWith: [] }])
+  })
+
+  it('gives a list a note that everyone who opens it reads, and changes only what was sent', () => {
+    const { db, art, mom } = setup()
+    const token = addList(db, art.id, 'Kerst')
+    expect(getListView(db, token, art.id)?.note).toBeNull()
+    expect(changeList(db, art.id, token, { note: 'Maat 128, liever geen snoep.' })).toEqual({ title: 'Kerst', note: 'Maat 128, liever geen snoep.' })
+    for (const viewer of [art.id, mom.id, null]) expect(getListView(db, token, viewer)?.note).toBe('Maat 128, liever geen snoep.')
+    // A new name keeps the note, and a new note keeps the name.
+    expect(changeList(db, art.id, token, { title: 'Verjaardag' })).toEqual({ title: 'Verjaardag', note: 'Maat 128, liever geen snoep.' })
+    expect(changeList(db, art.id, token, { note: null })).toEqual({ title: 'Verjaardag', note: null })
+    expect(getListView(db, token, null)?.note).toBeNull()
+  })
+
+  it('lets every owner of a joint list write its note', () => {
+    const { db, art, mom } = setup()
+    const token = addList(db, art.id)
+    addOwner(db, token, mom.id)
+    changeList(db, mom.id, token, { note: 'Van ons allebei.' })
+    expect(getListView(db, token, art.id)?.note).toBe('Van ons allebei.')
   })
 
   it('does not let someone else rename or delete it', () => {
     const { db, art, mom } = setup()
     const token = addList(db, art.id)
-    expect(codeOf(() => renameList(db, mom.id, token, 'Mine'))).toBe('not_found')
+    expect(codeOf(() => changeList(db, mom.id, token, { title: 'Mine' }))).toBe('not_found')
+    expect(codeOf(() => changeList(db, mom.id, token, { note: 'Gekaapt' }))).toBe('not_found')
+    expect(getListView(db, token, null)).toMatchObject({ title: 'Kerst', note: null })
     expect(codeOf(() => deleteList(db, mom.id, token))).toBe('not_found')
     expect(listOwnedLists(db, art.id)).toHaveLength(1)
   })

@@ -63,8 +63,13 @@ export function ownedListId(db: Db, userId: number, token: string): number {
   return row.id
 }
 
-export function renameList(db: Db, userId: number, token: string, title: string): void {
-  db.update(lists).set({ title }).where(eq(lists.id, ownedListId(db, userId, token))).run()
+/**
+ * Renames the list, or changes its note (null clears it), or both: only what is in `change`.
+ * Answers the title and the note as they are now.
+ */
+export function changeList(db: Db, userId: number, token: string, change: { title?: string, note?: string | null }): { title: string, note: string | null } {
+  return db.update(lists).set(change).where(eq(lists.id, ownedListId(db, userId, token)))
+    .returning({ title: lists.title, note: lists.note }).get()!
 }
 
 /**

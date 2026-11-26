@@ -120,6 +120,11 @@ export interface ListThread {
 export interface ListView {
   token: string
   title: string
+  /**
+   * What the owners wrote about the whole list, for everyone who opens it. Null when they wrote
+   * nothing, on a deleted list, and at an address the list no longer has.
+   */
+  note: string | null
   /** Display names of the list's owners. Empty once the account of its only owner is deleted. */
   owners: string[]
   viewerOwnsList: boolean

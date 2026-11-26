@@ -182,6 +182,22 @@ async function rename(text: string, saved: string): Promise<string | null> {
   }
 }
 
+// The note on the list, under its title: an owner edits it where it stands, like a wish's
+// description, and it saves by itself. Emptied, it is gone for everyone.
+async function saveNote(text: string, saved: string): Promise<string | null> {
+  const note = cleanText(text, 'text')
+  if (note === saved) return null
+  try {
+    await $fetch(`/api/lists/${token.value}`, { method: 'PATCH', body: { note: note || null } })
+    await refresh()
+    return null
+  }
+  catch (error) {
+    const parsed = parse(error)
+    return parsed.fields.note ?? parsed.message
+  }
+}
+
 async function onRenameDone(how: 'enter' | 'escape' | 'blur') {
   renaming.value = false
   // After leaving the field by clicking elsewhere, the focus is where that click put it.
@@ -684,10 +700,10 @@ async function addWish(title: string) {
 <template>
   <div>
     <PageHead :title="list.title">
-      <!-- Whose list it is, for everyone but its owners. A name that can be asked to be friends
-           is a button that opens a small card (see openOwnerCard). -->
-      <template v-if="!list.viewerOwnsList && owners" #lead>
-        <p class="lead">
+      <template v-if="(!list.viewerOwnsList && owners) || canManage || list.note" #lead>
+        <!-- Whose list it is, for everyone but its owners. A name that can be asked to be friends
+             is a button that opens a small card (see openOwnerCard). -->
+        <p v-if="!list.viewerOwnsList && owners" class="lead">
           {{ ownersFrame[0] }}<template v-for="(part, index) in ownerParts" :key="index"><button
             v-if="part.owner"
             type="button"
@@ -697,6 +713,18 @@ async function addWish(title: string) {
             @click="openOwnerCard(part.owner, $event)"
           >{{ part.text }}</button><template v-else>{{ part.text }}</template></template>{{ ownersFrame[1] }}
         </p>
+        <!-- The note on the list, for everyone who opens it; a field where it stands for an owner. -->
+        <EditableText
+          v-if="canManage"
+          class="list-note-edit"
+          kind="text"
+          :value="list.note ?? ''"
+          :label="t('list.note')"
+          :placeholder="t('list.noteEmpty')"
+          :save="saveNote"
+          :maxlength="1000"
+        />
+        <p v-else-if="list.note" class="list-note">{{ list.note }}</p>
       </template>
       <template v-if="canManage" #title>
         <h1 v-if="!renaming">

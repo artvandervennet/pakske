@@ -108,6 +108,12 @@ req art POST /api/lists '{"title":"   "}'; check "a list without a title is refu
 req anon POST /api/lists '{"title":"x"}'; check "making a list needs a login" 401
 req art PATCH "/api/lists/$TOKEN" '{"title":"Verjaardag Art"}'; check "art renames the list" 200; has "… and gets the new title back" '"title":"Verjaardag Art"'
 req mom PATCH "/api/lists/$TOKEN" '{"title":"Gekaapt"}'; check "mom cannot rename art's list" 404
+req art PATCH "/api/lists/$TOKEN" '{"note":"Maat 128, liever geen snoep."}'; check "art writes a note on the list" 200; has "… and gets it back" '"note":"Maat 128, liever geen snoep."'; has "… with the title kept" '"title":"Verjaardag Art"'
+req anon GET "/api/lists/$TOKEN"; check "a visitor who isn't logged in opens the list" 200; has "… and reads the note" '"note":"Maat 128, liever geen snoep."'
+req mom PATCH "/api/lists/$TOKEN" '{"note":"Gekaapt"}'; check "mom cannot change the note on art's list" 404
+req art PATCH "/api/lists/$TOKEN" '{}'; check "a change to a list that names nothing is refused" 422
+req art PATCH "/api/lists/$TOKEN" "{\"note\":\"$(printf 'x%.0s' $(seq 1001))\"}"; check "a note of 1001 characters is refused" 422; has "… with the code too_long" '"note":"too_long"'
+req art PATCH "/api/lists/$TOKEN" '{"note":""}'; check "art empties the note" 200; has "… and it is gone" '"note":null'
 req mom DELETE "/api/lists/$TOKEN"; check "mom cannot delete art's list" 404
 req art GET /api/home; check "art opens the home page" 200; has "… and the list is there" "\"token\":\"$TOKEN\""
 

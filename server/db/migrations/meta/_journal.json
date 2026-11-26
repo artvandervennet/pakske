@@ -134,6 +134,13 @@
       "when": 1795164245204,
       "tag": "0018_list_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1795678271345,
+      "tag": "0019_list_note",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { friendRequests } from '../server/db/schema'
 import { exportAccount } from '../server/domain/export'
 import { answerRequest, askFriend, setShownTo } from '../server/domain/friends'
+import { changeList } from '../server/domain/lists'
 import { sendMessage } from '../server/domain/messages'
 import { addNote } from '../server/domain/notes'
 import { setPurchase } from '../server/domain/purchases'
@@ -13,7 +14,7 @@ import { setWishImage } from '../server/domain/wishes'
 import { addList, addUser, addWishTo, codeOf, makeDb } from './helpers'
 
 /**
- * Art's list with socks on it. Mom gets the socks without her name, wrote a note about them and
+ * Art's list with socks on it, and a note. Mom gets the socks without her name, wrote a note about them and
  * wrote to Art, who answered. Lotte is Art's friend and sees his list. Art asked Mom to be
  * friends and she declined. All three are in a Secret Santa whose names are drawn.
  */
@@ -23,6 +24,7 @@ function setup() {
   const lotte = addUser(db, 'lotte')
   const mom = addUser(db, 'mom')
   const token = addList(db, art.id, 'Kerst')
+  changeList(db, art.id, token, { note: 'Maat M.' })
   const sokken = addWishTo(db, art.id, token, 'Sokken')
   setWishImage(db, art.id, token, sokken.id, 'socks.png')
   setPicture(db, art.id, 'art.jpg')
@@ -59,6 +61,7 @@ describe('the copy of an account\'s data', () => {
     expect(copy.account).toMatchObject({ name: 'Art', email: 'art@example.test', picture: '/uploads/art.jpg', googleLinked: false })
     expect(copy.lists).toMatchObject([{
       title: 'Kerst',
+      note: 'Maat M.',
       link: `/l/${token}`,
       sharedWith: [],
       shownToFriends: ['Lotte'],

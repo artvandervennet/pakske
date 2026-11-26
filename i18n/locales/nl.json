@@ -140,6 +140,8 @@
     "gone": "Deze lijst bestaat niet meer.",
     "rename": "Naam wijzigen",
     "renameLabel": "Naam van de lijst",
+    "note": "Notitie bij de lijst",
+    "noteEmpty": "Voeg een notitie toe voor iedereen die de lijst opent",
     "delete": "Lijst verwijderen",
     "deleteTitle": "“{title}” verwijderen?",
     "deleteBody": "De lijst verdwijnt, met alle wensen erop. Dat kun je niet ongedaan maken.",
@@ -651,7 +653,7 @@
   "privacy": {
     "title": "Privacy",
     "lead": "Wat deze site over je bewaart, wie het te zien krijgt en hoe je het weer weghaalt.",
-    "updated": "Laatst gewijzigd op 21 november 2026.",
+    "updated": "Laatst gewijzigd op 26 november 2026.",
     "who": {
       "title": "Wie je gegevens bewaart",
       "named": "{operator} beheert deze site, beslist wat er gebeurt met wat je erop zet, en is daar verantwoordelijk voor.",
@@ -663,7 +665,7 @@
       "title": "Wat de site bewaart",
       "intro": "Wat je er zelf op zet, en het weinige dat de site nodig heeft om te werken:",
       "account": "Je account: je naam, je e-mailadres, je profielfoto als je er een kiest, en wanneer je het maakte. Log je in met Google, dan ook het nummer waaronder Google je account kent.",
-      "lists": "Je lijsten en wensen: titels, beschrijvingen, links en foto’s.",
+      "lists": "Je lijsten en wensen: titels, de notitie bij een lijst, beschrijvingen, links en foto’s.",
       "giving": "Wat je aanvinkt op de lijsten van anderen: welke wens, hoeveel, of je anoniem geeft, en de notities die je daar schrijft.",
       "messages": "Wat je aan de eigenaars van andermans lijst schrijft, en wat je op je eigen lijst antwoordt.",
       "visited": "Welke lijsten van anderen je opende en wanneer je dat het laatst deed, zodat je ze terugvindt onder “Van anderen”.",

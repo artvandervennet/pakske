@@ -31,6 +31,9 @@ export const lists = sqliteTable('lists', {
   // The link is the access: random and unguessable, never derived from the id.
   token: text('token').notNull().unique(),
   title: text('title').notNull(),
+  // What the owners say about the whole list, under its title for everyone who opens it
+  // ("Maat 128, liever geen snoep"). Null when they wrote nothing.
+  note: text('note'),
   createdAt: createdAt(),
   deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
 })
