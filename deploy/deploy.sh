@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # Auto-deploy for the Raspberry Pi. A systemd timer runs this every minute.
-# It asks GitHub whether main has moved. If not, it stops there. If it has, it pulls, builds,
-# and switches the site over to the new build once that build answers. GitHub never has to
-# reach the Pi.
+# It asks GitHub for the newest release: the highest tag named vMAJOR.MINOR.PATCH, which
+# deploy/release.sh makes. If that one is live, it stops there. If not, it builds that release
+# and switches the site over once the new build answers. GitHub never has to reach the Pi.
+# A tag with more after the version (v1.2.0-rc.1) is never deployed, and neither is main.
 #
-#   deploy/deploy.sh           deploy if there is something new
-#   deploy/deploy.sh --force   build and switch over even if nothing changed, or if this
-#                              commit failed before
+#   deploy/deploy.sh                         deploy the newest release if it isn't live
+#   deploy/deploy.sh --force                 build and switch over even if nothing changed,
+#                                            or if this release failed before
+#   RELEASE=v1.2.0 deploy/deploy.sh --force  deploy that release by hand; the timer goes back
+#                                            to the newest a minute later
+#
+# Deleting a release's tag on GitHub takes it back: the newest release left goes live.
 #
 # Each build becomes a release folder; `current` points at the live one. The site keeps running
 # from the old release while the new one builds, so a deploy never serves half a build, and a
@@ -19,8 +24,8 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-$HOME/pakske}"
 ENV_FILE="${ENV_FILE:-$HOME/.config/pakske.env}"
 STATE_DIR="${STATE_DIR:-$HOME/.local/share/pakske}"
-# the branch that goes live; another one only to try a deploy out
-BRANCH="${BRANCH:-main}"
+# a release to deploy by hand instead of the newest one
+RELEASE="${RELEASE:-}"
 KEEP_RELEASES=3
 FORCE="${1:-}"
 
@@ -31,13 +36,17 @@ cd "$APP_DIR"
 exec 9>"$STATE_DIR/deploy.lock"
 flock -n 9 || exit 0
 
-git fetch --quiet origin "$BRANCH"
-target="$(git rev-parse "origin/$BRANCH")"
+# --force: a tag that was moved on GitHub moves here too; --prune-tags: a deleted one goes
+git fetch --quiet --force --prune --prune-tags --tags origin
+tag="${RELEASE:-$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)}"
+# nothing released yet: the site stays as it is
+[ -n "$tag" ] || exit 0
+target="$(git rev-parse --verify "$tag^{commit}")"
 live="$(basename "$(readlink "$STATE_DIR/current" 2>/dev/null || echo none)")"
 if [ "$FORCE" != "--force" ]; then
   # a release folder is named after its commit, with a suffix when --force rebuilt that commit
   [ "${live%%-*}" = "$target" ] && exit 0
-  # a commit that failed once fails again: wait for the next commit instead of rebuilding every minute
+  # a release that failed once fails again: wait for the next one instead of rebuilding every minute
   [ "$(cat "$STATE_DIR/failed" 2>/dev/null)" = "$target" ] && exit 0
 fi
 
@@ -55,15 +64,15 @@ fi
 . deploy/report.sh
 
 subject="$(git log -1 --format=%s "$target")"
-echo "$(date '+%F %T') Deploying ${target:0:7}: $subject"
+echo "$(date '+%F %T') Deploying $tag (${target:0:7}): $subject"
 fail() {
-  echo "$(date '+%F %T') FAILED ${target:0:7}: $1. The live site stays on ${live:0:7}."
+  echo "$(date '+%F %T') FAILED $tag (${target:0:7}): $1. The live site stays on ${live:0:7}."
   echo "$target" > "$STATE_DIR/failed"
-  report pakske-deploy fail "${target:0:7} ($subject): $1. The live site stays on ${live:0:7}."
+  report pakske-deploy fail "$tag (${target:0:7}, $subject): $1. The live site stays on ${live:0:7}."
   exit 1
 }
 
-# build exactly that commit; if someone edited files on the Pi, stop and say so instead of overwriting
+# build exactly that release; if someone edited files on the Pi, stop and say so instead of overwriting
 [ -z "$(git status --porcelain --untracked-files=no)" ] || fail "the checkout on the Pi has its own changes"
 git checkout --quiet --detach "$target"
 
@@ -123,8 +132,8 @@ for _ in $(seq 30); do
     ls -1t "$STATE_DIR/releases" | tail -n +$((KEEP_RELEASES + 1)) | while read -r old; do
       rm -rf "${STATE_DIR:?}/releases/$old"
     done
-    echo "$(date '+%F %T') Deployed ${target:0:7}"
-    report pakske-deploy ok "Deployed ${target:0:7}: $subject"
+    echo "$(date '+%F %T') Deployed $tag (${target:0:7})"
+    report pakske-deploy ok "Deployed $tag (${target:0:7}): $subject"
     exit 0
   fi
   sleep 2

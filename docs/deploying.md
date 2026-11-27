@@ -132,7 +132,21 @@ docker compose up -d --build
 
 ## Without Docker: auto-deploy on the Pi
 
-pakske.vandervennet.art runs this way, beside two other sites on the same Pi. A systemd timer runs `deploy/deploy.sh` every minute. When `main` has a new commit, it pulls, builds, and switches the site over once the new build answers on `/api/health`. The site keeps running from the old build until then, and a build that fails or doesn't answer leaves it there. A commit that failed is not tried again until the next commit, or `deploy/deploy.sh --force`.
+pakske.vandervennet.art runs this way, beside two other sites on the same Pi. Only releases go live: tags named `vMAJOR.MINOR.PATCH`, not `main`. A systemd timer runs `deploy/deploy.sh` every minute. When GitHub has a newer release than the live one, it builds that release and switches the site over once the new build answers on `/api/health`. The site keeps running from the old build until then, and a build that fails or doesn't answer leaves it there. A release that failed is not tried again until the next release, or `deploy/deploy.sh --force`. A tag with more after the version, such as `v1.2.0-rc.1`, is never deployed.
+
+### Making a release
+
+On your own machine, with `main` committed and pushed, and the [GitHub CLI](https://cli.github.com) logged in:
+
+```sh
+deploy/release.sh patch    # v1.2.3 to v1.2.4: fixes
+deploy/release.sh minor    # v1.2.3 to v1.3.0: something new
+deploy/release.sh major    # v1.2.3 to v2.0.0: a change in how the site is used
+```
+
+It lists the commits since the last release and asks before it tags `main` with the next version. Then it pushes the tag and makes a release page on GitHub from those commits. The Pi deploys it within a few minutes. The first release names its version: `deploy/release.sh v1.0.0`.
+
+To take a release back, delete its tag on GitHub, together with its release page (`gh release delete v1.2.4 --cleanup-tag`). The Pi then deploys the newest release that is left. Fix the problem in a new release with a higher number, so a version number is never used twice.
 
 The script installs its own Node, at the version and checksum in `deploy/node-version`, under `~/.local/share/pakske/node/`, so the Pi's own Node can stay at what its other sites need. pm2 runs the server from `~/.local/share/pakske/current`, a link to the live build in `releases/`; the three newest builds stay there.
 
@@ -150,7 +164,7 @@ systemctl --user daemon-reload && systemctl --user enable --now pakske-deploy.ti
 
 pm2 must already start at boot (`pm2 startup`), and the user needs lingering (`loginctl enable-linger`) for the timer to run without anyone logged in. Then point a Cloudflare Tunnel hostname at `http://localhost:3030`.
 
-`tail ~/.local/share/pakske/deploy.log` shows what each deploy did. To go back to an older build by hand: `ln -sfn ~/.local/share/pakske/releases/<commit> ~/.local/share/pakske/current && pm2 reload pakske`.
+`tail ~/.local/share/pakske/deploy.log` shows what each deploy did. `RELEASE=v1.2.0 ~/pakske/deploy/deploy.sh --force` builds and deploys one release by hand, but the timer puts the newest release back a minute later. To go back for good, take the release back as above.
 
 ### Backing up from the Pi
 

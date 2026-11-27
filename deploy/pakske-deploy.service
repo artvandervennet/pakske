@@ -1,7 +1,7 @@
 # One run of the deploy script. Started by pakske-deploy.timer.
 #   ~/.config/systemd/user/pakske-deploy.service
 [Unit]
-Description=Deploy Pakske when main has changed
+Description=Deploy Pakske when there is a new release
 
 [Service]
 Type=oneshot

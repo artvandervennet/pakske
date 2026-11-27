@@ -59,7 +59,7 @@ if [ "${1:-}" = "setup" ]; then
   # The backup runs at 03:30 and may try again for a while: deploy/pakske-backup.timer.
   make pakske-backup "deploy/backup.sh, every night at 03:30" "\"schedule\":\"30 3 * * *\",\"tz\":\"$(timedatectl show -p Timezone --value 2>/dev/null || echo UTC)\",\"grace\":10800"
   # A deploy comes when there is something to deploy, so only a failed one counts as down.
-  make pakske-deploy "deploy/deploy.sh, at every new commit on main" '"timeout":31536000,"grace":3600'
+  make pakske-deploy "deploy/deploy.sh, at every new release" '"timeout":31536000,"grace":3600'
   exit "$failed"
 fi
 
