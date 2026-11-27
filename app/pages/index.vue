@@ -6,7 +6,9 @@ const localePath = useLocalePath()
 const { loggedIn } = useUserSession()
 const { parse } = useApiError()
 
-useHead({ title: () => t('home.title') })
+// The site's name first, then what it is, as a search result and a browser tab show it. Every
+// other page puts the site's name after its own title (useSiteHead); this one says it already.
+useHead({ title: () => t('preview.title'), titleTemplate: null })
 
 // For search engines: what the site is, under its own name, and that it costs nothing (as the
 // terms say). Structured data in schema.org's words, which they read beside the page.
